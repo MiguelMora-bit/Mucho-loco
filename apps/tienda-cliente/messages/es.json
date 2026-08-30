@@ -1,0 +1,122 @@
+{
+  "nav": {
+    "gym": "El Gym",
+    "branches": "Sucursales",
+    "coaches": "Coaches",
+    "memberships": "Membresías",
+    "shop": "Tienda",
+    "contact": "Contacto"
+  },
+  "hero": {
+    "live": "15 SUCURSALES · CDMX & EDO. MÉX.",
+    "titleA": "ES HORA",
+    "titleB": "DE LIBERAR",
+    "titleC": "A LA BESTIA",
+    "lead": "Entrena como toro suelto. 15 sucursales, los mejores coaches y la energía más intensa de la ciudad. Tú vienes con el hambre, nosotros ponemos el incendio.",
+    "ctaJoin": "ÚNETE AL CAOS",
+    "ctaTour": "AGENDA TU TOUR"
+  },
+  "stats": [
+    { "n": "15",   "l": "Sucursales" },
+    { "n": "120+", "l": "Coaches certificados" },
+    { "n": "5-23H","l": "Horario amplio" },
+    { "n": "12K+", "l": "Locos activos" }
+  ],
+  "branches": {
+    "eyebrow": "Encuentra tu manada",
+    "titleA": "MAPA DEL",
+    "titleB": "INFIERNO",
+    "sub": "15 sucursales ardiendo por todo el país. Toca un pin para ver fotos, instructores y precios.",
+    "quote": "Cada sucursal es una jaula distinta. Encuentra la tuya.",
+    "classes": "Clases",
+    "coaches": "Coaches",
+    "price": "Desde",
+    "viewMore": "Ver detalles",
+    "hours": "Horario"
+  },
+  "coaches": {
+    "eyebrow": "Los que prenden la mecha",
+    "titleA": "TUS",
+    "titleB": "COACHES",
+    "sub": "No son influencers. Son los que te van a romper en mil pedazos para que vuelvas más fuerte.",
+    "quote": "Si no te grita, no te quiere. Acostúmbrate.",
+    "spec": "Especialidad",
+    "branch": "Sucursal"
+  },
+  "memberships": {
+    "eyebrow": "Sin letra chica",
+    "titleA": "MEMBRESÍAS",
+    "titleB": "QUE QUEMAN",
+    "sub": "Precios reales por sucursal. También entras con TotalPass y Wellhub.",
+    "visit": "Visita",
+    "weekly": "Semana",
+    "monthly": "Mes",
+    "quarterly": "Trimestral",
+    "annual": "Anual",
+    "popular": "MÁS LOCO",
+    "choose": "Elegir sucursal",
+    "select": "Seleccionar",
+    "perks": [
+      "Acceso en horario amplio",
+      "Todas las clases",
+      "Locker incluido",
+      "Invitado al mes",
+      "Asesoría nutricional",
+      "App con rutinas"
+    ],
+    "partners": "Acceso con tus apps de bienestar",
+    "partnersSub": "Si tu empresa te da TotalPass o Wellhub, entras directo. Solo presenta tu QR en recepción."
+  },
+  "shop": {
+    "eyebrow": "Combustible para fieras",
+    "titleA": "MUCHO LOCO",
+    "titleB": "STORE",
+    "sub": "Lo que tomamos los locos. Recoge en sucursal o te lo mandamos a casa.",
+    "filterAll": "Todo",
+    "add": "Al carrito",
+    "added": "AGREGADO",
+    "quote": "No es magia, es química. Y huevos."
+  },
+  "cart": {
+    "title": "Tu Bolsa Loca",
+    "empty": "La bolsa está más vacía que tu motivación de lunes.",
+    "subtotal": "Subtotal",
+    "checkout": "Pagar ahora",
+    "remove": "Quitar",
+    "continue": "Seguir comprando"
+  },
+  "contact": {
+    "eyebrow": "Háblanos sin miedo",
+    "titleA": "VENTE A",
+    "titleB": "QUEMARLA",
+    "sub": "Reserva un día gratis, pregunta lo que quieras o búscanos en redes.",
+    "name": "Nombre",
+    "email": "Correo",
+    "branch": "Sucursal de interés",
+    "message": "Cuéntanos qué te trae",
+    "send": "MANDAR",
+    "followUs": "Síguenos"
+  },
+  "avisos": {
+    "board": "Avisos",
+    "title": "TABLÓN DE AVISOS",
+    "sub": "Todo lo que está prendiendo en Mucho Loco.",
+    "empty": "Sin avisos por ahora.",
+    "close": "Cerrar",
+    "newTag": "NUEVO",
+    "seeAll": "Ver todos los avisos"
+  },
+  "meta": {
+    "homeTitle": "MUCHO LOCO GYM · Sin miedo, sin excusas, puro fuego",
+    "homeDesc": "15 sucursales en CDMX y Estado de México. Entrena como toro suelto con los mejores coaches y la energía más intensa de la ciudad.",
+    "cuentaTitle": "Mi Cuenta",
+    "cuentaDesc": "Inicia sesión o crea tu cuenta en Mucho Loco Gym. Accede a tus membresías, historial y más.",
+    "checkoutTitle": "Checkout",
+    "checkoutDesc": "Completa tu compra en la tienda Mucho Loco. Retiro en sucursal o envío a domicilio en CDMX.",
+    "panelTitle": "Mi Panel",
+    "panelDesc": "Tu dashboard personal: membresía, accesos QR, pedidos y rendimiento.",
+    "rendimientoTitle": "Mi Rendimiento",
+    "rendimientoDesc": "Estadísticas y progreso de tus entrenamientos en Mucho Loco Gym.",
+    "productoDesc": "Cómpralo en la tienda Mucho Loco. Retiro en sucursal o envío a domicilio."
+  }
+}

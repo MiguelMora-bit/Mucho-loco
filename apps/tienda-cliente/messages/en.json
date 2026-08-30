@@ -1,0 +1,122 @@
+{
+  "nav": {
+    "gym": "The Gym",
+    "branches": "Locations",
+    "coaches": "Coaches",
+    "memberships": "Memberships",
+    "shop": "Shop",
+    "contact": "Contact"
+  },
+  "hero": {
+    "live": "15 LOCATIONS · MEXICO CITY METRO",
+    "titleA": "IT'S TIME",
+    "titleB": "TO UNLEASH",
+    "titleC": "THE BEAST",
+    "lead": "Train like a loose bull. 15 locations, the meanest coaches in town and the most savage energy. You bring the hunger — we bring the fire.",
+    "ctaJoin": "JOIN THE CHAOS",
+    "ctaTour": "BOOK A TOUR"
+  },
+  "stats": [
+    { "n": "15",   "l": "Locations" },
+    { "n": "120+", "l": "Certified coaches" },
+    { "n": "5-23H","l": "Wide schedule" },
+    { "n": "12K+", "l": "Active members" }
+  ],
+  "branches": {
+    "eyebrow": "Find your pack",
+    "titleA": "MAP OF THE",
+    "titleB": "INFERNO",
+    "sub": "15 locations burning across the country. Tap a pin for pics, coaches and pricing.",
+    "quote": "Every location is a different cage. Pick yours.",
+    "classes": "Classes",
+    "coaches": "Coaches",
+    "price": "From",
+    "viewMore": "View details",
+    "hours": "Hours"
+  },
+  "coaches": {
+    "eyebrow": "The ones who light the fuse",
+    "titleA": "YOUR",
+    "titleB": "COACHES",
+    "sub": "Not influencers. The ones who'll wreck you so you come back stronger.",
+    "quote": "If they don't yell, they don't care. Get used to it.",
+    "spec": "Specialty",
+    "branch": "Location"
+  },
+  "memberships": {
+    "eyebrow": "No fine print",
+    "titleA": "MEMBERSHIPS",
+    "titleB": "THAT BURN",
+    "sub": "Real prices per location. TotalPass & Wellhub also accepted.",
+    "visit": "Day Pass",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "annual": "Annual",
+    "popular": "MOST LOCO",
+    "choose": "Pick location",
+    "select": "Select",
+    "perks": [
+      "Wide schedule access",
+      "All classes",
+      "Locker included",
+      "One guest/month",
+      "Nutrition coaching",
+      "App with workouts"
+    ],
+    "partners": "Access with your wellness apps",
+    "partnersSub": "If your company gives you TotalPass or Wellhub, you're in. Just show your QR at the counter."
+  },
+  "shop": {
+    "eyebrow": "Fuel for beasts",
+    "titleA": "MUCHO LOCO",
+    "titleB": "STORE",
+    "sub": "What us locos drink. Pickup at any branch or we ship it.",
+    "filterAll": "All",
+    "add": "Add to bag",
+    "added": "ADDED",
+    "quote": "It's not magic. It's chemistry. And balls."
+  },
+  "cart": {
+    "title": "Your Loco Bag",
+    "empty": "Bag is emptier than your Monday motivation.",
+    "subtotal": "Subtotal",
+    "checkout": "Checkout",
+    "remove": "Remove",
+    "continue": "Keep shopping"
+  },
+  "contact": {
+    "eyebrow": "Talk to us, no fear",
+    "titleA": "COME",
+    "titleB": "BURN IT",
+    "sub": "Book a free day pass, ask anything, or hit us on socials.",
+    "name": "Name",
+    "email": "Email",
+    "branch": "Location of interest",
+    "message": "Tell us what brings you",
+    "send": "SEND IT",
+    "followUs": "Follow us"
+  },
+  "avisos": {
+    "board": "News",
+    "title": "NEWS BOARD",
+    "sub": "Everything that's on fire at Mucho Loco.",
+    "empty": "No news right now.",
+    "close": "Close",
+    "newTag": "NEW",
+    "seeAll": "See all news"
+  },
+  "meta": {
+    "homeTitle": "MUCHO LOCO GYM · No fear, no excuses, pure fire",
+    "homeDesc": "15 locations across Mexico City. Train like a loose bull with the best coaches and the most intense energy in the city.",
+    "cuentaTitle": "My Account",
+    "cuentaDesc": "Log in or create your Mucho Loco Gym account. Access your memberships, history and more.",
+    "checkoutTitle": "Checkout",
+    "checkoutDesc": "Complete your purchase at the Mucho Loco store. Pickup at any branch or home delivery.",
+    "panelTitle": "My Dashboard",
+    "panelDesc": "Your personal dashboard: membership, QR access, orders and performance.",
+    "rendimientoTitle": "My Performance",
+    "rendimientoDesc": "Stats and progress from your Mucho Loco Gym workouts.",
+    "productoDesc": "Buy it at the Mucho Loco store. Branch pickup or home delivery."
+  }
+}
