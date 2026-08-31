@@ -66,6 +66,7 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 - **AWS CDK (TypeScript)** como infraestructura como código — mismo lenguaje que el resto del monorepo.
 - **@nestjs/swagger** para documentar la API (OpenAPI) — librería oficial de Nest, no requiere skill aparte.
 - Frontend (`customer-app`) se despliega en **Vercel**, no en AWS — es lo que hace la mayoría de empresas reales con stack Next.js + backend propio en AWS, y mantiene el foco de aprendizaje de AWS en el backend/infra en vez de en hosting de frontend.
+- **WhatsApp Business Platform (Cloud API de Meta)** para notificaciones — avisos de vencimiento de membresía/periodo de gracia, pedido listo para retiro, confirmación de pago. Se elige sobre email porque WhatsApp es el canal dominante en México. Requiere un módulo de backend (webhook + credenciales de Meta Business verificado) — se construye junto con el resto del backend NestJS, no antes. Distinto de WhatsApp Business (la app gratis) que solo son links `wa.me` — eso ya está en el frontend, sin backend.
 
 `aws-amplify` y `aws-blocks` quedan instaladas pero dejan de ser la ruta activa — no se usan en este proyecto salvo que se decida lo contrario.
 

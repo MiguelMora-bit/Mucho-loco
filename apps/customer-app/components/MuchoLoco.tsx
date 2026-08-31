@@ -604,7 +604,14 @@ function Contact({ t, lang }: { t: Translations; lang: Lang }) {
               </a>
             ))}
           </div>
-          <div className="sf-wa">{lang === 'es' ? '¿Dudas? Escríbenos al WhatsApp' : 'Questions? WhatsApp us'} <b>+52 55 1234 5678</b></div>
+          <a
+            className="sf-wa"
+            href={`https://wa.me/525512345678?text=${encodeURIComponent(lang === 'es' ? 'Hola, tengo una duda sobre Mucho Loco Gym' : 'Hi, I have a question about Mucho Loco Gym')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {lang === 'es' ? '¿Dudas? Escríbenos al WhatsApp' : 'Questions? WhatsApp us'} <b>+52 55 1234 5678</b>
+          </a>
         </div>
       </div>
     </section>

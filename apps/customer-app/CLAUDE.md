@@ -64,7 +64,7 @@ O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 ## Pendiente / conocido
 
 - `README.md` de este app menciona "CSS puro (sin Tailwind)" — desactualizado, el proyecto ya usa Tailwind v3. Pendiente de actualizar.
-- El formulario de contacto (claves `contact.name/email/branch/message/send` en `messages/*.json`) no está renderizado en ningún componente — pendiente decidir si se construye (mismo patrón que checkout: simula envío) o se borran las claves.
+- **Decidido (2026-08-30): no hay formulario de contacto.** WhatsApp gana para este mercado — más natural que un form y ya es el tono de marca. El link `wa.me` en `Contact` (componente `MuchoLoco.tsx`) ya es funcional. Las claves `contact.name/email/branch/message/send` en `messages/*.json` quedan sin usar; no se borran todavía por si más adelante se justifica un form real con lead-capture. Notificaciones automáticas (avisos de vencimiento, pedido listo) van por WhatsApp Business Platform cuando exista backend — ver `CLAUDE.md` root.
 - `producto/[id]` y `rendimiento` no crean pedidos/entrenamientos reales — el checkout no escribe en `userRepository`, así que un pedido nuevo no aparece en el panel. Aceptable para mock, pero si se quiere una demo 100% coherente falta cablear eso.
 
 ## Patrón: página server component + client component
