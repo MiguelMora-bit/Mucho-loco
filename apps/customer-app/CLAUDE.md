@@ -63,8 +63,13 @@ O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 
 ## Pendiente / conocido
 
-- Existen rutas duplicadas sin prefijo de locale (`app/checkout/page.tsx`, `app/cuenta/page.tsx`, `app/panel/page.tsx`, `app/producto/[id]/page.tsx`, `app/rendimiento/page.tsx`) junto a sus equivalentes bajo `app/[locale]/`. Probablemente residuo de cuando se agregó `next-intl` — revisar si siguen sirviendo algo o se pueden borrar.
 - `README.md` de este app menciona "CSS puro (sin Tailwind)" — desactualizado, el proyecto ya usa Tailwind v3. Pendiente de actualizar.
+- El formulario de contacto (claves `contact.name/email/branch/message/send` en `messages/*.json`) no está renderizado en ningún componente — pendiente decidir si se construye (mismo patrón que checkout: simula envío) o se borran las claves.
+- `producto/[id]` y `rendimiento` no crean pedidos/entrenamientos reales — el checkout no escribe en `userRepository`, así que un pedido nuevo no aparece en el panel. Aceptable para mock, pero si se quiere una demo 100% coherente falta cablear eso.
+
+## Patrón: página server component + client component
+
+`panel` (`PanelClient`), `producto/[id]` (`ProductoClient`) y `rendimiento` (`RendimientoClient`) siguen el mismo patrón: el `page.tsx` es un Server Component async que llama al repository correspondiente y pasa los datos como props; el componente en `components/` es `'use client'` y solo maneja estado de interacción (tabs, cantidad, modales). Nuevas páginas con datos + interactividad deberían seguir esta misma división — así el swap de mock a API real (Fase 5 de la metodología) solo toca el `page.tsx`, nunca el componente cliente.
 
 ## Próximo hito: backend AWS
 
