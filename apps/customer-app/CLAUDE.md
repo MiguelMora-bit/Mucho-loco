@@ -61,12 +61,18 @@ pnpm --filter customer-app build
 ```
 O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 
+## Testing
+
+- **Vitest** (`pnpm test` / `pnpm test:watch`) — unit tests de `lib/repositories/*.ts` (contrato de datos que el backend real va a tener que cumplir en Fase 2+) y de lógica pura extraída a `lib/` (`pricing.ts`, `i18n-href.ts`). No hay tests de componentes React todavía — se agregan cuando el UI deje de estar en movimiento.
+- **Playwright** (`pnpm test:e2e`) — E2E de los flujos críticos en `tests/e2e/`: navegación (incluye regresión del bug del splash), auth + redirects de rutas protegidas, y shop → checkout → el pedido aparece en el dashboard. `playwright.config.ts` levanta el dev server solo si no hay uno corriendo ya, y fija `locale: 'es-MX'` porque el Accept-Language default de Chromium (en-US) hace que next-intl negocie inglés y rompa los asserts en español.
+- Al agregar una página/feature nueva con lógica no trivial: si es lógica pura (cálculo, formateo, contrato de repository), Vitest; si es un flujo de usuario (click, navegación, formulario), un spec de Playwright.
+
 ## Pendiente / conocido
 
 - `README.md` de este app menciona "CSS puro (sin Tailwind)" — desactualizado, el proyecto ya usa Tailwind v3. Pendiente de actualizar.
 - **Decidido (2026-08-30): no hay formulario de contacto.** WhatsApp gana para este mercado — más natural que un form y ya es el tono de marca. El link `wa.me` en `Contact` (componente `MuchoLoco.tsx`) ya es funcional. Las claves `contact.name/email/branch/message/send` en `messages/*.json` quedan sin usar; no se borran todavía por si más adelante se justifica un form real con lead-capture. Notificaciones automáticas (avisos de vencimiento, pedido listo) van por WhatsApp Business Platform cuando exista backend — ver `CLAUDE.md` root.
-- `product/[id]` y `performance` no crean pedidos/entrenamientos reales — el checkout no escribe en `userRepository`, así que un pedido nuevo no aparece en el dashboard. Aceptable para mock, pero si se quiere una demo 100% coherente falta cablear eso.
 - Rutas en inglés (`/account`, `/dashboard`, `/performance`, `/product/[id]`, `/checkout`) por preferencia explícita del usuario (2026-08-30) — el copy/contenido del sitio se queda en español.
+- **Resuelto (2026-08-30):** checkout ya crea un pedido real vía `POST /api/orders` (server-side) que `userRepository.getOrders()` refleja — por eso un pedido nuevo SÍ aparece en el dashboard. `product/[id]` y `performance` siguen sin persistir nada (no hay acción de usuario ahí que debiera hacerlo).
 
 ## Patrón: página server component + client component
 
