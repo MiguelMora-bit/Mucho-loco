@@ -12,6 +12,14 @@ import type { Branch, Product, CartItem, Announcement, Lang, PlanKey, TierKey, T
 
 const MEXICO_PATH = "M 8,32 L 14,28 L 18,30 L 22,28 L 28,32 L 30,38 L 32,42 L 34,42 L 36,40 L 38,42 L 40,44 L 42,46 L 44,48 L 46,50 L 48,52 L 50,54 L 54,58 L 58,60 L 62,62 L 66,64 L 70,66 L 72,68 L 70,70 L 68,68 L 64,66 L 60,68 L 58,66 L 56,64 L 54,62 L 52,60 L 50,62 L 48,64 L 46,62 L 44,60 L 42,58 L 40,56 L 38,58 L 36,56 L 34,54 L 32,52 L 30,50 L 28,48 L 26,46 L 24,44 L 22,42 L 20,40 L 18,38 L 16,36 L 14,34 L 10,34 Z";
 
+// Announcement `link` values are bare internal paths (e.g. '/producto/p7') or a same-page
+// hash anchor. Plain <a> tags don't know about the current locale, so an /en visitor
+// would silently land on the (default-locale) Spanish page — this restores the prefix.
+function localizedHref(path: string, lang: Lang): string {
+  if (path.startsWith('#')) return path;
+  return lang === 'en' ? `/en${path}` : path;
+}
+
 interface LandingProps {
   branches: Branch[];
   products: Product[];
@@ -672,7 +680,7 @@ function AvisosButton({ t, lang, onOpen, announcements }: {
 function AvisoCard({ aviso, lang, t, onAction }: {
   aviso: Announcement; lang: Lang; t: Translations; onAction: () => void;
 }) {
-  const link = aviso.link || '#contact';
+  const link = localizedHref(aviso.link || '#contact', lang);
   return (
     <div className="aviso-card" style={{ '--accent': aviso.accent } as React.CSSProperties}>
       <div className="aviso-card-side">
@@ -739,7 +747,7 @@ function AvisoSplash({ aviso, t, lang, onClose, onBoard }: {
         </div>
         <p className="aviso-splash-body">{aviso.body[lang]}</p>
         <div className="aviso-splash-actions">
-          <a href={aviso.link || '#contact'} className="aviso-splash-cta" onClick={onClose}>{aviso.cta[lang]} →</a>
+          <a href={localizedHref(aviso.link || '#contact', lang)} className="aviso-splash-cta" onClick={onClose}>{aviso.cta[lang]} →</a>
           <button className="aviso-splash-board" onClick={onBoard}>{t.avisos.seeAll}</button>
         </div>
       </div>

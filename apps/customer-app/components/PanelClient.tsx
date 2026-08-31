@@ -224,7 +224,7 @@ export default function PanelClient({ profile, membership, history, orders }: Pa
                   <div className="text-[15px]">{val}</div>
                 </div>
               ))}
-              <button onClick={() => {}} className="mt-2 w-full p-[14px] bg-ml-red text-white font-display text-lg tracking-[0.04em] border-none cursor-pointer">
+              <button onClick={() => setPane('access')} className="mt-2 w-full p-[14px] bg-ml-red text-white font-display text-lg tracking-[0.04em] border-none cursor-pointer">
                 RENOVAR MEMBRESÍA
               </button>
             </div>
