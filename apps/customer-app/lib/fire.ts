@@ -14,7 +14,12 @@ interface Particle {
 }
 
 export function startFireCanvas(canvas: HTMLCanvasElement, opts: FireOpts = {}): () => void {
-  const ctx = canvas.getContext('2d')!;
+  const maybeCtx = canvas.getContext('2d');
+  // getContext can genuinely return null (privacy-hardened browsers, low
+  // memory, canvas already bound to a different context type). The fire
+  // effect is decorative — degrade silently instead of crashing the page.
+  if (!maybeCtx) return () => {};
+  const ctx = maybeCtx;
   const dpr = window.devicePixelRatio || 1;
   const N = opts.count || 90;
   let w = 0, h = 0;
