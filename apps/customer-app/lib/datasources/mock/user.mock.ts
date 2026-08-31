@@ -1,6 +1,12 @@
-import type { UserProfile, MembershipInfo, Visit, Order } from '@mucho-loco/types';
+import type { UserProfile, MembershipInfo, Visit, Order, OrderItem } from '@mucho-loco/types';
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+const MONTHS_ES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+
+export function formatOrderDate(d: Date): string {
+  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 const MOCK_PROFILE: UserProfile = {
   email: 'diego@mucholoco.mx',
@@ -28,7 +34,7 @@ const MOCK_HISTORY: Visit[] = [
   { day: '07', month: 'JUN', branch: 'Interlomas', duration: '1h 33m' },
 ];
 
-const MOCK_ORDERS: Order[] = [
+let MOCK_ORDERS: Order[] = [
   {
     id: '#ML-240619',
     date: '19 JUN 2026',
@@ -67,5 +73,18 @@ export class UserMockDatasource {
   async getOrders(): Promise<Order[]> {
     await delay(170);
     return MOCK_ORDERS;
+  }
+
+  async createOrder(items: OrderItem[], total: number): Promise<Order> {
+    await delay(150);
+    const order: Order = {
+      id: `#ML-${Date.now().toString().slice(-6)}`,
+      date: formatOrderDate(new Date()),
+      status: 'ready',
+      items,
+      total,
+    };
+    MOCK_ORDERS = [order, ...MOCK_ORDERS];
+    return order;
   }
 }

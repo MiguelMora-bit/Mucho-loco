@@ -21,7 +21,12 @@ export default function CheckoutPage() {
   async function placeOrder(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPlacing(true);
-    await new Promise((r) => setTimeout(r, 1200));
+    const items = cart.map(({ name, flav, img }) => ({ name, flav, img }));
+    await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, total }),
+    });
     clear();
     setStep(2);
     setPlacing(false);
