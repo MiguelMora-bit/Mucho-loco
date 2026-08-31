@@ -19,6 +19,18 @@
       "skillPath": "skills/core-skills/aws-blocks/SKILL.md",
       "computedHash": "6ad103a2905e99a428c6038e9383b3023dbea2599ba6561c5230af3fee5f857c"
     },
+    "aws-cdk": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-cdk/SKILL.md",
+      "computedHash": "4480c20e15885a356ba96334c50b0e726d0e89b533872ad92c03a767972ef28d"
+    },
+    "aws-containers": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-containers/SKILL.md",
+      "computedHash": "a265d458448000007bf1a57bb8585a63c75156f083b502b39b97a51071269793"
+    },
     "database-schema-designer": {
       "source": "softaworks/agent-toolkit",
       "sourceType": "github",
@@ -48,6 +60,12 @@
       "sourceType": "github",
       "skillPath": "plugins/payment-processing/skills/paypal-integration/SKILL.md",
       "computedHash": "dd80cfc7dd31d6d57af2eef7227a7ada6ba52c2682c4e1d9502ec0b35ee3502f"
+    },
+    "prisma-database-setup": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "skillPath": "prisma-database-setup/SKILL.md",
+      "computedHash": "6a991a2530a6da7131e3fc71c353e8278702d0146b8b6e1d2fdfc2d3d0a21bd2"
     },
     "stripe-best-practices": {
       "source": "stripe/ai",

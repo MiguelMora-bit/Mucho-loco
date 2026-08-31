@@ -55,12 +55,38 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 - **Fase 2** — app de sucursal completa (corte de caja, roles gerente/mostrador) + panel del dueño completo (transferencias de inventario, gastos).
 - **Fase 3** — nómina completa (asistencia, deducciones, recibos), reportes ejecutivos avanzados.
 
+### Arquitectura de backend (decidida 2026-08-30)
+
+**NestJS sobre AWS nativo** (no Amplify). Objetivo explícito del usuario: aprender AWS de forma realista, como en una empresa seria — no el camino más corto (Amplify/serverless-first), sino el stack que se encuentra en un backend de producción típico.
+
+- **NestJS** como monolito modular (no microservicios todavía — con un solo dev, microservicios agregan complejidad operativa sin beneficio real; los módulos de Nest ya dan el límite de dominio que permitiría separar después si hiciera falta).
+- **PostgreSQL en RDS + Prisma** como ORM — no DynamoDB. Relacional encaja mejor con el dominio (sucursales, membresías, inventario, nómina tienen relaciones fuertes) y es lo que se ve en la mayoría de backends NestJS reales.
+- **Cognito User Pools** para auth (emite JWT, NestJS lo valida vía Passport) — se mantiene aunque no se use Amplify; Cognito es independiente de Amplify.
+- **Docker → ECR → ECS Fargate detrás de un ALB** para desplegar NestJS — el patrón estándar para un servidor persistente en AWS (no Lambda, que es para funciones cortas/stateless).
+- **AWS CDK (TypeScript)** como infraestructura como código — mismo lenguaje que el resto del monorepo.
+- **@nestjs/swagger** para documentar la API (OpenAPI) — librería oficial de Nest, no requiere skill aparte.
+- Frontend (`customer-app`) se despliega en **Vercel**, no en AWS — es lo que hace la mayoría de empresas reales con stack Next.js + backend propio en AWS, y mantiene el foco de aprendizaje de AWS en el backend/infra en vez de en hosting de frontend.
+
+`aws-amplify` y `aws-blocks` quedan instaladas pero dejan de ser la ruta activa — no se usan en este proyecto salvo que se decida lo contrario.
+
+### Metodología
+
+**Contract-first**: terminar `customer-app` completamente mock-funcional (todos los flujos de usuario funcionando con datos falsos, sin huecos) ANTES de escribir el backend. La capa `lib/repositories/` de `customer-app` ya está diseñada para esto — cada método de repositorio define el contrato que el backend real va a tener que cumplir. Cuando el backend esté listo, solo se cambia el datasource (de mock a HTTP), no el resto de la app.
+
+Orden de fases:
+1. `customer-app` 100% mock-funcional (flujos completos: tienda, cuenta, checkout, panel, rendimiento).
+2. Definir contrato de API (DTOs/OpenAPI) a partir de los repositorios ya existentes.
+3. Fundaciones AWS vía CDK: VPC, RDS Postgres, Cognito User Pool.
+4. Backend NestJS: módulos de dominio (branches, products, orders, memberships) + Prisma + auth con Cognito.
+5. Conectar: swap de datasource mock → HTTP en `customer-app`, Docker + ECS Fargate, CI/CD.
+6. Pagos (Stripe/PayPal/Mercado Pago) sobre la base ya funcional.
+7. `branch-app` y `owner-panel` (Fase 2/3 del negocio) reusando `apps/backend` y `packages/types`.
+
 ### Pendiente de decidir
 
 - Qué pasa con socios/empleados si cierra una sucursal.
 - Qué redes sociales exactas para login social.
 - Política de devoluciones/cancelaciones.
-- **Arquitectura de backend**: este repo ya trae skills de NestJS instaladas (`nestjs-best-practices`, `nestjs-patterns`), pero el plan original apuntaba a AWS nativo (Cognito/DynamoDB/Lambda) y también se instalaron skills de AWS Amplify. Falta decidir NestJS vs. Amplify/Lambda-native antes de avanzar con el backend — son dos enfoques distintos (servidor persistente vs. serverless-first) y no deberían mezclarse a medias.
 
 ### Skills instaladas para este proyecto (`.agents/skills/`, ver `skills-lock.json`)
 
@@ -68,9 +94,13 @@ Viven en la raíz del monorepo — aplican a todos los apps, no solo a `customer
 
 - `stripe-best-practices`, `stripe-projects` (oficial Stripe) — pagos con tarjeta/Stripe.
 - `paypal-integration` — pagos PayPal.
-- `aws-amplify`, `aws-blocks`, `aws-auth` (oficial AWS) — backend AWS.
+- `aws-auth` (oficial AWS) — Cognito.
+- `aws-cdk` (oficial AWS) — infraestructura como código.
+- `aws-containers` (oficial AWS) — Docker/ECS/Fargate.
+- `prisma-database-setup` (oficial Prisma) — ORM + PostgreSQL.
 - `database-schema-designer` — diseño de esquema multi-sucursal.
 - `nestjs-best-practices`, `nestjs-patterns`, `frontend-design`, `vercel-composition-patterns`, `vercel-react-native-skills`, `vercel-react-view-transitions`.
+- `aws-amplify`, `aws-blocks` — instaladas pero no activas (ruta serverless-first no elegida).
 
 No hay skill confiable instalable para Mercado Pago, inventario/POS multi-sucursal ni mapa de sucursales — se diseñan directo con el usuario.
 
