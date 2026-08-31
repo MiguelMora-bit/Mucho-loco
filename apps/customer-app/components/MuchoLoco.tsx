@@ -12,7 +12,7 @@ import type { Branch, Product, CartItem, Announcement, Lang, PlanKey, TierKey, T
 
 const MEXICO_PATH = "M 8,32 L 14,28 L 18,30 L 22,28 L 28,32 L 30,38 L 32,42 L 34,42 L 36,40 L 38,42 L 40,44 L 42,46 L 44,48 L 46,50 L 48,52 L 50,54 L 54,58 L 58,60 L 62,62 L 66,64 L 70,66 L 72,68 L 70,70 L 68,68 L 64,66 L 60,68 L 58,66 L 56,64 L 54,62 L 52,60 L 50,62 L 48,64 L 46,62 L 44,60 L 42,58 L 40,56 L 38,58 L 36,56 L 34,54 L 32,52 L 30,50 L 28,48 L 26,46 L 24,44 L 22,42 L 20,40 L 18,38 L 16,36 L 14,34 L 10,34 Z";
 
-// Announcement `link` values are bare internal paths (e.g. '/producto/p7') or a same-page
+// Announcement `link` values are bare internal paths (e.g. '/product/p7') or a same-page
 // hash anchor. Plain <a> tags don't know about the current locale, so an /en visitor
 // would silently land on the (default-locale) Spanish page — this restores the prefix.
 function localizedHref(path: string, lang: Lang): string {
@@ -59,7 +59,10 @@ export default function MuchoLoco({ branches, products, announcements }: Landing
     try { seen = JSON.parse(localStorage.getItem('ml_avisos_seen') || '[]'); } catch (e) {}
     const newest = announcements.find((a) => !seen.includes(a.id));
     if (newest) {
-      const tm = setTimeout(() => setSplashAviso(newest), 900);
+      // 900ms was long enough to collide with a visitor's first intentional click
+      // (e.g. going straight for "mi cuenta") — the splash's full-screen backdrop
+      // would eat that click to dismiss itself instead of letting it reach the nav.
+      const tm = setTimeout(() => setSplashAviso(newest), 3000);
       return () => clearTimeout(tm);
     }
   }, [announcements]);
@@ -131,7 +134,7 @@ function Nav({ t, lang, setLang, cartCount, onCartOpen }: {
           <button className={lang === 'es' ? 'active' : ''} onClick={() => setLang('es')}>ES</button>
           <button className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>EN</button>
         </div>
-        <Link href="/cuenta" className="login-btn" title="Mi cuenta" aria-label="Mi cuenta">
+        <Link href="/account" className="login-btn" title="Mi cuenta" aria-label="Mi cuenta">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-7 8-7s8 3 8 7" />
           </svg>
@@ -152,7 +155,7 @@ function Nav({ t, lang, setLang, cartCount, onCartOpen }: {
           <a href="#memberships" onClick={closeMenu}>{t.nav.memberships}</a>
           <a href="#contact" onClick={closeMenu}>{t.nav.contact}</a>
           <div className="mobile-menu-foot">
-            <Link href="/cuenta" className="mobile-cta">🔥 MI CUENTA</Link>
+            <Link href="/account" className="mobile-cta">🔥 MI CUENTA</Link>
           </div>
         </div>
       </div>
@@ -367,7 +370,7 @@ function Memberships({ t, branches, branch, setBranchId, plan, setPlan, mult, la
                   <div className="mh-value">{tier.key === 'single' ? branch.hours : '5:00 — 23:00'} · {lang === 'es' ? 'Lun a Dom' : 'Mon to Sun'}</div>
                 </div>
               </div>
-              <Link href={`/cuenta?plan=${tier.key}&period=${cur}`} className="select-btn block text-center">
+              <Link href={`/account?plan=${tier.key}&period=${cur}`} className="select-btn block text-center">
                 {t.memberships.select} · {curName} →
               </Link>
             </div>
@@ -435,7 +438,7 @@ function Shop({ t, lang, cat, setCat, products }: {
           const inCart = items.find((c) => c.id === p.id);
           return (
             <div key={p.id} className="product-card">
-              <Link href={`/producto/${p.id}`} className="no-underline text-inherit flex flex-col flex-1">
+              <Link href={`/product/${p.id}`} className="no-underline text-inherit flex flex-col flex-1">
                 <div className="product-img">
                   {p.tag && <div className={'product-tag ' + p.tag}>{p.tag}</div>}
                   <img src={p.img} alt={p.name} className="w-full h-full object-cover" />
@@ -559,7 +562,7 @@ function Contact({ t, lang }: { t: Translations; lang: Lang }) {
               ? 'Entra a entrenar a cualquiera de las 15 sucursales, sin costo. El sistema lo detecta automáticamente cuando tu cuenta es nueva y nunca has tenido una membresía activa — sin tarjeta, sin compromiso.'
               : "Train at any of our 15 locations, on the house. The system detects it automatically when your account is new and you've never had an active membership — no card, no commitment."}</p>
             <div className="fv-actions">
-              <Link href="/cuenta" className="btn-primary">{lang === 'es' ? 'CREAR CUENTA GRATIS' : 'CREATE FREE ACCOUNT'}</Link>
+              <Link href="/account" className="btn-primary">{lang === 'es' ? 'CREAR CUENTA GRATIS' : 'CREATE FREE ACCOUNT'}</Link>
               <span className="fv-note">{lang === 'es' ? 'Detección automática · 1 visita por persona' : 'Auto-detected · 1 visit per person'}</span>
             </div>
           </div>

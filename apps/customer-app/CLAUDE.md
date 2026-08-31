@@ -14,7 +14,7 @@ El backend (AWS: Cognito, DynamoDB, Lambda) se construirá después, probablemen
 - **'use client'** — solo en componentes con hooks/browser APIs. El componente principal `MuchoLoco.tsx` es `'use client'` porque usa `useState`, `useEffect`, canvas y localStorage.
 - **Server Components** — las páginas de rutas son Server Components por defecto. Solo marcar como cliente cuando sea necesario.
 - **i18n** — `next-intl`, rutas bajo `app/[locale]/`. Config en `i18n/routing.ts` y `i18n/request.ts`, mensajes en `messages/es.json` y `messages/en.json`.
-- **Middleware** — `middleware.ts` en la raíz del app protege `/panel`, `/rendimiento`, `/checkout` verificando la cookie `ml_session` (constantes en `lib/auth.ts`), y corre el middleware de `next-intl` para el locale.
+- **Middleware** — `middleware.ts` en la raíz del app protege `/dashboard`, `/performance`, `/checkout` verificando la cookie `ml_session` (constantes en `lib/auth.ts`), y corre el middleware de `next-intl` para el locale.
 - **Route Handlers** — `app/api/auth/login/route.ts` y `logout/route.ts` manejan la autenticación mock.
 - **Capas en `lib/`** — `datasources/mock/` (datos crudos), `repositories/` (acceso a datos), `stores/` (zustand: `auth.store.ts`, `cart.store.ts`), `hooks/` (`useT.ts` para traducciones).
 
@@ -33,7 +33,7 @@ Cargadas con `next/font/google` en `layout.tsx`: `'Anton'`, `'Bebas Neue'`, `'In
 ## Auth flow
 
 ```
-Usuario sin sesión → /panel → middleware → /cuenta?next=/panel
+Usuario sin sesión → /dashboard → middleware → /account?next=/dashboard
                                                     ↓
                                          Login form submit
                                                     ↓
@@ -41,7 +41,7 @@ Usuario sin sesión → /panel → middleware → /cuenta?next=/panel
                                                     ↓
                                          Cookie ml_session seteada
                                                     ↓
-                                         router.push(next || '/panel')
+                                         router.push(next || '/dashboard')
 ```
 
 ## Convenciones
@@ -65,11 +65,12 @@ O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 
 - `README.md` de este app menciona "CSS puro (sin Tailwind)" — desactualizado, el proyecto ya usa Tailwind v3. Pendiente de actualizar.
 - **Decidido (2026-08-30): no hay formulario de contacto.** WhatsApp gana para este mercado — más natural que un form y ya es el tono de marca. El link `wa.me` en `Contact` (componente `MuchoLoco.tsx`) ya es funcional. Las claves `contact.name/email/branch/message/send` en `messages/*.json` quedan sin usar; no se borran todavía por si más adelante se justifica un form real con lead-capture. Notificaciones automáticas (avisos de vencimiento, pedido listo) van por WhatsApp Business Platform cuando exista backend — ver `CLAUDE.md` root.
-- `producto/[id]` y `rendimiento` no crean pedidos/entrenamientos reales — el checkout no escribe en `userRepository`, así que un pedido nuevo no aparece en el panel. Aceptable para mock, pero si se quiere una demo 100% coherente falta cablear eso.
+- `product/[id]` y `performance` no crean pedidos/entrenamientos reales — el checkout no escribe en `userRepository`, así que un pedido nuevo no aparece en el dashboard. Aceptable para mock, pero si se quiere una demo 100% coherente falta cablear eso.
+- Rutas en inglés (`/account`, `/dashboard`, `/performance`, `/product/[id]`, `/checkout`) por preferencia explícita del usuario (2026-08-30) — el copy/contenido del sitio se queda en español.
 
 ## Patrón: página server component + client component
 
-`panel` (`PanelClient`), `producto/[id]` (`ProductoClient`) y `rendimiento` (`RendimientoClient`) siguen el mismo patrón: el `page.tsx` es un Server Component async que llama al repository correspondiente y pasa los datos como props; el componente en `components/` es `'use client'` y solo maneja estado de interacción (tabs, cantidad, modales). Nuevas páginas con datos + interactividad deberían seguir esta misma división — así el swap de mock a API real (Fase 5 de la metodología) solo toca el `page.tsx`, nunca el componente cliente.
+`dashboard` (`DashboardClient`), `product/[id]` (`ProductClient`) y `performance` (`PerformanceClient`) siguen el mismo patrón: el `page.tsx` es un Server Component async que llama al repository correspondiente y pasa los datos como props; el componente en `components/` es `'use client'` y solo maneja estado de interacción (tabs, cantidad, modales). Nuevas páginas con datos + interactividad deberían seguir esta misma división — así el swap de mock a API real (Fase 5 de la metodología) solo toca el `page.tsx`, nunca el componente cliente.
 
 ## Próximo hito: backend AWS
 

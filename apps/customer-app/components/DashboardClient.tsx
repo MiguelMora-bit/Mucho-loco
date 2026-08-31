@@ -16,14 +16,14 @@ const NAV_ITEMS: Array<{ key: PaneKey; label: string; icon: string }> = [
 const DAYS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 const TODAY_IDX = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
 
-interface PanelClientProps {
+interface DashboardClientProps {
   profile: UserProfile;
   membership: MembershipInfo;
   history: Visit[];
   orders: Order[];
 }
 
-export default function PanelClient({ profile, membership, history, orders }: PanelClientProps) {
+export default function DashboardClient({ profile, membership, history, orders }: DashboardClientProps) {
   const router = useRouter();
   const { clear } = useAuthStore();
   const [pane, setPane] = useState<PaneKey>('home');
@@ -67,7 +67,7 @@ export default function PanelClient({ profile, membership, history, orders }: Pa
               <span className="side-label">{item.label}</span>
             </button>
           ))}
-          <Link href="/rendimiento" className="nav-item no-underline">
+          <Link href="/performance" className="nav-item no-underline">
             <span className="text-xl">📈</span>
             <span className="side-label">RENDIMIENTO</span>
           </Link>

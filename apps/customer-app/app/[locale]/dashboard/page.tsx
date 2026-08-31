@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { setRequestLocale } from 'next-intl/server';
 import { userRepository } from '@/lib/repositories/user.repository';
-import PanelClient from '@/components/PanelClient';
+import DashboardClient from '@/components/DashboardClient';
 
 interface Props {
   params: { locale: string };
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PanelPage({ params }: Props) {
+export default async function DashboardPage({ params }: Props) {
   setRequestLocale(params.locale);
 
   const [profile, membership, history, orders] = await Promise.all([
@@ -29,7 +29,7 @@ export default async function PanelPage({ params }: Props) {
   ]);
 
   return (
-    <PanelClient
+    <DashboardClient
       profile={profile}
       membership={membership}
       history={history}

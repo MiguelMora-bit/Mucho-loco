@@ -6,10 +6,10 @@ import { Link, useRouter } from '@/i18n/routing';
 import { startFireCanvas } from '../../../lib/fire';
 import { useAuthStore } from '../../../lib/stores/auth.store';
 
-function CuentaContent() {
+function AccountContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get('next') || '/panel';
+  const nextPath = searchParams.get('next') || '/dashboard';
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
   const fireRef = useRef<HTMLCanvasElement>(null);
@@ -142,10 +142,10 @@ function CuentaContent() {
   );
 }
 
-export default function CuentaPage() {
+export default function AccountPage() {
   return (
     <Suspense fallback={<div className="bg-ml-black min-h-screen" />}>
-      <CuentaContent />
+      <AccountContent />
     </Suspense>
   );
 }

@@ -129,7 +129,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
       en: 'The new Beast Pre-Workout in Mango Chamoy is here. 300mg caffeine, beta-alanine and a chili kick that wakes anyone up. Hit the store and try it with 15% launch discount.',
     },
     cta: { es: 'VER EN LA TIENDA', en: 'SHOP NOW' },
-    link: '/producto/p7',
+    link: '/product/p7',
     location: { es: 'Tienda Mucho Loco', en: 'Mucho Loco Store' },
     emoji: '🔥',
     accent: '#ff6b1a',

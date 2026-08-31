@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/panel', '/rendimiento', '/checkout', '/en/panel', '/en/rendimiento', '/en/checkout'],
+        disallow: ['/dashboard', '/performance', '/checkout', '/en/dashboard', '/en/performance', '/en/checkout'],
       },
     ],
     sitemap: 'https://mucholoco.mx/sitemap.xml',

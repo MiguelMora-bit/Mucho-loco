@@ -5,7 +5,7 @@ import { SESSION_COOKIE } from './lib/auth';
 
 const intlMiddleware = createMiddleware(routing);
 
-const PROTECTED = ['/panel', '/rendimiento', '/checkout'];
+const PROTECTED = ['/dashboard', '/performance', '/checkout'];
 
 function getLocalePrefix(pathname: string): string {
   const match = pathname.match(/^\/(en)(\/|$)/);
@@ -24,7 +24,7 @@ export function middleware(request: NextRequest) {
   if (PROTECTED.some((p) => path === p || path.startsWith(p + '/'))) {
     if (!request.cookies.get(SESSION_COOKIE)) {
       const url = request.nextUrl.clone();
-      url.pathname = `${getLocalePrefix(pathname)}/cuenta`;
+      url.pathname = `${getLocalePrefix(pathname)}/account`;
       url.searchParams.set('next', pathname);
       return NextResponse.redirect(url);
     }

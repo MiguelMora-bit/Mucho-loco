@@ -3,7 +3,7 @@ import { PRODUCTS } from '@/lib/data';
 
 const BASE = 'https://mucholoco.mx';
 
-const PUBLIC_PATHS = ['', '/cuenta'];
+const PUBLIC_PATHS = ['', '/account'];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
@@ -25,14 +25,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const productPages: MetadataRoute.Sitemap = PRODUCTS.flatMap((p) => [
     {
-      url: `${BASE}/producto/${p.id}`,
+      url: `${BASE}/product/${p.id}`,
       lastModified: now,
       changeFrequency: 'monthly' as const,
       priority: 0.6,
       alternates: {
         languages: {
-          es: `${BASE}/producto/${p.id}`,
-          en: `${BASE}/en/producto/${p.id}`,
+          es: `${BASE}/product/${p.id}`,
+          en: `${BASE}/en/product/${p.id}`,
         },
       },
     },

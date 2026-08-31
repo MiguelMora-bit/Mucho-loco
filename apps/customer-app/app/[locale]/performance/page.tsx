@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { performanceRepository } from '@/lib/repositories/performance.repository';
-import RendimientoClient from '@/components/RendimientoClient';
+import PerformanceClient from '@/components/PerformanceClient';
 
 interface Props {
   params: { locale: string };
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function RendimientoPage({ params }: Props) {
+export default async function PerformancePage({ params }: Props) {
   setRequestLocale(params.locale);
 
   const [stats, records, workouts, heatmap] = await Promise.all([
@@ -27,5 +27,5 @@ export default async function RendimientoPage({ params }: Props) {
     performanceRepository.getHeatmap(),
   ]);
 
-  return <RendimientoClient stats={stats} records={records} workouts={workouts} heatmap={heatmap} />;
+  return <PerformanceClient stats={stats} records={records} workouts={workouts} heatmap={heatmap} />;
 }

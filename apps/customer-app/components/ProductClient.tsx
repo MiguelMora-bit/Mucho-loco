@@ -5,13 +5,13 @@ import { Link } from '@/i18n/routing';
 import { PRODUCT_CATS } from '@/lib/data';
 import type { Product, Lang } from '@mucho-loco/types';
 
-interface ProductoClientProps {
+interface ProductClientProps {
   product: Product;
   siblings: Product[];
   lang: Lang;
 }
 
-export default function ProductoClient({ product, siblings, lang }: ProductoClientProps) {
+export default function ProductClient({ product, siblings, lang }: ProductClientProps) {
   const [qty, setQty] = useState(1);
   const [wishlist, setWishlist] = useState(false);
   const [added, setAdded] = useState(false);
@@ -99,7 +99,7 @@ export default function ProductoClient({ product, siblings, lang }: ProductoClie
             </div>
             <div className="related-grid">
               {siblings.map(p => (
-                <Link key={p.id} href={`/producto/${p.id}` as '/producto/[id]'} className="related-card">
+                <Link key={p.id} href={`/product/${p.id}` as '/product/[id]'} className="related-card">
                   <img src={p.img} alt={p.name} />
                   <div className="rc-body">
                     <div className="rc-name">{p.name}</div>

@@ -6,28 +6,28 @@ import type { Workout, PerformanceStat, PersonalRecord, HeatmapLevel } from '@/l
 
 type ViewKey = 'overview' | 'workouts' | 'heatmap';
 
-interface RendimientoClientProps {
+interface PerformanceClientProps {
   stats: PerformanceStat[];
   records: PersonalRecord[];
   workouts: Workout[];
   heatmap: HeatmapLevel[][];
 }
 
-export default function RendimientoClient({ stats, records, workouts, heatmap }: RendimientoClientProps) {
+export default function PerformanceClient({ stats, records, workouts, heatmap }: PerformanceClientProps) {
   const [view, setView] = useState<ViewKey>('overview');
 
   return (
     <div className="bg-ml-black min-h-screen pb-20">
       <nav className="flex items-center px-8 py-[18px] border-b border-ml-border gap-[18px]">
-        <Link href="/panel" className="flex items-center gap-3 no-underline">
+        <Link href="/dashboard" className="flex items-center gap-3 no-underline">
           <img src="/assets/bull-head.png" className="w-11 h-11 object-contain drop-shadow-[0_0_8px_rgba(225,20,28,0.7)]" alt="" />
           <div className="font-display text-[22px] leading-none text-ml-cream">MUCHO <span className="text-ml-red">LOCO</span></div>
         </Link>
         <span className="font-mono text-[11px] text-ml-cream-dim tracking-wide-xl uppercase">
-          <Link href="/panel" className="text-ml-cream-dim no-underline">Mi cuenta</Link> · Rendimiento
+          <Link href="/dashboard" className="text-ml-cream-dim no-underline">Mi cuenta</Link> · Rendimiento
         </span>
         <span className="flex-1" />
-        <Link href="/panel" className="font-mono text-xs text-ml-cream-dim uppercase tracking-[0.12em] px-4 py-2.5 border border-ml-border no-underline">← VOLVER</Link>
+        <Link href="/dashboard" className="font-mono text-xs text-ml-cream-dim uppercase tracking-[0.12em] px-4 py-2.5 border border-ml-border no-underline">← VOLVER</Link>
       </nav>
 
       <div className="max-w-[1200px] mx-auto mt-8 px-8">

@@ -1,14 +1,14 @@
 import { setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import { productRepository } from '@/lib/repositories/product.repository';
-import ProductoClient from '@/components/ProductoClient';
+import ProductClient from '@/components/ProductClient';
 import type { Lang } from '@mucho-loco/types';
 
 interface Props {
   params: { locale: string; id: string };
 }
 
-export default async function ProductoPage({ params }: Props) {
+export default async function ProductPage({ params }: Props) {
   const { locale, id } = params;
   setRequestLocale(locale);
   const lang = locale as Lang;
@@ -26,5 +26,5 @@ export default async function ProductoPage({ params }: Props) {
 
   const siblings = await productRepository.getSiblings(product.id, product.cat);
 
-  return <ProductoClient product={product} siblings={siblings} lang={lang} />;
+  return <ProductClient product={product} siblings={siblings} lang={lang} />;
 }

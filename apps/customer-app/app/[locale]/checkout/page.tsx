@@ -190,7 +190,7 @@ export default function CheckoutPage() {
               Tu confirmación llegará por email. {delivery === 'pickup' ? 'Listo para retiro en 24–48h.' : 'Envío en 2–3 días hábiles.'}
             </p>
             <div className="flex gap-[14px] justify-center flex-wrap">
-              <Link href="/panel" className="btn-primary inline-block no-underline px-8 py-4 font-display text-xl tracking-[0.06em] bg-ml-red text-white">VER MI CUENTA</Link>
+              <Link href="/dashboard" className="btn-primary inline-block no-underline px-8 py-4 font-display text-xl tracking-[0.06em] bg-ml-red text-white">VER MI CUENTA</Link>
               <Link href="/" className="inline-block no-underline px-8 py-4 font-display text-xl tracking-[0.06em] border border-ml-border text-ml-cream">SEGUIR COMPRANDO</Link>
             </div>
           </div>
