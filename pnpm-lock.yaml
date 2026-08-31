@@ -12,7 +12,7 @@ importers:
         specifier: ^2.5.0
         version: 2.10.12
 
-  apps/tienda-cliente:
+  apps/customer-app:
     dependencies:
       '@mucho-loco/types':
         specifier: workspace:*

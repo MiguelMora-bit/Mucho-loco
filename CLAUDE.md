@@ -11,9 +11,9 @@ Gestionado con **pnpm workspaces + Turborepo**. Un único desarrollador, así qu
 ```
 mucho-loco/
   apps/
-    tienda-cliente/     # Next.js 14 — tienda + app del socio (único app activo hoy)
-    app-sucursal/       # futuro — Fase 1 (versión mínima) / Fase 2 (completa)
-    panel-dueno/        # futuro — Fase 1 (solo lectura) / Fase 2 (completo)
+    customer-app/       # Next.js 14 — tienda + app del socio (único app activo hoy)
+    branch-app/         # futuro — Fase 1 (versión mínima) / Fase 2 (completa)
+    owner-panel/        # futuro — Fase 1 (solo lectura) / Fase 2 (completo)
     backend/            # futuro — pendiente NestJS vs AWS Amplify/Lambda-native
   packages/
     types/              # @mucho-loco/types — tipos de dominio compartidos (Branch, Product, etc.)
@@ -26,13 +26,13 @@ pnpm dev             # turbo run dev — corre dev de todos los apps (o pnpm --f
 pnpm build           # turbo run build — respeta orden de dependencias entre paquetes
 ```
 
-Cada app nuevo (`app-sucursal`, `panel-dueno`, `backend`) tiene su propio `CLAUDE.md` con sus convenciones específicas cuando se cree. `apps/tienda-cliente/CLAUDE.md` ya existe.
+Cada app nuevo (`branch-app`, `owner-panel`, `backend`) tiene su propio `CLAUDE.md` con sus convenciones específicas cuando se cree. `apps/customer-app/CLAUDE.md` ya existe.
 
 ## Visión completa del proyecto (negocio)
 
 Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena de ~15 sucursales (se abren/cierran) que también vende productos propios (preentrenos, proteína, gomitas). Son 3 sistemas:
 
-1. **Tienda + app del cliente** — hoy vive en `apps/tienda-cliente`.
+1. **Tienda + app del cliente** — hoy vive en `apps/customer-app`.
 2. **App de sucursal** (staff) — pedidos a entregar, venta de mostrador, caja.
 3. **Panel del dueño** (HQ) — estadísticas, inventario global, nómina.
 
@@ -64,7 +64,7 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 
 ### Skills instaladas para este proyecto (`.agents/skills/`, ver `skills-lock.json`)
 
-Viven en la raíz del monorepo — aplican a todos los apps, no solo a `tienda-cliente`.
+Viven en la raíz del monorepo — aplican a todos los apps, no solo a `customer-app`.
 
 - `stripe-best-practices`, `stripe-projects` (oficial Stripe) — pagos con tarjeta/Stripe.
 - `paypal-integration` — pagos PayPal.
@@ -76,4 +76,4 @@ No hay skill confiable instalable para Mercado Pago, inventario/POS multi-sucurs
 
 ### Nota operativa
 
-Solo `README.md` estaba trackeado en git antes de la migración a monorepo (todo el resto de `apps/tienda-cliente` nunca se hizo `git add`). Revisar `git status` antes del próximo commit para confirmar qué se está agregando.
+Solo `README.md` estaba trackeado en git antes de la migración a monorepo (todo el resto de `apps/customer-app` nunca se hizo `git add`). Revisar `git status` antes del próximo commit para confirmar qué se está agregando.

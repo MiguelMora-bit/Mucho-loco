@@ -1,4 +1,4 @@
-# CLAUDE.md — apps/tienda-cliente
+# CLAUDE.md — apps/customer-app
 
 Visión de negocio completa y estructura del monorepo: ver [`CLAUDE.md`](../../CLAUDE.md) en la raíz.
 
@@ -20,7 +20,7 @@ El backend (AWS: Cognito, DynamoDB, Lambda) se construirá después, probablemen
 
 ## Tipos compartidos
 
-Los tipos de dominio (`Branch`, `Product`, `CartItem`, `UserProfile`, etc.) viven en el paquete de workspace `@mucho-loco/types` (`packages/types/src/index.ts`), no en este app. Importar siempre como `import type { X } from '@mucho-loco/types'`. Si se agrega un tipo nuevo que otro app del monorepo también necesitará (ej. `app-sucursal`, `backend`), agregarlo ahí — si es exclusivo de este app, se queda local.
+Los tipos de dominio (`Branch`, `Product`, `CartItem`, `UserProfile`, etc.) viven en el paquete de workspace `@mucho-loco/types` (`packages/types/src/index.ts`), no en este app. Importar siempre como `import type { X } from '@mucho-loco/types'`. Si se agrega un tipo nuevo que otro app del monorepo también necesitará (ej. `branch-app`, `backend`), agregarlo ahí — si es exclusivo de este app, se queda local.
 
 ## Estilos
 
@@ -56,8 +56,8 @@ Usuario sin sesión → /panel → middleware → /cuenta?next=/panel
 
 Desde la raíz del monorepo (recomendado, usa Turborepo):
 ```bash
-pnpm --filter tienda-cliente dev
-pnpm --filter tienda-cliente build
+pnpm --filter customer-app dev
+pnpm --filter customer-app build
 ```
 O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 

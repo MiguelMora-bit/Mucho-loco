@@ -1,4 +1,4 @@
-# panel-dueno
+# owner-panel
 
 Pendiente — sin empezar.
 
