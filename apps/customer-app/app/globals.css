@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Smooth in-page navigation (anchor links, route fade-ins) ──
+   Gated behind prefers-reduced-motion: no-preference so motion-sensitive
+   visitors keep instant jumps/cuts. */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+/* Anchor targets sit under the fixed .nav — offset so smooth-scroll doesn't
+   land the section title underneath it. */
+.shop, .branches, .memberships, .contact { scroll-margin-top: 96px; }
+@media (max-width: 700px) {
+  .shop, .branches, .memberships, .contact { scroll-margin-top: 68px; }
+}
+
+@keyframes routeFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.route-fade-in { animation: routeFadeIn 220ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .route-fade-in { animation: none; }
+}
+
 /* ── Design tokens ── disponibles como var() en TODO el proyecto */
 :root {
   --black:      #0a0606;
@@ -1987,8 +2009,14 @@ button, a, input, select { -webkit-tap-highlight-color: rgba(225,20,28,0.2); }
   .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 6px; font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 0.08em; color: var(--cream-dim); transition: all 0.15s; cursor: pointer; border: 1px solid transparent; background: transparent; width: 100%; text-align: left; }
   .nav-item:hover { background: rgba(225,20,28,0.08); color: var(--cream); }
   .nav-item.active { background: rgba(225,20,28,0.15); border-color: var(--red); color: var(--cream); }
-  .pane { display: none; padding: 36px 32px 80px; }
-  .pane.active { display: block; }
+  .pane {
+    display: none; padding: 36px 32px 80px;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 180ms ease, transform 180ms ease, display 180ms allow-discrete;
+  }
+  .pane.active { display: block; opacity: 1; transform: translateY(0); }
+  @starting-style { .pane.active { opacity: 0; transform: translateY(6px); } }
+  @media (prefers-reduced-motion: reduce) { .pane { transition: none; } }
   @media (max-width: 600px) { .pane { padding: 24px 18px 60px; } }
   .stat-card { padding: 22px; background: var(--card); border: 1px solid var(--border); position: relative; overflow: hidden; }
   .stat-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--red); }
