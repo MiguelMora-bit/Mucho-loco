@@ -1,7 +1,7 @@
 import createMiddleware from 'next-intl/middleware';
 import { type NextRequest, NextResponse } from 'next/server';
 import { routing } from './i18n/routing';
-import { SESSION_COOKIE, isProtected } from './lib/auth';
+import { SESSION_COOKIE, NEXT_PARAM, isProtected } from './lib/auth';
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -23,7 +23,7 @@ export function middleware(request: NextRequest) {
     if (!request.cookies.get(SESSION_COOKIE)) {
       const url = request.nextUrl.clone();
       url.pathname = `${getLocalePrefix(pathname)}/account`;
-      url.searchParams.set('next', pathname);
+      url.searchParams.set(NEXT_PARAM, pathname);
       return NextResponse.redirect(url);
     }
   }

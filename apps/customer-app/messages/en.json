@@ -5,7 +5,8 @@
     "coaches": "Coaches",
     "memberships": "Memberships",
     "shop": "Shop",
-    "contact": "Contact"
+    "contact": "Contact",
+    "account": "Account"
   },
   "hero": {
     "live": "15 LOCATIONS · MEXICO CITY METRO",
@@ -65,7 +66,14 @@
       "App with workouts"
     ],
     "partners": "Access with your wellness apps",
-    "partnersSub": "If your company gives you TotalPass or Wellhub, you're in. Just show your QR at the counter."
+    "partnersSub": "If your company gives you TotalPass or Wellhub, you're in. Just show your QR at the counter.",
+    "branchPriceNote": "Prices change by location",
+    "allGymsLocation": "15 gyms · Mexico City area",
+    "partnersEyebrow": "Wellness apps",
+    "partnersNote": "Link your corporate plan and walk right in",
+    "totalPassNote": "Use your credits",
+    "wellhubNote": "Formerly Gympass",
+    "partnerAccepted": "Accepted"
   },
   "shop": {
     "eyebrow": "Fuel for beasts",
@@ -95,7 +103,22 @@
     "branch": "Location of interest",
     "message": "Tell us what brings you",
     "send": "SEND IT",
-    "followUs": "Follow us"
+    "followUs": "Follow us",
+    "freeVisitBadge": "1ST VISIT",
+    "freeVisitTitle": "YOUR FIRST VISIT IS FREE",
+    "freeVisitBody": "Train at any of our 15 locations, on the house. The system detects it automatically when your account is new and you've never had an active membership — no card, no commitment.",
+    "freeVisitCta": "CREATE FREE ACCOUNT",
+    "freeVisitNote": "Auto-detected · 1 visit per person",
+    "freeVisitStep1": "Create your account",
+    "freeVisitStep2": "System verifies you're new",
+    "freeVisitStep3": "Show your QR at the front desk",
+    "latestPosts": "Our latest posts",
+    "feedRefreshLabel": "Refresh posts",
+    "feedLive": "Live via API · refresh",
+    "postDaily": "We post every day",
+    "followers": "followers",
+    "whatsappMessage": "Hi, I have a question about Mucho Loco Gym",
+    "whatsappCta": "Questions? WhatsApp us"
   },
   "avisos": {
     "board": "News",
@@ -105,6 +128,29 @@
     "close": "Close",
     "newTag": "NEW",
     "seeAll": "See all news"
+  },
+  "footer": {
+    "tagline": "15 locations. 120+ coaches. One philosophy: train like loose bulls.",
+    "navigate": "EXPLORE",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "rules": "Rules",
+    "corporate": "Corporate",
+    "madeWith": "MADE WITH FIRE 🔥"
+  },
+  "product": {
+    "store": "Store",
+    "back": "BACK",
+    "addedToBag": "ADDED TO BAG",
+    "addToBag": "ADD TO BAG",
+    "branchPickup": "BRANCH PICKUP",
+    "homeDelivery": "HOME DELIVERY",
+    "securePayment": "SECURE PAYMENT",
+    "moreFrom": "MORE FROM",
+    "theCategory": "THE CATEGORY"
+  },
+  "common": {
+    "updating": "Updating…"
   },
   "meta": {
     "homeTitle": "MUCHO LOCO GYM · No fear, no excuses, pure fire",

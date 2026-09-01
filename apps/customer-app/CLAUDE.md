@@ -78,6 +78,10 @@ O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 
 `dashboard` (`DashboardClient`), `product/[id]` (`ProductClient`) y `performance` (`PerformanceClient`) siguen el mismo patrón: el `page.tsx` es un Server Component async que llama al repository correspondiente y pasa los datos como props; el componente en `components/` es `'use client'` y solo maneja estado de interacción (tabs, cantidad, modales). Nuevas páginas con datos + interactividad deberían seguir esta misma división — así el swap de mock a API real (Fase 5 de la metodología) solo toca el `page.tsx`, nunca el componente cliente.
 
+## Patrón: contenido de landing vía store (announcements, membership tiers, social)
+
+`Memberships`, `Contact` y `AvisosBoard` no reciben su data por props: la leen de un store de Zustand (`lib/stores/announcements.store.ts`, `membershipTiers.store.ts`, `socialLinks.store.ts`, `socialFeed.store.ts`), todos construidos con el factory `lib/stores/createAsyncResource.ts` (`{ data, loading, error, hydrate, fetch }`). El Server Component de home (`app/[locale]/page.tsx`) sigue precargando estos datos vía repository — igual que branches/products — y `MuchoLoco.tsx` los recibe como props y los usa solo para llamar `hydrate()` una vez al montar (así no hay flash de loader en la primera carga). `loading`/`fetch()` quedan disponibles para cuando el componente sí necesita mostrar el loader — `AvisosBoard` re-hace `fetch()` cada vez que se abre, y el botón "EN VIVO VÍA API" del feed de `Contact` lo dispara manualmente. Nuevo contenido de landing sin repository propio (nada de arrays sueltos en el componente) debería seguir este mismo patrón.
+
 ## Próximo hito: backend AWS
 
 Cuando se integre AWS (o el backend que se decida), los cambios serán en:

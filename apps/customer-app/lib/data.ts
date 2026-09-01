@@ -1,4 +1,5 @@
-import type { Branch, Product, Announcement, Lang, ProductCat } from '@mucho-loco/types';
+import type { Branch, Product, Announcement, Lang, ProductCat, MembershipTier } from '@mucho-loco/types';
+import type { SocialLink, FeedPost } from './types/social';
 
 export const BRANCHES: Branch[] = [
   { id: 1,  name: "ROMA SUR",       city: "CDMX",        addr: "Av. Cuauhtémoc 612, Roma Sur",               phone: "55 5564 1101", lat: 19.4080, lng: -99.1593, classes: 26, coaches: 9,  price: 1090, tier: "Premium", featured: true,  hours: "5:00 — 23:00", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=70" },
@@ -98,4 +99,44 @@ export const ANNOUNCEMENTS: Announcement[] = [
     emoji: '🏆',
     accent: '#ffb627',
   },
+];
+
+export const MEMBERSHIP_TIERS: MembershipTier[] = [
+  {
+    key: 'single',
+    name: { es: 'UNA SUCURSAL', en: 'ONE GYM' },
+    factor: 1.0,
+    perks: {
+      es: ['Acceso a tu sucursal elegida', 'Todas las clases de esa sucursal', 'Locker incluido', 'Horario completo 5:00 – 23:00', 'Acceso a la app con rutinas'],
+      en: ['Access to your chosen gym', 'All classes at that location', 'Locker included', 'Full schedule 5:00 – 11:00 PM', 'App with workouts'],
+    },
+    badge: { es: '1 SUCURSAL', en: '1 GYM' },
+  },
+  {
+    key: 'all',
+    name: { es: 'TODAS LAS SUCURSALES', en: 'ALL GYMS' },
+    factor: 1.5,
+    popular: true,
+    perks: {
+      es: ['Acceso a las 15 sucursales', 'Todas las clases en cualquier sede', 'Locker incluido', 'Horario completo en todas', 'Invitado al mes', 'Asesoría nutricional', 'App con rutinas'],
+      en: ['Access to all 15 gyms', 'All classes at any location', 'Locker included', 'Full schedule everywhere', 'One guest/month', 'Nutrition coaching', 'App with workouts'],
+    },
+    badge: { es: '15 SUCURSALES', en: '15 GYMS' },
+  },
+];
+
+export const SOCIAL_LINKS: SocialLink[] = [
+  { key: 'instagram', name: 'Instagram', handle: '@mucholoco.fit', followers: '128K', url: '#' },
+  { key: 'tiktok', name: 'TikTok', handle: '@mucholoco', followers: '342K', url: '#' },
+  { key: 'youtube', name: 'YouTube', handle: 'Mucho Loco Gym', followers: '56K', url: '#' },
+  { key: 'facebook', name: 'Facebook', handle: '/mucholocogym', followers: '89K', url: '#' },
+];
+
+export const SOCIAL_FEED: FeedPost[] = [
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=500&q=70', cap: 'Leg day no perdona 🔥 Roma Sur a tope', likes: '2.4K', ago: '3h', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=500&q=70', cap: 'Nueva clase de HIIT en Condesa 💥', likes: '1.8K', ago: '9h', url: '#' },
+  { net: 'facebook', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=500&q=70', cap: 'Reto de 30 días: ¿te atreves, bestia?', likes: '973', ago: '1d', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=500&q=70', cap: 'PR de peso muerto en Santa Fe 🏋️', likes: '3.1K', ago: '1d', url: '#' },
+  { net: 'facebook', img: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=500&q=70', cap: 'Coaches nuevos en Interlomas. Bienvenidos 🐂', likes: '654', ago: '2d', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=500&q=70', cap: 'Domingo de cardio al aire libre ☀️', likes: '2.0K', ago: '3d', url: '#' },
 ];

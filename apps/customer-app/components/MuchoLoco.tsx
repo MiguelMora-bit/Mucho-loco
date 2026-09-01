@@ -6,17 +6,25 @@ import { useRouter, usePathname } from '@/i18n/routing';
 import { useT } from '../lib/hooks/useT';
 import { useFireCanvas } from '../lib/hooks/useFireCanvas';
 import { useCartStore, selectCartCount } from '../lib/stores/cart.store';
+import { useAnnouncementsStore } from '../lib/stores/announcements.store';
+import { useMembershipTiersStore } from '../lib/stores/membershipTiers.store';
+import { useSocialLinksStore } from '../lib/stores/socialLinks.store';
+import { useSocialFeedStore } from '../lib/stores/socialFeed.store';
 import { getSeenAnnouncementIds, markAnnouncementSeen } from '../lib/announcements';
 import { Nav, Hero, Branches, Memberships, Shop, CartDrawer, Contact, Footer, AvisosButton, AvisosBoard, AvisoSplash } from './landing';
-import type { Branch, Product, Announcement, Lang, PlanKey } from '@mucho-loco/types';
+import type { Branch, Product, Announcement, MembershipTier, Lang, PlanKey } from '@mucho-loco/types';
+import type { SocialLink, FeedPost } from '../lib/types/social';
 
 interface LandingProps {
   branches: Branch[];
   products: Product[];
   announcements: Announcement[];
+  membershipTiers: MembershipTier[];
+  socialLinks: SocialLink[];
+  socialFeed: FeedPost[];
 }
 
-export default function MuchoLoco({ branches, products, announcements }: LandingProps) {
+export default function MuchoLoco({ branches, products, announcements, membershipTiers, socialLinks, socialFeed }: LandingProps) {
   const locale = useLocale();
   const lang = locale as Lang;
   const t = useT();
@@ -34,6 +42,15 @@ export default function MuchoLoco({ branches, products, announcements }: Landing
   useEffect(() => {
     document.body.classList.toggle('darker', darker);
   }, [darker]);
+
+  // Server already fetched these — seed the stores so children read them
+  // without prop-drilling, and without a loader flash on first paint.
+  useEffect(() => {
+    useAnnouncementsStore.getState().hydrate(announcements);
+    useMembershipTiersStore.getState().hydrate(membershipTiers);
+    useSocialLinksStore.getState().hydrate(socialLinks);
+    useSocialFeedStore.getState().hydrate(socialFeed);
+  }, [announcements, membershipTiers, socialLinks, socialFeed]);
 
   useEffect(() => {
     if (!announcements.length) return;
@@ -69,11 +86,11 @@ export default function MuchoLoco({ branches, products, announcements }: Landing
       <Shop t={t} lang={lang} cat={shopCat} setCat={setShopCat} products={products} />
       <Branches t={t} branches={branches} active={activeBranch} setActive={setActiveBranch} />
       <Memberships t={t} branches={branches} branch={memBranch} setBranchId={setMemBranchId} mult={planMultiplier} label={planLabel} lang={lang} />
-      <Contact t={t} lang={lang} />
-      <Footer t={t} lang={lang} />
+      <Contact t={t} />
+      <Footer t={t} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} t={t} />
       <AvisosButton t={t} onOpen={() => setAvisosOpen(true)} announcements={announcements} />
-      <AvisosBoard open={avisosOpen} onClose={() => setAvisosOpen(false)} t={t} lang={lang} announcements={announcements} />
+      <AvisosBoard open={avisosOpen} onClose={() => setAvisosOpen(false)} t={t} lang={lang} />
       {splashAviso && (
         <AvisoSplash
           aviso={splashAviso} t={t} lang={lang}

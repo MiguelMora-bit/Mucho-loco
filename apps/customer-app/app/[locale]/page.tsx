@@ -4,7 +4,9 @@ import { setRequestLocale } from 'next-intl/server';
 import MuchoLoco from '@/components/MuchoLoco';
 import { branchRepository } from '@/lib/repositories/branch.repository';
 import { productRepository } from '@/lib/repositories/product.repository';
-import { ANNOUNCEMENTS } from '@/lib/data';
+import { announcementRepository } from '@/lib/repositories/announcement.repository';
+import { membershipRepository } from '@/lib/repositories/membership.repository';
+import { socialRepository } from '@/lib/repositories/social.repository';
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -57,16 +59,23 @@ export default async function HomePage(props: Props) {
   const { locale } = params;
   setRequestLocale(locale);
 
-  const [branches, products] = await Promise.all([
+  const [branches, products, announcements, membershipTiers, socialLinks, socialFeed] = await Promise.all([
     branchRepository.getAll(),
     productRepository.getAll(),
+    announcementRepository.getAll(),
+    membershipRepository.getTiers(),
+    socialRepository.getLinks(),
+    socialRepository.getFeed(),
   ]);
 
   return (
     <MuchoLoco
       branches={branches}
       products={products}
-      announcements={ANNOUNCEMENTS}
+      announcements={announcements}
+      membershipTiers={membershipTiers}
+      socialLinks={socialLinks}
+      socialFeed={socialFeed}
     />
   );
 }

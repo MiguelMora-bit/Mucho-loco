@@ -64,6 +64,15 @@ export interface Announcement {
   accent: string;
 }
 
+export interface MembershipTier {
+  key: TierKey;
+  name: LocalizedString;
+  factor: number;
+  perks: Record<Lang, string[]>;
+  badge: LocalizedString;
+  popular?: boolean;
+}
+
 export interface AuthUser {
   email: string;
   name: string;
@@ -118,6 +127,7 @@ export interface Translations {
     memberships: string;
     shop: string;
     contact: string;
+    account: string;
   };
   hero: {
     live: string;
@@ -166,6 +176,13 @@ export interface Translations {
     perks: string[];
     partners: string;
     partnersSub: string;
+    branchPriceNote: string;
+    allGymsLocation: string;
+    partnersEyebrow: string;
+    partnersNote: string;
+    totalPassNote: string;
+    wellhubNote: string;
+    partnerAccepted: string;
   };
   shop: {
     eyebrow: string;
@@ -196,6 +213,21 @@ export interface Translations {
     message: string;
     send: string;
     followUs: string;
+    freeVisitBadge: string;
+    freeVisitTitle: string;
+    freeVisitBody: string;
+    freeVisitCta: string;
+    freeVisitNote: string;
+    freeVisitStep1: string;
+    freeVisitStep2: string;
+    freeVisitStep3: string;
+    latestPosts: string;
+    feedRefreshLabel: string;
+    feedLive: string;
+    postDaily: string;
+    followers: string;
+    whatsappMessage: string;
+    whatsappCta: string;
   };
   avisos: {
     board: string;
@@ -205,5 +237,28 @@ export interface Translations {
     close: string;
     newTag: string;
     seeAll: string;
+  };
+  footer: {
+    tagline: string;
+    navigate: string;
+    terms: string;
+    privacy: string;
+    rules: string;
+    corporate: string;
+    madeWith: string;
+  };
+  product: {
+    store: string;
+    back: string;
+    addedToBag: string;
+    addToBag: string;
+    branchPickup: string;
+    homeDelivery: string;
+    securePayment: string;
+    moreFrom: string;
+    theCategory: string;
+  };
+  common: {
+    updating: string;
   };
 }

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { PRODUCT_CATS } from '@/lib/data';
+import { useT } from '@/lib/hooks/useT';
 import { Gallery, Info, RelatedProducts } from './product';
 import type { Product, Lang } from '@mucho-loco/types';
 
@@ -13,6 +14,7 @@ interface ProductClientProps {
 }
 
 export default function ProductClient({ product, siblings, lang }: ProductClientProps) {
+  const t = useT();
   const catLabel = PRODUCT_CATS[lang][product.cat] || product.cat.toUpperCase();
 
   return (
@@ -23,19 +25,19 @@ export default function ProductClient({ product, siblings, lang }: ProductClient
           <div className="name">MUCHO <span>LOCO</span></div>
         </Link>
         <span className="crumbs">
-          <Link href="/">{lang === 'es' ? 'Tienda' : 'Store'}</Link> · {catLabel} · {product.name}
+          <Link href="/">{t.product.store}</Link> · {catLabel} · {product.name}
         </span>
         <span className="grow" />
-        <Link href="/" className="back">← {lang === 'es' ? 'VOLVER' : 'BACK'}</Link>
+        <Link href="/" className="back">← {t.product.back}</Link>
       </nav>
 
       <div className="pd-wrap">
         <div className="pd-main">
           <Gallery product={product} />
-          <Info product={product} catLabel={catLabel} lang={lang} />
+          <Info product={product} catLabel={catLabel} t={t} />
         </div>
 
-        <RelatedProducts siblings={siblings} lang={lang} />
+        <RelatedProducts siblings={siblings} t={t} />
       </div>
     </div>
   );

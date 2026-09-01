@@ -5,7 +5,8 @@
     "coaches": "Coaches",
     "memberships": "Membresías",
     "shop": "Tienda",
-    "contact": "Contacto"
+    "contact": "Contacto",
+    "account": "Mi cuenta"
   },
   "hero": {
     "live": "15 SUCURSALES · CDMX & EDO. MÉX.",
@@ -65,7 +66,14 @@
       "App con rutinas"
     ],
     "partners": "Acceso con tus apps de bienestar",
-    "partnersSub": "Si tu empresa te da TotalPass o Wellhub, entras directo. Solo presenta tu QR en recepción."
+    "partnersSub": "Si tu empresa te da TotalPass o Wellhub, entras directo. Solo presenta tu QR en recepción.",
+    "branchPriceNote": "Los precios cambian según la sucursal",
+    "allGymsLocation": "15 sucursales · CDMX & Edo. Méx.",
+    "partnersEyebrow": "Apps del bienestar",
+    "partnersNote": "Vincula tu plan corporativo y entra sin pagar de más",
+    "totalPassNote": "Entra con tus créditos",
+    "wellhubNote": "Antes Gympass",
+    "partnerAccepted": "Aceptado"
   },
   "shop": {
     "eyebrow": "Combustible para fieras",
@@ -95,7 +103,22 @@
     "branch": "Sucursal de interés",
     "message": "Cuéntanos qué te trae",
     "send": "MANDAR",
-    "followUs": "Síguenos"
+    "followUs": "Síguenos",
+    "freeVisitBadge": "1ª VISITA",
+    "freeVisitTitle": "TU PRIMERA VISITA ES GRATIS",
+    "freeVisitBody": "Entra a entrenar a cualquiera de las 15 sucursales, sin costo. El sistema lo detecta automáticamente cuando tu cuenta es nueva y nunca has tenido una membresía activa — sin tarjeta, sin compromiso.",
+    "freeVisitCta": "CREAR CUENTA GRATIS",
+    "freeVisitNote": "Detección automática · 1 visita por persona",
+    "freeVisitStep1": "Creas tu cuenta",
+    "freeVisitStep2": "El sistema valida que eres nuevo",
+    "freeVisitStep3": "Muestras tu QR en recepción",
+    "latestPosts": "Lo último que publicamos",
+    "feedRefreshLabel": "Actualizar publicaciones",
+    "feedLive": "En vivo vía API · actualizar",
+    "postDaily": "Posteamos todos los días",
+    "followers": "seguidores",
+    "whatsappMessage": "Hola, tengo una duda sobre Mucho Loco Gym",
+    "whatsappCta": "¿Dudas? Escríbenos al WhatsApp"
   },
   "avisos": {
     "board": "Avisos",
@@ -105,6 +128,29 @@
     "close": "Cerrar",
     "newTag": "NUEVO",
     "seeAll": "Ver todos los avisos"
+  },
+  "footer": {
+    "tagline": "15 sucursales. 120+ coaches. Una sola filosofía: entrenar como toros sueltos.",
+    "navigate": "NAVEGAR",
+    "terms": "Términos",
+    "privacy": "Privacidad",
+    "rules": "Reglamento",
+    "corporate": "Empresas",
+    "madeWith": "HECHO CON FUEGO 🔥"
+  },
+  "product": {
+    "store": "Tienda",
+    "back": "VOLVER",
+    "addedToBag": "AGREGADO AL CARRITO",
+    "addToBag": "AGREGAR AL CARRITO",
+    "branchPickup": "RETIRO EN SUCURSAL",
+    "homeDelivery": "ENVÍO A DOMICILIO",
+    "securePayment": "PAGO SEGURO",
+    "moreFrom": "MÁS DE",
+    "theCategory": "LA CATEGORÍA"
+  },
+  "common": {
+    "updating": "Actualizando…"
   },
   "meta": {
     "homeTitle": "MUCHO LOCO GYM · Sin miedo, sin excusas, puro fuego",

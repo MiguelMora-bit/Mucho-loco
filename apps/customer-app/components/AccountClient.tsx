@@ -9,12 +9,17 @@ import { useFireCanvas } from '../lib/hooks/useFireCanvas';
 import { useAsyncSubmit } from '../lib/hooks/useAsyncSubmit';
 import { useAuthStore } from '../lib/stores/auth.store';
 import { postJson } from '../lib/api-client';
+import { NEXT_PARAM } from '../lib/auth';
 import { LoginForm, SignupForm } from './account';
+
+// Placeholder identity for the "social login" button and the empty-email
+// fallback — there's no real OAuth/email provider behind this mock yet.
+const DEMO_EMAIL = 'bestia@mucholoco.mx';
 
 export default function AccountClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get('next') || '/dashboard';
+  const nextPath = searchParams.get(NEXT_PARAM) || '/dashboard';
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const fireRef = useFireCanvas({ count: 70 });
   const { loading, error, run } = useAsyncSubmit({ errorMessage: 'No pudimos iniciar tu sesión. Intenta de nuevo.' });
@@ -32,12 +37,12 @@ export default function AccountClient() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const email = (form.get('email') as string | null) ?? 'bestia@mucholoco.mx';
+    const email = (form.get('email') as string | null) ?? DEMO_EMAIL;
     const name = (form.get('name') as string | null) ?? '';
     await performLogin(email, name);
   }
 
-  const handleSocialLogin = () => performLogin('bestia@mucholoco.mx', '');
+  const handleSocialLogin = () => performLogin(DEMO_EMAIL, '');
 
   return (
     <div className="auth-layout">

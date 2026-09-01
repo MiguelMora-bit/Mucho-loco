@@ -1,12 +1,11 @@
 import Image from 'next/image';
-import type { Lang, Translations } from '@mucho-loco/types';
+import type { Translations } from '@mucho-loco/types';
 
 interface FooterProps {
   t: Translations;
-  lang: Lang;
 }
 
-export function Footer({ t, lang }: FooterProps) {
+export function Footer({ t }: FooterProps) {
   return (
     <footer className="footer">
       <div className="footer-grid">
@@ -16,13 +15,11 @@ export function Footer({ t, lang }: FooterProps) {
             <div className="font-display text-[28px]">MUCHO <span className="text-ml-red">LOCO</span></div>
           </div>
           <p className="text-ml-cream-dim text-sm max-w-[360px]">
-            {lang === 'es'
-              ? '15 sucursales. 120+ coaches. Una sola filosofía: entrenar como toros sueltos.'
-              : '15 locations. 120+ coaches. One philosophy: train like loose bulls.'}
+            {t.footer.tagline}
           </p>
         </div>
         <div>
-          <h4>{lang === 'es' ? 'NAVEGAR' : 'EXPLORE'}</h4>
+          <h4>{t.footer.navigate}</h4>
           <ul>
             <li><a href="#branches">{t.nav.branches}</a></li>
             <li><a href="#memberships">{t.nav.memberships}</a></li>
@@ -32,9 +29,9 @@ export function Footer({ t, lang }: FooterProps) {
         <div>
           <h4>LEGAL</h4>
           <ul>
-            <li><a href="#">{lang === 'es' ? 'Términos' : 'Terms'}</a></li>
-            <li><a href="#">{lang === 'es' ? 'Privacidad' : 'Privacy'}</a></li>
-            <li><a href="#">{lang === 'es' ? 'Reglamento' : 'Rules'}</a></li>
+            <li><a href="#">{t.footer.terms}</a></li>
+            <li><a href="#">{t.footer.privacy}</a></li>
+            <li><a href="#">{t.footer.rules}</a></li>
           </ul>
         </div>
         <div>
@@ -42,12 +39,12 @@ export function Footer({ t, lang }: FooterProps) {
           <ul>
             <li><a href="#">TotalPass</a></li>
             <li><a href="#">Wellhub</a></li>
-            <li><a href="#">{lang === 'es' ? 'Empresas' : 'Corporate'}</a></li>
+            <li><a href="#">{t.footer.corporate}</a></li>
           </ul>
         </div>
       </div>
       <div className="footer-bottom">
-        <span>© 2026 MUCHO LOCO GYM · {lang === 'es' ? 'HECHO CON FUEGO 🔥' : 'MADE WITH FIRE 🔥'}</span>
+        <span>© 2026 MUCHO LOCO GYM · {t.footer.madeWith}</span>
         <span>v1.0 · MX</span>
       </div>
     </footer>

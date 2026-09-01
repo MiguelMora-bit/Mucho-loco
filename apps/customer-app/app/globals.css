@@ -482,25 +482,6 @@ body.darker {
 
 /* ============ MEMBERSHIPS ============ */
 .memberships { padding-bottom: 0; }
-.memb-controls {
-  display: flex; gap: 24px; padding: 0 60px; max-width: 1600px; margin: 0 auto 32px;
-  align-items: center; flex-wrap: wrap;
-}
-.memb-controls label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: var(--cream-dim); text-transform: uppercase; }
-.memb-controls select {
-  padding: 12px 16px; background: var(--card); color: var(--cream);
-  border: 1px solid var(--border); font-family: 'Bebas Neue', sans-serif;
-  font-size: 16px; letter-spacing: 0.1em; min-width: 220px;
-}
-.memb-toggle { display: flex; gap: 0; flex-wrap: wrap; }
-.memb-toggle button {
-  padding: 10px 14px; border: 1px solid var(--border);
-  font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.08em;
-  color: var(--cream-dim); background: var(--card);
-  flex: 1 1 auto; min-width: 0; white-space: nowrap;
-}
-.memb-toggle button + button { border-left: none; }
-.memb-toggle button.active { background: var(--red); color: var(--cream); border-color: var(--red); }
 
 /* Branch picker (prices change per sucursal) */
 .memb-branch-pick {
@@ -537,8 +518,19 @@ body.darker {
   grid-template-columns: repeat(2, minmax(0, 560px));
   justify-content: center;
   gap: 28px;
+  position: relative;
 }
-@media (max-width: 1000px) { .memb-grid.memb-grid-2 { grid-template-columns: 1fr; } }
+@media (max-width: 1000px) { .memb-grid.memb-grid-2 { grid-template-columns: 1fr; } .memb-vs { display: none; } }
+
+/* VS divider between the two tiers — echoes the fight-card framing */
+.memb-vs {
+  position: absolute; top: 40px; left: 50%; transform: translateX(-50%); z-index: 2;
+  width: 72px; height: 72px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--orange), var(--red-deep) 70%);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 6px var(--black), 0 0 36px rgba(255,107,26,0.5);
+  font-family: 'Anton', sans-serif; font-size: 24px; color: var(--cream);
+}
 .memb-card {
   background: var(--card); border: 1px solid var(--border);
   padding: 30px 32px; position: relative; overflow: hidden;
@@ -570,68 +562,27 @@ body.darker {
 .memb-card .price .per { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--cream-dim); letter-spacing: 0.15em; }
 .memb-card.popular .price .amount { color: var(--red); }
 
-/* Period price table (visita / semanal / trimestral / anual) */
-.memb-plans {
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  padding: 6px 0; display: flex; flex-direction: column;
+@keyframes membPricePulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.14); }
+  100% { transform: scale(1); }
 }
-.memb-plans-head {
-  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.25em;
-  color: var(--cream-dim); text-transform: uppercase; padding: 8px 0 4px;
+.memb-card .price.pulse .amount { animation: membPricePulse 0.42s cubic-bezier(.34,1.56,.64,1); }
+
+/* Period picker — compact pills, price lives once in the hero above */
+.memb-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.memb-pill {
+  flex: 1 1 auto; min-height: 40px; padding: 8px 6px;
+  border: 1px solid var(--border); background: var(--card-2); color: var(--cream-dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em;
+  text-transform: uppercase; transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.memb-plan-row {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
-  width: 100%; text-align: left; padding: 7px 12px; border-top: 1px dashed var(--border);
-  background: transparent; color: inherit; cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s;
-  font-family: inherit;
-}
-.memb-plan-row:first-of-type { border-top: none; }
-.memb-plan-row:hover { background: rgba(255,255,255,0.04); }
-.memb-plan-row .mp-radio {
-  width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--cream-dim);
-  position: relative; transition: all 0.15s; flex: 0 0 18px;
-}
-.memb-plan-row.selected {
-  background: rgba(225,20,28,0.12); box-shadow: inset 3px 0 0 var(--red);
-}
-.memb-plan-row.selected .mp-radio { border-color: var(--red); }
-.memb-plan-row.selected .mp-radio::after {
-  content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--red);
-}
-.memb-plan-row .mp-name {
-  font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 0.06em;
-  color: var(--cream);
-}
-.memb-plan-row .mp-price {
-  font-family: 'Anton', sans-serif; font-size: 20px; color: var(--cream);
-  display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; justify-self: end;
-}
-.memb-plan-row .mp-price em {
-  font-family: 'JetBrains Mono', monospace; font-style: normal;
-  font-size: 9px; letter-spacing: 0.12em; color: var(--cream-dim);
-}
-.memb-card.popular .memb-plan-row.selected {
-  background: rgba(255,107,26,0.16); box-shadow: inset 3px 0 0 var(--orange);
-}
-.memb-card.popular .memb-plan-row.selected .mp-radio { border-color: var(--orange); }
-.memb-card.popular .memb-plan-row.selected .mp-radio::after { background: var(--orange); }
-.memb-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; }
-.memb-card ul li { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--cream); }
+.memb-pill.selected { background: var(--red); border-color: var(--red); color: var(--cream); }
+.memb-card.popular .memb-pill.selected { background: var(--orange); border-color: var(--orange); color: var(--black); }
+
+.memb-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; padding-top: 4px; border-top: 1px dashed var(--border); }
+.memb-card ul li { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--cream); padding-top: 8px; }
 .memb-card ul li::before { content: '🔥'; font-size: 14px; }
-.memb-hours {
-  display: flex; align-items: center; gap: 12px; flex: 1;
-  padding: 12px 16px; background: var(--card-2); border: 1px solid var(--border);
-}
-.memb-hours .mh-ico { font-size: 22px; line-height: 1; }
-.memb-hours .mh-label {
-  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
-  color: var(--orange); text-transform: uppercase;
-}
-.memb-hours .mh-value {
-  font-family: 'Anton', sans-serif; font-size: 18px; line-height: 1.1; color: var(--cream); margin-top: 3px;
-}
-.memb-card.popular .memb-hours { border-color: var(--orange); }
 .memb-card .select-btn {
   padding: 14px 20px; background: var(--card-2); color: var(--cream);
   border: 1px solid var(--border); font-family: 'Anton', sans-serif;
@@ -1027,6 +978,8 @@ body.darker {
   font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--cream-dim);
 }
+.feed-live-btn { background: none; border: none; padding: 0; cursor: pointer; }
+.feed-live-btn:disabled { cursor: default; opacity: 0.7; }
 .feed-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .feed-post {
   position: relative; display: block; aspect-ratio: 1; overflow: hidden;
@@ -1116,7 +1069,7 @@ body.darker {
   .branch-detail { margin: 40px 24px 0; padding: 0; }
   .coaches-grid, .shop-grid { grid-template-columns: repeat(2, 1fr); padding: 0 24px; }
   .memb-grid { grid-template-columns: 1fr; padding: 0 24px; }
-  .memb-controls, .shop-controls { padding: 0 24px; }
+  .shop-controls { padding: 0 24px; }
   .free-visit { grid-template-columns: 1fr; gap: 26px; text-align: center; justify-items: center; }
   .fv-body p { margin-left: auto; margin-right: auto; }
   .fv-actions { justify-content: center; }
@@ -1387,11 +1340,6 @@ button, a, input, select { -webkit-tap-highlight-color: rgba(225,20,28,0.2); }
   .coach-card .coach-num { font-size: 22px; top: 12px; right: 12px; }
 
   /* Memberships */
-  .memb-controls { padding: 0 16px; gap: 14px; flex-direction: column; align-items: stretch; }
-  .memb-controls > div { width: 100%; }
-  .memb-controls select { width: 100%; min-width: 0; }
-  .memb-toggle { width: 100%; }
-  .memb-toggle button { flex: 1; padding: 10px 8px; font-size: 12px; }
   .memb-branch-pick { padding: 0 16px; margin-bottom: 28px; }
   .memb-branch-select { width: 100%; }
   .memb-branch-select select { width: 100%; min-width: 0; font-size: 22px; padding: 16px 48px 16px 18px; }

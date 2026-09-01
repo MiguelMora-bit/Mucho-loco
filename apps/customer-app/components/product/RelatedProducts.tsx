@@ -1,20 +1,20 @@
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { formatPrice } from '@/lib/pricing';
-import type { Product, Lang } from '@mucho-loco/types';
+import type { Product, Translations } from '@mucho-loco/types';
 
 interface RelatedProductsProps {
   siblings: Product[];
-  lang: Lang;
+  t: Translations;
 }
 
-export function RelatedProducts({ siblings, lang }: RelatedProductsProps) {
+export function RelatedProducts({ siblings, t }: RelatedProductsProps) {
   if (siblings.length === 0) return null;
 
   return (
     <div className="mt-16">
       <div className="font-display text-[32px] mb-6">
-        {lang === 'es' ? 'MÁS DE' : 'MORE FROM'} <span className="text-ml-red">{lang === 'es' ? 'LA CATEGORÍA' : 'THE CATEGORY'}</span>
+        {t.product.moreFrom} <span className="text-ml-red">{t.product.theCategory}</span>
       </div>
       <div className="related-grid">
         {siblings.map(p => (

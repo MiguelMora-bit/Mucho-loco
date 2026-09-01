@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { formatPrice } from '@/lib/pricing';
-import type { Product, Lang } from '@mucho-loco/types';
+import type { Product, Translations } from '@mucho-loco/types';
 
 interface InfoProps {
   product: Product;
   catLabel: string;
-  lang: Lang;
+  t: Translations;
 }
 
-export function Info({ product, catLabel, lang }: InfoProps) {
+export function Info({ product, catLabel, t }: InfoProps) {
   const [qty, setQty] = useState(1);
   const [wishlist, setWishlist] = useState(false);
   const [added, setAdded] = useState(false);
@@ -37,8 +37,8 @@ export function Info({ product, catLabel, lang }: InfoProps) {
       <div className="pd-actions">
         <button className={'add-btn-main' + (added ? ' done' : '')} onClick={handleAdd}>
           {added
-            ? `✓ ${lang === 'es' ? 'AGREGADO AL CARRITO' : 'ADDED TO BAG'}`
-            : `🔥 ${lang === 'es' ? 'AGREGAR AL CARRITO' : 'ADD TO BAG'}`}
+            ? `✓ ${t.product.addedToBag}`
+            : `🔥 ${t.product.addToBag}`}
         </button>
         <button className={'wishlist-btn' + (wishlist ? ' active' : '')} onClick={() => setWishlist(w => !w)}>
           {wishlist ? '♥' : '♡'}
@@ -47,15 +47,15 @@ export function Info({ product, catLabel, lang }: InfoProps) {
       <div className="mt-6 p-[18px] bg-ml-card border border-ml-border grid grid-cols-3 gap-4">
         <div className="text-center">
           <div className="font-display text-[22px] text-ml-orange">🏪</div>
-          <div className="text-[11px] font-mono text-ml-cream-dim mt-1">{lang === 'es' ? 'RETIRO EN SUCURSAL' : 'BRANCH PICKUP'}</div>
+          <div className="text-[11px] font-mono text-ml-cream-dim mt-1">{t.product.branchPickup}</div>
         </div>
         <div className="text-center">
           <div className="font-display text-[22px] text-ml-orange">📦</div>
-          <div className="text-[11px] font-mono text-ml-cream-dim mt-1">{lang === 'es' ? 'ENVÍO A DOMICILIO' : 'HOME DELIVERY'}</div>
+          <div className="text-[11px] font-mono text-ml-cream-dim mt-1">{t.product.homeDelivery}</div>
         </div>
         <div className="text-center">
           <div className="font-display text-[22px] text-ml-orange">🔒</div>
-          <div className="text-[11px] font-mono text-ml-cream-dim mt-1">{lang === 'es' ? 'PAGO SEGURO' : 'SECURE PAYMENT'}</div>
+          <div className="text-[11px] font-mono text-ml-cream-dim mt-1">{t.product.securePayment}</div>
         </div>
       </div>
     </div>
