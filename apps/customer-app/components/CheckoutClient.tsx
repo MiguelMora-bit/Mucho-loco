@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { useCartStore } from '../lib/stores/cart.store';
@@ -24,7 +24,7 @@ export default function CheckoutClient() {
   const [payMethod, setPayMethod] = useState<PayMethod>('card');
   const { loading: placing, error, run } = useAsyncSubmit({ errorMessage: 'No pudimos procesar tu pedido. Intenta de nuevo.' });
 
-  async function placeOrder(e: FormEvent<HTMLFormElement>) {
+  async function placeOrder(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const shipping = delivery === 'home' ? 99 : 0;
     const total = cart.reduce((n, i) => n + i.price * i.qty, 0) + shipping;

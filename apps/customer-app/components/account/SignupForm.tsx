@@ -1,9 +1,9 @@
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { SocialButtons } from './SocialButtons';
 
 interface SignupFormProps {
   loading: boolean;
-  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
   onSocialLogin: () => void;
 }
 

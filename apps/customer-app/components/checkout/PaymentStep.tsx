@@ -1,6 +1,6 @@
 'use client';
 
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { useCartStore, selectSubtotal } from '../../lib/stores/cart.store';
 import { formatPrice } from '../../lib/pricing';
 
@@ -12,7 +12,7 @@ interface PaymentStepProps {
   setPayMethod: (m: PayMethod) => void;
   placing: boolean;
   error: string | null;
-  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
 }
 
 const PAY_LABELS: Record<PayMethod, string> = {

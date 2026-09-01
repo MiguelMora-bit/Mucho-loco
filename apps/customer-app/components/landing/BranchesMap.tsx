@@ -1,6 +1,6 @@
 'use client';
 
-import { APIProvider, Map, AdvancedMarker, AdvancedMarkerAnchorPoint } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import type { Branch } from '@mucho-loco/types';
 
 const CDMX_CENTER = { lat: 19.4326, lng: -99.1332 };
@@ -42,7 +42,8 @@ export function BranchesMap({ branches, active, setActive }: BranchesMapProps) {
             <AdvancedMarker
               key={b.id}
               position={{ lat: b.lat, lng: b.lng }}
-              anchorPoint={AdvancedMarkerAnchorPoint.CENTER}
+              anchorLeft="50%"
+              anchorTop="50%"
               onClick={() => setActive(b)}
             >
               <div className={'pin' + (active.id === b.id ? ' active' : '')}>

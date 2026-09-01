@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { Link, useRouter } from '@/i18n/routing';
@@ -34,7 +34,7 @@ export default function AccountClient() {
     });
   }
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const email = (form.get('email') as string | null) ?? DEMO_EMAIL;
