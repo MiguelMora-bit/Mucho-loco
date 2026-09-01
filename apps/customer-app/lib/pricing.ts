@@ -9,3 +9,8 @@ export function calculateMembershipPrice(
 ): number {
   return Math.round((basePrice * tierFactor * periodMultiplier) / 10) * 10;
 }
+
+/** Formats a peso amount as "$X,XXX" — the one place this string shape gets built. */
+export function formatPrice(amount: number): string {
+  return `$${amount.toLocaleString()}`;
+}

@@ -1,11 +1,9 @@
 import createMiddleware from 'next-intl/middleware';
 import { type NextRequest, NextResponse } from 'next/server';
 import { routing } from './i18n/routing';
-import { SESSION_COOKIE } from './lib/auth';
+import { SESSION_COOKIE, isProtected } from './lib/auth';
 
 const intlMiddleware = createMiddleware(routing);
-
-const PROTECTED = ['/dashboard', '/performance', '/checkout'];
 
 function getLocalePrefix(pathname: string): string {
   const match = pathname.match(/^\/(en)(\/|$)/);
@@ -21,7 +19,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const path = cleanPath(pathname);
 
-  if (PROTECTED.some((p) => path === p || path.startsWith(p + '/'))) {
+  if (isProtected(path)) {
     if (!request.cookies.get(SESSION_COOKIE)) {
       const url = request.nextUrl.clone();
       url.pathname = `${getLocalePrefix(pathname)}/account`;

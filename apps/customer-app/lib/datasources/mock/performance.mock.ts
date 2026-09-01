@@ -1,6 +1,5 @@
 import type { Workout, PerformanceStat, PersonalRecord, HeatmapLevel } from '../../types/performance';
-
-const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+import { delay } from './delay';
 
 const MOCK_STATS: PerformanceStat[] = [
   { lbl: 'ENTRENAMIENTOS ESTE MES', num: '18', sub: '+3 vs mes anterior', color: 'var(--orange)' },

@@ -1,7 +1,6 @@
 import type { Branch } from '@mucho-loco/types';
 import { BRANCHES } from '../../data';
-
-const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+import { delay } from './delay';
 
 export class BranchMockDatasource {
   async getAll(): Promise<Branch[]> {

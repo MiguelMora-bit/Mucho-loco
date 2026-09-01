@@ -18,14 +18,15 @@ type Locale = (typeof routing.locales)[number];
 
 interface LocaleLayoutProps {
   children: ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }
 
 export async function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params }: { params: { locale: string } }) {
+export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
+  const params = await props.params;
   const { locale } = params;
   const t = await getTranslations({ locale, namespace: 'meta' });
   const isEn = locale === 'en';
@@ -66,7 +67,13 @@ export async function generateMetadata({ params }: { params: { locale: string } 
   };
 }
 
-export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
+export default async function LocaleLayout(props: LocaleLayoutProps) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
   const { locale } = params;
 
   if (!routing.locales.includes(locale as Locale)) {

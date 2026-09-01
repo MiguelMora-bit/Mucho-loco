@@ -12,8 +12,8 @@ export interface Branch {
   city: string;
   addr: string;
   phone: string;
-  x: number;
-  y: number;
+  lat: number;
+  lng: number;
   classes: number;
   coaches: number;
   price: number;
@@ -99,6 +99,7 @@ export interface OrderItem {
   name: string;
   flav: string;
   img: string;
+  qty: number;
 }
 
 export interface Order {

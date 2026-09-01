@@ -1,7 +1,6 @@
 import type { Product } from '@mucho-loco/types';
 import { PRODUCTS } from '../../data';
-
-const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+import { delay } from './delay';
 
 export class ProductMockDatasource {
   async getAll(): Promise<Product[]> {

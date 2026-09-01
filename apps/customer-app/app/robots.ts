@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { PROTECTED_PATHS } from '@/lib/auth';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -6,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/dashboard', '/performance', '/checkout', '/en/dashboard', '/en/performance', '/en/checkout'],
+        disallow: PROTECTED_PATHS.flatMap((p) => [p, `/en${p}`]),
       },
     ],
     sitemap: 'https://mucholoco.mx/sitemap.xml',

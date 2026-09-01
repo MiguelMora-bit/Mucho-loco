@@ -349,19 +349,30 @@ body.darker {
   pointer-events: none;
 }
 .map-svg { width: 100%; height: 100%; position: relative; z-index: 2; }
-.map-country path { fill: rgba(225, 20, 28, 0.08); stroke: rgba(225, 20, 28, 0.4); stroke-width: 0.5; }
+.map-wrap-empty { display: flex; align-items: center; justify-content: center; padding: 24px; }
+.map-wrap-empty p { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cream-dim); text-align: center; line-height: 1.8; }
+.map-wrap-empty code { color: var(--yellow); }
 .pin {
+  position: relative; width: 32px; height: 32px;
   cursor: pointer;
   transition: transform 0.2s;
   transform-origin: center;
 }
-.pin .pin-glow { fill: var(--red); opacity: 0.3; animation: ping 2s infinite; }
-.pin .pin-body { fill: var(--red); stroke: var(--cream); stroke-width: 0.4; }
+.pin-glow {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--red); opacity: 0.3; animation: ping 2s infinite;
+}
+.pin-body {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--red); border: 1.4px solid var(--cream);
+}
 .pin:hover { transform: scale(1.4); }
-.pin:hover .pin-body { fill: var(--orange); }
-.pin.active .pin-body { fill: var(--yellow); stroke: var(--red); }
-.pin.active .pin-glow { fill: var(--yellow); }
-@keyframes ping { 0% { r: 2; opacity: 0.6; } 100% { r: 8; opacity: 0; } }
+.pin:hover .pin-body { background: var(--orange); }
+.pin.active .pin-body { background: var(--yellow); border-color: var(--red); }
+.pin.active .pin-glow { background: var(--yellow); }
+@keyframes ping { 0% { width: 10px; height: 10px; opacity: 0.6; } 100% { width: 32px; height: 32px; opacity: 0; } }
 
 .map-legend {
   position: absolute; bottom: 16px; left: 16px;
@@ -1888,7 +1899,7 @@ button, a, input, select { -webkit-tap-highlight-color: rgba(225,20,28,0.2); }
   .auth-side .top .name span { color: var(--red); }
   .auth-headline { position: relative; z-index: 2; font-family: 'Anton', sans-serif; font-size: clamp(56px, 8vw, 110px); line-height: 0.85; text-transform: uppercase; color: var(--cream); }
   .auth-headline .flame { background: linear-gradient(180deg, #ffe066, #ff8c1a 40%, #e1141c 75%, #8b0a10); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 28px rgba(255,120,30,0.6)); }
-  .auth-mascot { position: absolute; right: -40px; bottom: -20px; width: 380px; filter: drop-shadow(0 0 60px rgba(225,20,28,0.6)); opacity: 0.8; pointer-events: none; z-index: 1; }
+  .auth-mascot { position: absolute; right: -40px; bottom: -20px; width: 380px; height: auto; filter: drop-shadow(0 0 60px rgba(225,20,28,0.6)); opacity: 0.8; pointer-events: none; z-index: 1; }
   .auth-foot { position: relative; z-index: 2; color: var(--cream-dim); font-size: 13px; max-width: 360px; }
   .auth-form { padding: 48px; display: flex; flex-direction: column; justify-content: center; background: var(--black); }
   .auth-form-inner { width: 100%; max-width: 440px; margin: 0 auto; }

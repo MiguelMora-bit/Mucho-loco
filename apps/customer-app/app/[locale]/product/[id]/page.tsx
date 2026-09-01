@@ -1,19 +1,38 @@
-import { setRequestLocale } from 'next-intl/server';
+import { cache } from 'react';
+import type { Metadata } from 'next';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import { productRepository } from '@/lib/repositories/product.repository';
 import ProductClient from '@/components/ProductClient';
 import type { Lang } from '@mucho-loco/types';
 
 interface Props {
-  params: { locale: string; id: string };
+  params: Promise<{ locale: string; id: string }>;
 }
 
-export default async function ProductPage({ params }: Props) {
+// generateMetadata and the page body both need the product for the same
+// request — cache() dedupes them to a single productRepository.getById call.
+const getProduct = cache((id: string) => productRepository.getById(id));
+
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
+  const { locale, id } = params;
+  const product = await getProduct(id);
+  if (!product) return {};
+  const t = await getTranslations({ locale, namespace: 'meta' });
+  return {
+    title: `${product.name} · ${t('productoTitle')}`,
+    description: t('productoDesc'),
+  };
+}
+
+export default async function ProductPage(props: Props) {
+  const params = await props.params;
   const { locale, id } = params;
   setRequestLocale(locale);
   const lang = locale as Lang;
 
-  const product = await productRepository.getById(id);
+  const product = await getProduct(id);
 
   if (!product) {
     return (

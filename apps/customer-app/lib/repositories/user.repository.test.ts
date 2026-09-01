@@ -4,7 +4,7 @@ import { userRepository } from './user.repository';
 describe('userRepository', () => {
   it('createOrder adds an order that then shows up in getOrders', async () => {
     const before = await userRepository.getOrders();
-    const items = [{ name: 'Test Product', flav: 'Test Flavor', img: '/assets/test.jpg' }];
+    const items = [{ name: 'Test Product', flav: 'Test Flavor', img: '/assets/test.jpg', qty: 2 }];
 
     const created = await userRepository.createOrder(items, 123);
 

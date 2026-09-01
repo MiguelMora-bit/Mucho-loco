@@ -7,10 +7,11 @@ import { productRepository } from '@/lib/repositories/product.repository';
 import { ANNOUNCEMENTS } from '@/lib/data';
 
 interface Props {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const { locale } = params;
   const t = await getTranslations({ locale, namespace: 'meta' });
   const baseUrl = 'https://mucholoco.mx';
@@ -51,7 +52,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function HomePage({ params }: Props) {
+export default async function HomePage(props: Props) {
+  const params = await props.params;
   const { locale } = params;
   setRequestLocale(locale);
 

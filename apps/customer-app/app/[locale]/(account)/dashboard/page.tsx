@@ -5,10 +5,11 @@ import { userRepository } from '@/lib/repositories/user.repository';
 import DashboardClient from '@/components/DashboardClient';
 
 interface Props {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const { locale } = params;
   const t = await getTranslations({ locale, namespace: 'meta' });
   return {
@@ -18,7 +19,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function DashboardPage({ params }: Props) {
+export default async function DashboardPage(props: Props) {
+  const params = await props.params;
   setRequestLocale(params.locale);
 
   const [profile, membership, history, orders] = await Promise.all([

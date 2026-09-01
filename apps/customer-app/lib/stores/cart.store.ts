@@ -61,4 +61,4 @@ export const selectCartCount = (s: CartStore): number =>
   s._hydrated ? s.items.reduce((n, i) => n + i.qty, 0) : 0;
 
 export const selectSubtotal = (s: CartStore): number =>
-  s.items.reduce((n, i) => n + i.price * i.qty, 0);
+  s._hydrated ? s.items.reduce((n, i) => n + i.price * i.qty, 0) : 0;

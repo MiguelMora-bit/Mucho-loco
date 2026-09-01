@@ -4,10 +4,11 @@ import { performanceRepository } from '@/lib/repositories/performance.repository
 import PerformanceClient from '@/components/PerformanceClient';
 
 interface Props {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const { locale } = params;
   const t = await getTranslations({ locale, namespace: 'meta' });
   return {
@@ -17,7 +18,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PerformancePage({ params }: Props) {
+export default async function PerformancePage(props: Props) {
+  const params = await props.params;
   setRequestLocale(params.locale);
 
   const [stats, records, workouts, heatmap] = await Promise.all([

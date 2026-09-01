@@ -1,6 +1,5 @@
 import type { UserProfile, MembershipInfo, Visit, Order, OrderItem } from '@mucho-loco/types';
-
-const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+import { delay } from './delay';
 
 const MONTHS_ES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 
@@ -40,8 +39,8 @@ let MOCK_ORDERS: Order[] = [
     date: '19 JUN 2026',
     status: 'ready',
     items: [
-      { name: 'Pre-Entreno Bestia',  flav: 'Mango Chamoy', img: '/assets/prod-pre-mango.jpg' },
-      { name: 'Whey Protein 5LBS',   flav: 'Strawberry',   img: '/assets/prod-whey-strawberry.jpg' },
+      { name: 'Pre-Entreno Bestia',  flav: 'Mango Chamoy', img: '/assets/prod-pre-mango.jpg', qty: 1 },
+      { name: 'Whey Protein 5LBS',   flav: 'Strawberry',   img: '/assets/prod-whey-strawberry.jpg', qty: 1 },
     ],
     total: 2080,
   },
@@ -49,7 +48,7 @@ let MOCK_ORDERS: Order[] = [
     id: '#ML-240601',
     date: '01 JUN 2026',
     status: 'done',
-    items: [{ name: 'Shaker Loco', flav: '700ml', img: '/assets/mucho-loco-logo.jpg' }],
+    items: [{ name: 'Shaker Loco', flav: '700ml', img: '/assets/mucho-loco-logo.jpg', qty: 1 }],
     total: 290,
   },
 ];
