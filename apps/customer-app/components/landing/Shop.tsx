@@ -46,11 +46,11 @@ export function Shop({ t, lang, cat, setCat, products }: ShopProps) {
               <Link href={`/product/${p.id}`} className="no-underline text-inherit flex flex-col flex-1">
                 <div className="product-img">
                   {p.tag && <div className={'product-tag ' + p.tag}>{p.tag}</div>}
-                  <Image src={p.img} alt={p.name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover" />
+                  <Image src={p.img} alt={p.name[lang]} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover" />
                 </div>
                 <div className="product-body">
-                  <div className="product-name">{p.name}</div>
-                  <div className="product-flav">{p.flav}</div>
+                  <div className="product-name">{p.name[lang]}</div>
+                  <div className="product-flav">{p.flav[lang]}</div>
                   <div className="product-row">
                     <div className="product-price">${p.price}</div>
                     <button

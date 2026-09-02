@@ -21,8 +21,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   if (!product) return {};
   const t = await getTranslations({ locale, namespace: 'meta' });
   return {
-    title: `${product.name} · ${t('productoTitle')}`,
-    description: t('productoDesc'),
+    title: `${product.name[locale as Lang]} · ${t('productTitle')}`,
+    description: t('productDesc'),
   };
 }
 
@@ -35,10 +35,11 @@ export default async function ProductPage(props: Props) {
   const product = await getProduct(id);
 
   if (!product) {
+    const t = await getTranslations({ locale, namespace: 'product' });
     return (
       <div className="px-8 py-20 text-center">
-        <h1 className="font-display text-5xl">PRODUCTO NO ENCONTRADO</h1>
-        <Link href="/" className="text-ml-red font-mono text-sm">← VOLVER A LA TIENDA</Link>
+        <h1 className="font-display text-5xl">{t('notFound')}</h1>
+        <Link href="/" className="text-ml-red font-mono text-sm">← {t('backToShop')}</Link>
       </div>
     );
   }

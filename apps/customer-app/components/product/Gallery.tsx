@@ -1,11 +1,12 @@
 import Image from 'next/image';
-import type { Product } from '@mucho-loco/types';
+import type { Lang, Product } from '@mucho-loco/types';
 
 interface GalleryProps {
   product: Product;
+  lang: Lang;
 }
 
-export function Gallery({ product }: GalleryProps) {
+export function Gallery({ product, lang }: GalleryProps) {
   return (
     <div className="gallery">
       <div className="main-img">
@@ -14,7 +15,7 @@ export function Gallery({ product }: GalleryProps) {
             {product.tag}
           </div>
         )}
-        <Image src={product.img} alt={product.name} fill sizes="(max-width: 980px) 100vw, 50vw" className="object-cover" priority />
+        <Image src={product.img} alt={product.name[lang]} fill sizes="(max-width: 980px) 100vw, 50vw" className="object-cover" priority />
       </div>
     </div>
   );

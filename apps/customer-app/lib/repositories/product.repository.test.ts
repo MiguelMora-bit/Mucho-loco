@@ -10,7 +10,7 @@ describe('productRepository', () => {
 
   it('getById returns the matching product', async () => {
     const product = await productRepository.getById('p7');
-    expect(product?.name).toBe('Pre-Entreno Bestia');
+    expect(product?.name.es).toBe('Pre-Entreno Bestia');
   });
 
   it('getById returns null for an unknown id', async () => {

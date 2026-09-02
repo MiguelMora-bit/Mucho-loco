@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale } from 'next-intl';
 import { useLogout } from '@/lib/hooks/useLogout';
 import { useDashboardPaneStore } from '@/lib/stores/dashboardPane.store';
+import { useT } from '@/lib/hooks/useT';
 import { QrModal, Header, HomePane, AccessPane, OrdersPane, ProfilePane } from './dashboard';
-import type { UserProfile, MembershipInfo, Visit, Order } from '@mucho-loco/types';
+import type { UserProfile, MembershipInfo, Visit, Order, Lang } from '@mucho-loco/types';
 
 interface DashboardClientProps {
   profile: UserProfile;
@@ -14,6 +16,8 @@ interface DashboardClientProps {
 }
 
 export default function DashboardClient({ profile, membership, history, orders }: DashboardClientProps) {
+  const t = useT();
+  const lang = useLocale() as Lang;
   const logout = useLogout();
   const { pane, leaving, setPane } = useDashboardPaneStore();
   const [qrOpen, setQrOpen] = useState(false);
@@ -21,13 +25,13 @@ export default function DashboardClient({ profile, membership, history, orders }
 
   return (
     <>
-      <QrModal open={qrOpen} onClose={() => setQrOpen(false)} />
-      <Header pane={pane} avatarInitial={profile.name[0]} />
+      <QrModal t={t} open={qrOpen} onClose={() => setQrOpen(false)} />
+      <Header t={t} pane={pane} avatarInitial={profile.name[0]} />
 
-      <HomePane active={isActive('home')} profile={profile} membership={membership} onRenew={() => setPane('access')} />
-      <AccessPane active={isActive('access')} profile={profile} membership={membership} history={history} onShowQr={() => setQrOpen(true)} />
-      <OrdersPane active={isActive('orders')} orders={orders} />
-      <ProfilePane active={isActive('profile')} profile={profile} membership={membership} onRenew={() => setPane('access')} onLogout={logout} />
+      <HomePane t={t} active={isActive('home')} profile={profile} membership={membership} onRenew={() => setPane('access')} />
+      <AccessPane t={t} active={isActive('access')} profile={profile} membership={membership} history={history} onShowQr={() => setQrOpen(true)} />
+      <OrdersPane t={t} lang={lang} active={isActive('orders')} orders={orders} />
+      <ProfilePane t={t} active={isActive('profile')} profile={profile} membership={membership} onRenew={() => setPane('access')} onLogout={logout} />
     </>
   );
 }

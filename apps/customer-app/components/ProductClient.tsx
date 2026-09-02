@@ -25,7 +25,7 @@ export default function ProductClient({ product, siblings, lang }: ProductClient
           <div className="name">MUCHO <span>LOCO</span></div>
         </Link>
         <span className="crumbs">
-          <Link href="/">{t.product.store}</Link> · {catLabel} · {product.name}
+          <Link href="/">{t.product.store}</Link> · {catLabel} · {product.name[lang]}
         </span>
         <span className="grow" />
         <Link href="/" className="back">← {t.product.back}</Link>
@@ -33,11 +33,11 @@ export default function ProductClient({ product, siblings, lang }: ProductClient
 
       <div className="pd-wrap">
         <div className="pd-main">
-          <Gallery product={product} />
-          <Info product={product} catLabel={catLabel} t={t} />
+          <Gallery product={product} lang={lang} />
+          <Info product={product} catLabel={catLabel} t={t} lang={lang} />
         </div>
 
-        <RelatedProducts siblings={siblings} t={t} />
+        <RelatedProducts siblings={siblings} t={t} lang={lang} />
       </div>
     </div>
   );

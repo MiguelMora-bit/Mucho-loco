@@ -1,4 +1,4 @@
-const SEEN_KEY = 'ml_avisos_seen';
+const SEEN_KEY = 'ml_announcements_seen';
 
 export function getSeenAnnouncementIds(): string[] {
   try {

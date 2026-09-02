@@ -1,3 +1,5 @@
+import type { LocalizedString } from '@mucho-loco/types';
+
 export type SocialNetwork = 'instagram' | 'tiktok' | 'youtube' | 'facebook';
 
 export interface SocialLink {
@@ -11,7 +13,7 @@ export interface SocialLink {
 export interface FeedPost {
   net: SocialNetwork;
   img: string;
-  cap: string;
+  cap: LocalizedString;
   likes: string;
   ago: string;
   url: string;

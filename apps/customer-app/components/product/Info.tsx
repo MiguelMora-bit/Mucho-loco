@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { formatPrice } from '@/lib/pricing';
-import type { Product, Translations } from '@mucho-loco/types';
+import type { Lang, Product, Translations } from '@mucho-loco/types';
 
 interface InfoProps {
   product: Product;
   catLabel: string;
   t: Translations;
+  lang: Lang;
 }
 
-export function Info({ product, catLabel, t }: InfoProps) {
+export function Info({ product, catLabel, t, lang }: InfoProps) {
   const [qty, setQty] = useState(1);
   const [wishlist, setWishlist] = useState(false);
   const [added, setAdded] = useState(false);
@@ -21,8 +22,8 @@ export function Info({ product, catLabel, t }: InfoProps) {
   return (
     <div className="pd-info">
       <span className="cat-eyebrow">{catLabel}</span>
-      <h1>{product.name}</h1>
-      <div className="flav-label">{product.flav}</div>
+      <h1>{product.name[lang]}</h1>
+      <div className="flav-label">{product.flav[lang]}</div>
       <div className="price-row">
         <div className="price">{formatPrice(product.price)}<small className="text-ml-cream-dim text-lg ml-1.5">MXN</small></div>
       </div>

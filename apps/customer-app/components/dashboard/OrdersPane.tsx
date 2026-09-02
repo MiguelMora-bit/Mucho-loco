@@ -1,20 +1,23 @@
 import Image from 'next/image';
 import { formatPrice } from '@/lib/pricing';
-import type { Order } from '@mucho-loco/types';
+import { formatDate } from '@/lib/dates';
+import type { Lang, Order, Translations } from '@mucho-loco/types';
 
 interface OrdersPaneProps {
+  t: Translations;
+  lang: Lang;
   active: boolean;
   orders: Order[];
 }
 
-export function OrdersPane({ active, orders }: OrdersPaneProps) {
+export function OrdersPane({ t, lang, active, orders }: OrdersPaneProps) {
   return (
     <div className={'pane' + (active ? ' active' : '')}>
       {orders.map((order) => (
         <div key={order.id} className="order-card">
           <div className="flex items-center justify-between mb-3.5">
-            <span className="font-mono text-xs text-ml-cream-dim uppercase tracking-[0.12em]">{order.id} · {order.date}</span>
-            <span className={'status ' + order.status}>{order.status === 'ready' ? 'LISTO PARA RETIRO' : 'ENTREGADO'}</span>
+            <span className="font-mono text-xs text-ml-cream-dim uppercase tracking-[0.12em]">{order.id} · {formatDate(order.date, lang)}</span>
+            <span className={'status ' + order.status}>{order.status === 'ready' ? t.dashboard.orders.ready : t.dashboard.orders.delivered}</span>
           </div>
           <div className="flex gap-2.5 flex-wrap">
             {order.items.map((item, i) => (

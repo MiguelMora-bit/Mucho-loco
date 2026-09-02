@@ -1,21 +1,23 @@
+import type { LocalizedString } from '@mucho-loco/types';
+
 export interface Workout {
   date: string;
-  name: string;
+  name: LocalizedString;
   sets: number;
   vol: string;
-  pr: string | null;
+  pr: LocalizedString | null;
   duration: string;
 }
 
 export interface PerformanceStat {
-  lbl: string;
+  lbl: LocalizedString;
   num: string;
-  sub: string;
+  sub: LocalizedString;
   color: string;
 }
 
 export interface PersonalRecord {
-  exercise: string;
+  exercise: LocalizedString;
   weight: string;
   date: string;
   delta: string;

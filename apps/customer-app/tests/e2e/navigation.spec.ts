@@ -13,9 +13,9 @@ test.describe('navigation', () => {
 
   test('the announcement splash can be dismissed without blocking further navigation', async ({ page }) => {
     await page.goto('/');
-    const splash = page.locator('.aviso-splash');
+    const splash = page.locator('.announcement-splash');
     if (await splash.isVisible({ timeout: 500 }).catch(() => false)) {
-      await page.locator('.aviso-splash-close').click();
+      await page.locator('.announcement-splash-close').click();
       await expect(splash).toBeHidden();
     }
     await page.locator('a.login-btn').click();

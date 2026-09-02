@@ -21,24 +21,24 @@ export const BRANCHES: Branch[] = [
 
 
 export const PRODUCTS: Product[] = [
-  { id: 'p1',  cat: 'proteinas', name: 'Whey Protein 5LBS',           flav: 'Strawberry',        price: 1290, img: '/assets/prod-whey-strawberry.jpg', tag: 'BEST' },
-  { id: 'p2',  cat: 'proteinas', name: 'Whey Protein 2.2LBS',         flav: 'Cappuccino',        price: 990,  img: '/assets/prod-whey-cappuccino.jpg' },
-  { id: 'p3',  cat: 'proteinas', name: 'Whey Protein 2.2LBS',         flav: 'Cookies & Cream',   price: 990,  img: '/assets/prod-whey-flavors.jpg' },
-  { id: 'p4',  cat: 'proteinas', name: 'Whey Protein 2.2LBS',         flav: 'Sprinkle Donut',    price: 990,  img: '/assets/prod-whey-flavors.jpg', tag: 'NEW' },
-  { id: 'p5',  cat: 'proteinas', name: 'Whey Protein 1KG',            flav: 'Cinnamon Roll',     price: 690,  img: '/assets/prod-whey-flavors.jpg' },
-  { id: 'p6',  cat: 'proteinas', name: 'Whey Protein 1KG',            flav: 'Chocolate',         price: 690,  img: '/assets/prod-whey-flavors.jpg' },
-  { id: 'p7',  cat: 'pre',       name: 'Pre-Entreno Bestia',          flav: 'Mango Chamoy',      price: 790,  img: '/assets/prod-pre-mango.jpg', tag: 'HOT' },
-  { id: 'p8',  cat: 'pre',       name: 'Creatine Monohydrate',        flav: '500g · 5g por servicio', price: 590, img: '/assets/prod-creatine.jpg' },
-  { id: 'p9',  cat: 'energy',    name: 'Mucho Loco Energy 473ml',     flav: 'Mora-Uva',          price: 45,   img: '/assets/prod-energy.jpg' },
-  { id: 'p10', cat: 'energy',    name: 'Mucho Loco Energy 473ml',     flav: 'Sin azúcar',        price: 45,   img: '/assets/prod-energy.jpg' },
-  { id: 'p11', cat: 'gomitas',   name: "BCAA's en polvo",             flav: 'Watermelon',        price: 690,  img: '/assets/prod-bcaa.jpg' },
-  { id: 'p12', cat: 'gomitas',   name: "BCAA's en polvo",             flav: 'Blueberry',         price: 690,  img: '/assets/prod-bcaa.jpg' },
-  { id: 'p13', cat: 'gomitas',   name: 'Goma de Mascar Energética',   flav: 'Energía Bestial',   price: 95,   img: '/assets/prod-goma.jpg', tag: 'NEW' },
-  { id: 'p14', cat: 'gomitas',   name: 'Goma de Mascar Sin Límite',   flav: 'Cafeína + taurina', price: 95,   img: '/assets/prod-goma.jpg' },
-  { id: 'p15', cat: 'gomitas',   name: 'Goma de Mascar Bestia',       flav: 'Cafeína + taurina', price: 95,   img: '/assets/prod-goma.jpg' },
-  { id: 'p16', cat: 'agua',      name: 'Agua Mucho 1L',               flav: 'Natural',           price: 25,   img: '/assets/prod-energy.jpg' },
-  { id: 'p17', cat: 'agua',      name: 'Agua Electrolitos 750ml',     flav: 'Limón sal',         price: 45,   img: '/assets/prod-bcaa.jpg' },
-  { id: 'p18', cat: 'merch',     name: 'Shaker Loco',                 flav: '700ml',             price: 290,  img: '/assets/mucho-loco-logo.jpg' },
+  { id: 'p1',  cat: 'proteinas', name: { es: 'Whey Protein 5LBS', en: 'Whey Protein 5LBS' },                 flav: { es: 'Strawberry', en: 'Strawberry' },        price: 1290, img: '/assets/prod-whey-strawberry.jpg', tag: 'BEST' },
+  { id: 'p2',  cat: 'proteinas', name: { es: 'Whey Protein 2.2LBS', en: 'Whey Protein 2.2LBS' },             flav: { es: 'Cappuccino', en: 'Cappuccino' },        price: 990,  img: '/assets/prod-whey-cappuccino.jpg' },
+  { id: 'p3',  cat: 'proteinas', name: { es: 'Whey Protein 2.2LBS', en: 'Whey Protein 2.2LBS' },             flav: { es: 'Cookies & Cream', en: 'Cookies & Cream' }, price: 990,  img: '/assets/prod-whey-flavors.jpg' },
+  { id: 'p4',  cat: 'proteinas', name: { es: 'Whey Protein 2.2LBS', en: 'Whey Protein 2.2LBS' },             flav: { es: 'Sprinkle Donut', en: 'Sprinkle Donut' }, price: 990,  img: '/assets/prod-whey-flavors.jpg', tag: 'NEW' },
+  { id: 'p5',  cat: 'proteinas', name: { es: 'Whey Protein 1KG', en: 'Whey Protein 1KG' },                   flav: { es: 'Cinnamon Roll', en: 'Cinnamon Roll' },  price: 690,  img: '/assets/prod-whey-flavors.jpg' },
+  { id: 'p6',  cat: 'proteinas', name: { es: 'Whey Protein 1KG', en: 'Whey Protein 1KG' },                   flav: { es: 'Chocolate', en: 'Chocolate' },          price: 690,  img: '/assets/prod-whey-flavors.jpg' },
+  { id: 'p7',  cat: 'pre',       name: { es: 'Pre-Entreno Bestia', en: 'Beast Pre-Workout' },                flav: { es: 'Mango Chamoy', en: 'Mango Chamoy' },    price: 790,  img: '/assets/prod-pre-mango.jpg', tag: 'HOT' },
+  { id: 'p8',  cat: 'pre',       name: { es: 'Creatine Monohydrate', en: 'Creatine Monohydrate' },           flav: { es: '500g · 5g por servicio', en: '500g · 5g per serving' }, price: 590, img: '/assets/prod-creatine.jpg' },
+  { id: 'p9',  cat: 'energy',    name: { es: 'Mucho Loco Energy 473ml', en: 'Mucho Loco Energy 473ml' },     flav: { es: 'Mora-Uva', en: 'Berry-Grape' },         price: 45,   img: '/assets/prod-energy.jpg' },
+  { id: 'p10', cat: 'energy',    name: { es: 'Mucho Loco Energy 473ml', en: 'Mucho Loco Energy 473ml' },     flav: { es: 'Sin azúcar', en: 'Sugar-free' },        price: 45,   img: '/assets/prod-energy.jpg' },
+  { id: 'p11', cat: 'gomitas',   name: { es: "BCAA's en polvo", en: "BCAA's Powder" },                       flav: { es: 'Watermelon', en: 'Watermelon' },        price: 690,  img: '/assets/prod-bcaa.jpg' },
+  { id: 'p12', cat: 'gomitas',   name: { es: "BCAA's en polvo", en: "BCAA's Powder" },                       flav: { es: 'Blueberry', en: 'Blueberry' },          price: 690,  img: '/assets/prod-bcaa.jpg' },
+  { id: 'p13', cat: 'gomitas',   name: { es: 'Goma de Mascar Energética', en: 'Energy Chewing Gum' },        flav: { es: 'Energía Bestial', en: 'Beast Energy' }, price: 95,   img: '/assets/prod-goma.jpg', tag: 'NEW' },
+  { id: 'p14', cat: 'gomitas',   name: { es: 'Goma de Mascar Sin Límite', en: 'No Limit Chewing Gum' },      flav: { es: 'Cafeína + taurina', en: 'Caffeine + taurine' }, price: 95,   img: '/assets/prod-goma.jpg' },
+  { id: 'p15', cat: 'gomitas',   name: { es: 'Goma de Mascar Bestia', en: 'Beast Chewing Gum' },             flav: { es: 'Cafeína + taurina', en: 'Caffeine + taurine' }, price: 95,   img: '/assets/prod-goma.jpg' },
+  { id: 'p16', cat: 'agua',      name: { es: 'Agua Mucho 1L', en: 'Mucho Water 1L' },                        flav: { es: 'Natural', en: 'Natural' },              price: 25,   img: '/assets/prod-energy.jpg' },
+  { id: 'p17', cat: 'agua',      name: { es: 'Agua Electrolitos 750ml', en: 'Electrolyte Water 750ml' },     flav: { es: 'Limón sal', en: 'Lime salt' },          price: 45,   img: '/assets/prod-bcaa.jpg' },
+  { id: 'p18', cat: 'merch',     name: { es: 'Shaker Loco', en: 'Shaker Loco' },                             flav: { es: '700ml', en: '700ml' },                  price: 290,  img: '/assets/mucho-loco-logo.jpg' },
 ];
 
 export const PRODUCT_CATS: Record<Lang, Record<'all' | ProductCat, string>> = {
@@ -133,10 +133,10 @@ export const SOCIAL_LINKS: SocialLink[] = [
 ];
 
 export const SOCIAL_FEED: FeedPost[] = [
-  { net: 'instagram', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1000&q=70', cap: 'Leg day no perdona 🔥 Roma Sur a tope', likes: '2.4K', ago: '3h', url: '#' },
-  { net: 'instagram', img: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1000&q=70', cap: 'Nueva clase de HIIT en Condesa 💥', likes: '1.8K', ago: '9h', url: '#' },
-  { net: 'facebook', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1000&q=70', cap: 'Reto de 30 días: ¿te atreves, bestia?', likes: '973', ago: '1d', url: '#' },
-  { net: 'instagram', img: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1000&q=70', cap: 'PR de peso muerto en Santa Fe 🏋️', likes: '3.1K', ago: '1d', url: '#' },
-  { net: 'facebook', img: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=1000&q=70', cap: 'Coaches nuevos en Interlomas. Bienvenidos 🐂', likes: '654', ago: '2d', url: '#' },
-  { net: 'instagram', img: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=1000&q=70', cap: 'Domingo de cardio al aire libre ☀️', likes: '2.0K', ago: '3d', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Leg day no perdona 🔥 Roma Sur a tope', en: 'Leg day shows no mercy 🔥 Roma Sur going hard' }, likes: '2.4K', ago: '3h', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Nueva clase de HIIT en Condesa 💥', en: 'New HIIT class at Condesa 💥' }, likes: '1.8K', ago: '9h', url: '#' },
+  { net: 'facebook', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Reto de 30 días: ¿te atreves, bestia?', en: '30-day challenge: you in, beast?' }, likes: '973', ago: '1d', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1000&q=70', cap: { es: 'PR de peso muerto en Santa Fe 🏋️', en: 'Deadlift PR at Santa Fe 🏋️' }, likes: '3.1K', ago: '1d', url: '#' },
+  { net: 'facebook', img: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Coaches nuevos en Interlomas. Bienvenidos 🐂', en: 'New coaches at Interlomas. Welcome 🐂' }, likes: '654', ago: '2d', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Domingo de cardio al aire libre ☀️', en: 'Sunday outdoor cardio ☀️' }, likes: '2.0K', ago: '3d', url: '#' },
 ];

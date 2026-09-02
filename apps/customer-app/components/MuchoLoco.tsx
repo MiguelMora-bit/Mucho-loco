@@ -11,7 +11,7 @@ import { useMembershipTiersStore } from '../lib/stores/membershipTiers.store';
 import { useSocialLinksStore } from '../lib/stores/socialLinks.store';
 import { useSocialFeedStore } from '../lib/stores/socialFeed.store';
 import { getSeenAnnouncementIds, markAnnouncementSeen } from '../lib/announcements';
-import { Nav, Hero, Branches, Memberships, Shop, CartDrawer, Contact, Footer, AvisosButton, AvisosBoard, AvisoSplash } from './landing';
+import { Nav, Hero, Branches, Memberships, Shop, CartDrawer, Contact, Footer, AnnouncementsButton, AnnouncementsBoard, AnnouncementSplash } from './landing';
 import type { Branch, Product, Announcement, MembershipTier, Lang, PlanKey } from '@mucho-loco/types';
 import type { SocialLink, FeedPost } from '../lib/types/social';
 
@@ -36,8 +36,8 @@ export default function MuchoLoco({ branches, products, announcements, membershi
   const [shopCat, setShopCat] = useState('all');
   const [cartOpen, setCartOpen] = useState(false);
   const fireCanvasRef = useFireCanvas();
-  const [avisosOpen, setAvisosOpen] = useState(false);
-  const [splashAviso, setSplashAviso] = useState<Announcement | null>(null);
+  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
+  const [splashAnnouncement, setSplashAnnouncement] = useState<Announcement | null>(null);
 
   useEffect(() => {
     document.body.classList.toggle('darker', darker);
@@ -60,7 +60,7 @@ export default function MuchoLoco({ branches, products, announcements, membershi
       // 900ms was long enough to collide with a visitor's first intentional click
       // (e.g. going straight for "mi cuenta") — the splash's full-screen backdrop
       // would eat that click to dismiss itself instead of letting it reach the nav.
-      const tm = setTimeout(() => setSplashAviso(newest), 3000);
+      const tm = setTimeout(() => setSplashAnnouncement(newest), 3000);
       return () => clearTimeout(tm);
     }
   }, [announcements]);
@@ -70,14 +70,18 @@ export default function MuchoLoco({ branches, products, announcements, membershi
   }
 
   const dismissSplash = () => {
-    if (splashAviso) markAnnouncementSeen(splashAviso.id);
-    setSplashAviso(null);
+    if (splashAnnouncement) markAnnouncementSeen(splashAnnouncement.id);
+    setSplashAnnouncement(null);
   };
 
   const cartCount = useCartStore(selectCartCount);
   const memBranch = branches.find((b) => b.id === memBranchId) ?? branches[0];
   const planMultiplier: Record<PlanKey, number> = { visit: 0.12, weekly: 0.35, monthly: 1, quarterly: 2.7, annual: 9.5 };
-  const planLabel: Record<PlanKey, string> = { visit: '/DÍA', weekly: '/SEMANA', monthly: '/MES', quarterly: '/3 MESES', annual: '/AÑO' };
+  const planLabelByLang: Record<Lang, Record<PlanKey, string>> = {
+    es: { visit: '/DÍA', weekly: '/SEMANA', monthly: '/MES', quarterly: '/3 MESES', annual: '/AÑO' },
+    en: { visit: '/DAY', weekly: '/WEEK', monthly: '/MONTH', quarterly: '/3 MONTHS', annual: '/YEAR' },
+  };
+  const planLabel = planLabelByLang[lang];
 
   return (
     <>
@@ -86,16 +90,16 @@ export default function MuchoLoco({ branches, products, announcements, membershi
       <Shop t={t} lang={lang} cat={shopCat} setCat={setShopCat} products={products} />
       <Branches t={t} branches={branches} active={activeBranch} setActive={setActiveBranch} />
       <Memberships t={t} branches={branches} branch={memBranch} setBranchId={setMemBranchId} mult={planMultiplier} label={planLabel} lang={lang} />
-      <Contact t={t} />
+      <Contact t={t} lang={lang} />
       <Footer t={t} />
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} t={t} />
-      <AvisosButton t={t} onOpen={() => setAvisosOpen(true)} announcements={announcements} />
-      <AvisosBoard open={avisosOpen} onClose={() => setAvisosOpen(false)} t={t} lang={lang} />
-      {splashAviso && (
-        <AvisoSplash
-          aviso={splashAviso} t={t} lang={lang}
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} t={t} lang={lang} />
+      <AnnouncementsButton t={t} onOpen={() => setAnnouncementsOpen(true)} announcements={announcements} />
+      <AnnouncementsBoard open={announcementsOpen} onClose={() => setAnnouncementsOpen(false)} t={t} lang={lang} />
+      {splashAnnouncement && (
+        <AnnouncementSplash
+          announcement={splashAnnouncement} t={t} lang={lang}
           onClose={dismissSplash}
-          onBoard={() => { dismissSplash(); setAvisosOpen(true); }}
+          onBoard={() => { dismissSplash(); setAnnouncementsOpen(true); }}
         />
       )}
     </>

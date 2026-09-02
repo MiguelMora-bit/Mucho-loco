@@ -4,15 +4,16 @@ import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { useCartStore, selectSubtotal } from '../../lib/stores/cart.store';
 import { formatPrice } from '../../lib/pricing';
-import type { Translations } from '@mucho-loco/types';
+import type { Lang, Translations } from '@mucho-loco/types';
 
 interface CartDrawerProps {
   open: boolean;
   onClose: () => void;
   t: Translations;
+  lang: Lang;
 }
 
-export function CartDrawer({ open, onClose, t }: CartDrawerProps) {
+export function CartDrawer({ open, onClose, t, lang }: CartDrawerProps) {
   const cart = useCartStore((s) => s.items);
   const updateQty = useCartStore((s) => s.updateQty);
   const subtotal = useCartStore(selectSubtotal);
@@ -33,8 +34,8 @@ export function CartDrawer({ open, onClose, t }: CartDrawerProps) {
                 <Image src={item.img} alt="" fill sizes="60px" className="object-cover" />
               </div>
               <div>
-                <div className="ci-name">{item.name}</div>
-                <div className="ci-flav">{item.flav}</div>
+                <div className="ci-name">{item.name[lang]}</div>
+                <div className="ci-flav">{item.flav[lang]}</div>
                 <div className="ci-price">{formatPrice(item.price)}</div>
               </div>
               <div className="qty">

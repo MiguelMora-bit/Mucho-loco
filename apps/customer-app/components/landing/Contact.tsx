@@ -3,11 +3,12 @@ import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { useSocialLinksStore } from '../../lib/stores/socialLinks.store';
 import { useSocialFeedStore } from '../../lib/stores/socialFeed.store';
-import type { Translations } from '@mucho-loco/types';
+import type { Lang, Translations } from '@mucho-loco/types';
 import type { SocialNetwork } from '../../lib/types/social';
 
 interface ContactProps {
   t: Translations;
+  lang: Lang;
 }
 
 // A real API returns data, never JSX — icons are presentation and stay local,
@@ -23,7 +24,7 @@ const NET_ICON: Record<SocialNetwork, ReactNode> = {
   facebook: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12a12 12 0 1 0-13.88 11.85v-8.38H7.08V12h3.04V9.36c0-3 1.79-4.66 4.53-4.66 1.31 0 2.68.23 2.68.23v2.95h-1.51c-1.49 0-1.95.92-1.95 1.87V12h3.32l-.53 3.47h-2.79v8.38A12 12 0 0 0 24 12z" /></svg>,
 };
 
-export function Contact({ t }: ContactProps) {
+export function Contact({ t, lang }: ContactProps) {
   const socials = useSocialLinksStore((s) => s.data) ?? [];
   const feed = useSocialFeedStore((s) => s.data) ?? [];
   const feedLoading = useSocialFeedStore((s) => s.loading);
@@ -68,11 +69,11 @@ export function Contact({ t }: ContactProps) {
           </div>
           <div className="feed-grid">
             {feed.map((p, i) => (
-              <a key={i} className="feed-post" href={p.url} target="_blank" rel="noopener noreferrer" aria-label={p.cap}>
-                <Image src={p.img} alt={p.cap} fill sizes="(max-width: 768px) 33vw, 460px" className="object-cover" />
+              <a key={i} className="feed-post" href={p.url} target="_blank" rel="noopener noreferrer" aria-label={p.cap[lang]}>
+                <Image src={p.img} alt={p.cap[lang]} fill sizes="(max-width: 768px) 33vw, 460px" className="object-cover" />
                 <span className={'feed-net ' + p.net}>{NET_ICON[p.net]}</span>
                 <span className="feed-overlay">
-                  <span className="feed-cap">{p.cap}</span>
+                  <span className="feed-cap">{p.cap[lang]}</span>
                   <span className="feed-meta"><span>❤ {p.likes}</span><span>{p.ago}</span></span>
                 </span>
               </a>

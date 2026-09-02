@@ -1,39 +1,41 @@
 import type { SubmitEvent } from 'react';
+import type { Translations } from '@mucho-loco/types';
 import { SocialButtons } from './SocialButtons';
 
 interface SignupFormProps {
+  t: Translations;
   loading: boolean;
   onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
   onSocialLogin: () => void;
 }
 
-export function SignupForm({ loading, onSubmit, onSocialLogin }: SignupFormProps) {
+export function SignupForm({ t, loading, onSubmit, onSocialLogin }: SignupFormProps) {
   return (
     <form onSubmit={onSubmit}>
       <div className="field">
-        <label>Nombre completo</label>
+        <label>{t.account.signup.nameLabel}</label>
         <input name="name" type="text" placeholder="Diego Ramírez" required />
       </div>
       <div className="field">
-        <label>Email</label>
+        <label>{t.account.signup.emailLabel}</label>
         <input name="email" type="email" placeholder="bestia@email.com" required />
       </div>
       <div className="field-row">
         <div className="field">
-          <label>Contraseña</label>
+          <label>{t.account.signup.passwordLabel}</label>
           <input name="password" type="password" placeholder="••••••••" required />
         </div>
         <div className="field">
-          <label>Cumpleaños</label>
+          <label>{t.account.signup.birthdayLabel}</label>
           <input name="birthday" type="date" required />
         </div>
       </div>
       <button className="submit-btn" type="submit" disabled={loading}>
-        {loading ? 'CREANDO CUENTA...' : 'SOLTAR LA BESTIA'}
+        {loading ? t.account.signup.submitting : t.account.signup.submit}
       </button>
-      <div className="or-divider">O REGÍSTRATE CON</div>
+      <div className="or-divider">{t.account.signup.orDivider}</div>
       <SocialButtons onClick={onSocialLogin} />
-      <p className="terms">Al registrarte aceptas nuestros <a href="#">Términos</a> y la <a href="#">Política de Privacidad</a>. Tu primer día es gratis, bestia.</p>
+      <p className="terms">{t.account.signup.termsPrefix} <a href="#">{t.account.signup.termsLink}</a> {t.account.signup.termsAnd} <a href="#">{t.account.signup.privacyLink}</a>. {t.account.signup.termsSuffix}</p>
     </form>
   );
 }

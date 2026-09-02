@@ -15,9 +15,13 @@ export function useT(): Translations {
     shop:        t.raw('shop')        as Translations['shop'],
     cart:        t.raw('cart')        as Translations['cart'],
     contact:     t.raw('contact')     as Translations['contact'],
-    avisos:      t.raw('avisos')      as Translations['avisos'],
+    announcements: t.raw('announcements') as Translations['announcements'],
     footer:      t.raw('footer')      as Translations['footer'],
     product:     t.raw('product')     as Translations['product'],
     common:      t.raw('common')      as Translations['common'],
+    account:     t.raw('account')     as Translations['account'],
+    dashboard:   t.raw('dashboard')   as Translations['dashboard'],
+    checkout:    t.raw('checkout')    as Translations['checkout'],
+    performance: t.raw('performance') as Translations['performance'],
   };
 }

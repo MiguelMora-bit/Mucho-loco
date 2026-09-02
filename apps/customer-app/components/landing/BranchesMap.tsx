@@ -1,27 +1,25 @@
 'use client';
 
 import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
-import type { Branch } from '@mucho-loco/types';
+import type { Branch, Translations } from '@mucho-loco/types';
 
 const CDMX_CENTER = { lat: 19.4326, lng: -99.1332 };
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID';
 
 interface BranchesMapProps {
+  t: Translations;
   branches: Branch[];
   active: Branch;
   setActive: (b: Branch) => void;
 }
 
-export function BranchesMap({ branches, active, setActive }: BranchesMapProps) {
+export function BranchesMap({ t, branches, active, setActive }: BranchesMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   if (!apiKey) {
     return (
       <div className="map-wrap map-wrap-empty">
-        <p>
-          Falta <code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> en <code>.env.local</code>.
-          <br />Ver <code>.env.example</code>.
-        </p>
+        <p>{t.branches.mapKeyMissing}</p>
       </div>
     );
   }
@@ -55,8 +53,8 @@ export function BranchesMap({ branches, active, setActive }: BranchesMapProps) {
         </Map>
       </APIProvider>
       <div className="map-legend">
-        <span><span className="dot bg-ml-red"></span>SUCURSAL</span>
-        <span><span className="dot bg-ml-yellow"></span>SELECCIONADA</span>
+        <span><span className="dot bg-ml-red"></span>{t.branches.legendBranch}</span>
+        <span><span className="dot bg-ml-yellow"></span>{t.branches.legendSelected}</span>
       </div>
     </div>
   );

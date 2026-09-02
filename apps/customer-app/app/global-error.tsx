@@ -27,14 +27,16 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           fontFamily: 'monospace',
         }}
       >
-        <h1 style={{ fontSize: 28, marginBottom: 12 }}>Error crítico 🔥</h1>
+        {/* No locale is available this far outside app/[locale] (see comment
+            above), so both languages are shown stacked instead of picking one. */}
+        <h1 style={{ fontSize: 28, marginBottom: 12 }}>Error crítico / Critical error 🔥</h1>
         <p style={{ opacity: 0.7, marginBottom: 16, maxWidth: 480 }}>{error.message}</p>
         {error.digest && <p style={{ opacity: 0.4, fontSize: 12, marginBottom: 20 }}>digest: {error.digest}</p>}
         <button
           onClick={() => reset()}
           style={{ padding: '10px 20px', background: '#e1141c', color: 'white', border: 'none', cursor: 'pointer' }}
         >
-          Reintentar
+          Reintentar / Retry
         </button>
       </body>
     </html>

@@ -1106,8 +1106,8 @@ body.darker {
   .fv-body h3 { font-size: 30px; }
 }
 
-/* ============ AVISOS / ANNOUNCEMENTS ============ */
-.avisos-fab {
+/* ============ ANNOUNCEMENTS ============ */
+.announcements-fab {
   position: fixed; bottom: 24px; left: 24px; z-index: 150;
   display: flex; align-items: center; gap: 10px;
   padding: 14px 20px;
@@ -1118,16 +1118,16 @@ body.darker {
   box-shadow: 0 8px 30px rgba(225,20,28,0.5);
   transition: all 0.2s;
 }
-.avisos-fab:hover { background: var(--red-bright); transform: translateY(-2px); box-shadow: 0 12px 36px rgba(225,20,28,0.7); }
-.avisos-fab-ico { font-size: 20px; line-height: 1; animation: avisoRing 2.5s ease-in-out infinite; transform-origin: 50% 10%; }
-@keyframes avisoRing {
+.announcements-fab:hover { background: var(--red-bright); transform: translateY(-2px); box-shadow: 0 12px 36px rgba(225,20,28,0.7); }
+.announcements-fab-ico { font-size: 20px; line-height: 1; animation: announcementRing 2.5s ease-in-out infinite; transform-origin: 50% 10%; }
+@keyframes announcementRing {
   0%, 88%, 100% { transform: rotate(0); }
   90% { transform: rotate(14deg); }
   92% { transform: rotate(-12deg); }
   94% { transform: rotate(9deg); }
   96% { transform: rotate(-6deg); }
 }
-.avisos-fab-badge {
+.announcements-fab-badge {
   position: absolute; top: -8px; right: -8px;
   min-width: 22px; height: 22px; padding: 0 6px;
   background: var(--yellow); color: var(--black);
@@ -1137,85 +1137,85 @@ body.darker {
   border: 2px solid var(--black);
 }
 @media (max-width: 700px) {
-  .avisos-fab { bottom: 16px; left: 16px; padding: 12px 14px; }
-  .avisos-fab-label { display: none; }
-  .avisos-fab-ico { font-size: 22px; }
+  .announcements-fab { bottom: 16px; left: 16px; padding: 12px 14px; }
+  .announcements-fab-label { display: none; }
+  .announcements-fab-ico { font-size: 22px; }
 }
 
 /* Board (slide-in panel) */
-.avisos-backdrop {
+.announcements-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.7);
   z-index: 199; opacity: 0; pointer-events: none; transition: opacity 0.3s;
 }
-.avisos-backdrop.open { opacity: 1; pointer-events: auto; }
-.avisos-board {
+.announcements-backdrop.open { opacity: 1; pointer-events: auto; }
+.announcements-board {
   position: fixed; top: 0; left: 0; bottom: 0; width: 480px; max-width: 100vw;
   background: var(--black-2); border-right: 2px solid var(--red);
   z-index: 200; transform: translateX(-100%); transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
   display: flex; flex-direction: column;
 }
-.avisos-board.open { transform: translateX(0); }
-.avisos-board-head {
+.announcements-board.open { transform: translateX(0); }
+.announcements-board-head {
   padding: 28px 24px 20px; border-bottom: 1px solid var(--border);
   display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
 }
-.avisos-board-eyebrow {
+.announcements-board-eyebrow {
   font-family: 'JetBrains Mono', monospace; font-size: 11px;
   letter-spacing: 0.2em; text-transform: uppercase; color: var(--orange); margin-bottom: 10px;
 }
-.avisos-board-head h3 { font-family: 'Anton', sans-serif; font-size: 34px; line-height: 0.95; }
-.avisos-board-head p { color: var(--cream-dim); font-size: 13px; margin-top: 6px; }
-.avisos-board-head button {
+.announcements-board-head h3 { font-family: 'Anton', sans-serif; font-size: 34px; line-height: 0.95; }
+.announcements-board-head p { color: var(--cream-dim); font-size: 13px; margin-top: 6px; }
+.announcements-board-head button {
   flex: 0 0 auto; width: 40px; height: 40px; border: 1px solid var(--border);
   color: var(--cream-dim); font-size: 18px; background: transparent;
 }
-.avisos-board-head button:hover { border-color: var(--red); color: var(--red); }
-.avisos-board-list { flex: 1; overflow-y: auto; padding: 18px 24px 32px; display: flex; flex-direction: column; gap: 14px; }
-.avisos-board-list::-webkit-scrollbar { width: 6px; }
-.avisos-board-list::-webkit-scrollbar-thumb { background: var(--red); }
-.avisos-empty { text-align: center; color: var(--cream-dim); padding: 60px 20px; font-family: 'Permanent Marker', cursive; }
+.announcements-board-head button:hover { border-color: var(--red); color: var(--red); }
+.announcements-board-list { flex: 1; overflow-y: auto; padding: 18px 24px 32px; display: flex; flex-direction: column; gap: 14px; }
+.announcements-board-list::-webkit-scrollbar { width: 6px; }
+.announcements-board-list::-webkit-scrollbar-thumb { background: var(--red); }
+.announcements-empty { text-align: center; color: var(--cream-dim); padding: 60px 20px; font-family: 'Permanent Marker', cursive; }
 
-/* Aviso card (in board) */
-.aviso-card {
+/* Announcement card (in board) */
+.announcement-card {
   display: grid; grid-template-columns: 64px 1fr;
   background: var(--card); border: 1px solid var(--border);
   border-left: 4px solid var(--accent, var(--red));
   overflow: hidden;
 }
-.aviso-card-side {
+.announcement-card-side {
   background: color-mix(in oklab, var(--accent, var(--red)) 18%, var(--card));
   display: grid; place-items: center;
 }
-.aviso-emoji { font-size: 30px; }
-.aviso-card-body { padding: 16px 18px; }
-.aviso-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.aviso-badge {
+.announcement-emoji { font-size: 30px; }
+.announcement-card-body { padding: 16px 18px; }
+.announcement-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.announcement-badge {
   font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.15em;
   text-transform: uppercase; padding: 3px 8px;
   background: var(--accent, var(--red)); color: #1a0606; font-weight: 700;
 }
-.aviso-date { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--cream-dim); letter-spacing: 0.08em; }
-.aviso-card-body h4 { font-family: 'Anton', sans-serif; font-size: 22px; line-height: 1; letter-spacing: 0.01em; }
-.aviso-sub { color: var(--orange); font-size: 13px; margin-top: 4px; font-weight: 600; }
-.aviso-body { color: var(--cream-dim); font-size: 13px; line-height: 1.5; margin-top: 8px; }
-.aviso-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-.aviso-loc { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--cream-dim); }
-.aviso-cta {
+.announcement-date { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--cream-dim); letter-spacing: 0.08em; }
+.announcement-card-body h4 { font-family: 'Anton', sans-serif; font-size: 22px; line-height: 1; letter-spacing: 0.01em; }
+.announcement-sub { color: var(--orange); font-size: 13px; margin-top: 4px; font-weight: 600; }
+.announcement-body { color: var(--cream-dim); font-size: 13px; line-height: 1.5; margin-top: 8px; }
+.announcement-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.announcement-loc { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--cream-dim); }
+.announcement-cta {
   font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.08em; font-size: 14px;
   color: var(--cream); padding: 8px 14px; background: var(--accent, var(--red));
   white-space: nowrap;
 }
-.aviso-cta:hover { filter: brightness(1.15); }
+.announcement-cta:hover { filter: brightness(1.15); }
 
 /* Splash (fullscreen first-visit) */
-.aviso-splash {
+.announcement-splash {
   position: fixed; inset: 0; z-index: 300;
   background: rgba(5,2,2,0.92); backdrop-filter: blur(14px);
   display: flex; align-items: center; justify-content: center; padding: 24px;
-  animation: avisoSplashIn 0.35s ease;
+  animation: announcementSplashIn 0.35s ease;
 }
-@keyframes avisoSplashIn { from { opacity: 0; } to { opacity: 1; } }
-.aviso-splash-card {
+@keyframes announcementSplashIn { from { opacity: 0; } to { opacity: 1; } }
+.announcement-splash-card {
   position: relative; width: 100%; max-width: 620px;
   max-height: 92vh; overflow-y: auto;
   background:
@@ -1224,58 +1224,58 @@ body.darker {
   border: 2px solid var(--accent, var(--red));
   padding: 48px 44px 40px; text-align: center;
   box-shadow: 0 30px 90px rgba(0,0,0,0.7), 0 0 80px color-mix(in oklab, var(--accent, var(--red)) 40%, transparent);
-  animation: avisoCardIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  animation: announcementCardIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
 }
-@keyframes avisoCardIn { from { transform: scale(0.85) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-.aviso-splash-glow {
+@keyframes announcementCardIn { from { transform: scale(0.85) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+.announcement-splash-glow {
   position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
   width: 200px; height: 200px; border-radius: 50%;
   background: radial-gradient(circle, var(--accent, var(--red)), transparent 70%);
   opacity: 0.5; filter: blur(40px); pointer-events: none;
 }
-.aviso-splash-close {
+.announcement-splash-close {
   position: absolute; top: 16px; right: 16px;
   width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.2);
   color: var(--cream); font-size: 18px; background: rgba(0,0,0,0.3); z-index: 2;
 }
-.aviso-splash-close:hover { border-color: var(--cream); }
-.aviso-splash-emoji { font-size: 72px; line-height: 1; position: relative; z-index: 1; animation: avisoBounce 2s ease-in-out infinite; }
-@keyframes avisoBounce { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
-.aviso-splash-badge {
+.announcement-splash-close:hover { border-color: var(--cream); }
+.announcement-splash-emoji { font-size: 72px; line-height: 1; position: relative; z-index: 1; animation: announcementBounce 2s ease-in-out infinite; }
+@keyframes announcementBounce { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
+.announcement-splash-badge {
   display: inline-block; margin-top: 16px;
   font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.25em;
   text-transform: uppercase; padding: 6px 14px;
   background: var(--accent, var(--red)); color: #1a0606; font-weight: 700;
 }
-.aviso-splash-title {
+.announcement-splash-title {
   font-family: 'Anton', sans-serif; font-size: clamp(34px, 6vw, 58px);
   line-height: 0.92; text-transform: uppercase; margin-top: 16px; letter-spacing: 0.01em;
 }
-.aviso-splash-sub { color: var(--orange); font-size: 18px; margin-top: 10px; font-weight: 600; }
-.aviso-splash-meta {
+.announcement-splash-sub { color: var(--orange); font-size: 18px; margin-top: 10px; font-weight: 600; }
+.announcement-splash-meta {
   display: flex; gap: 18px; justify-content: center; flex-wrap: wrap;
   margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--cream-dim);
 }
-.aviso-splash-body { color: var(--cream-dim); font-size: 15px; line-height: 1.6; margin-top: 18px; max-width: 480px; margin-left: auto; margin-right: auto; }
-.aviso-splash-actions { display: flex; gap: 12px; justify-content: center; margin-top: 28px; flex-wrap: wrap; }
-.aviso-splash-cta {
+.announcement-splash-body { color: var(--cream-dim); font-size: 15px; line-height: 1.6; margin-top: 18px; max-width: 480px; margin-left: auto; margin-right: auto; }
+.announcement-splash-actions { display: flex; gap: 12px; justify-content: center; margin-top: 28px; flex-wrap: wrap; }
+.announcement-splash-cta {
   padding: 16px 28px; background: var(--accent, var(--red)); color: var(--cream);
   font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 0.06em;
   border: 2px solid transparent; transition: all 0.2s;
 }
-.aviso-splash-cta:hover { filter: brightness(1.15); transform: translateY(-2px); box-shadow: 0 10px 30px color-mix(in oklab, var(--accent, var(--red)) 50%, transparent); }
-.aviso-splash-board {
+.announcement-splash-cta:hover { filter: brightness(1.15); transform: translateY(-2px); box-shadow: 0 10px 30px color-mix(in oklab, var(--accent, var(--red)) 50%, transparent); }
+.announcement-splash-board {
   padding: 16px 24px; background: transparent; border: 1px solid var(--border);
   color: var(--cream); font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 0.1em;
 }
-.aviso-splash-board:hover { border-color: var(--cream); }
+.announcement-splash-board:hover { border-color: var(--cream); }
 
 @media (max-width: 700px) {
-  .avisos-board { width: 100vw; }
-  .aviso-splash-card { padding: 40px 22px 32px; }
-  .aviso-splash-emoji { font-size: 56px; }
-  .aviso-splash-actions { flex-direction: column; }
-  .aviso-splash-actions a, .aviso-splash-actions button { width: 100%; }
+  .announcements-board { width: 100vw; }
+  .announcement-splash-card { padding: 40px 22px 32px; }
+  .announcement-splash-emoji { font-size: 56px; }
+  .announcement-splash-actions { flex-direction: column; }
+  .announcement-splash-actions a, .announcement-splash-actions button { width: 100%; }
 }
 /* ============================================================
    MUCHO LOCO — MOBILE.CSS

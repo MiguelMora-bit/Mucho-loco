@@ -2,7 +2,19 @@
 
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
+import { useT } from '../../lib/hooks/useT';
 import type { Branch, Translations } from '@mucho-loco/types';
+
+// The loading placeholder renders before BranchesMap itself has mounted, so
+// it calls useT() on its own instead of receiving t as a prop.
+function MapLoading() {
+  const t = useT();
+  return (
+    <div className="map-wrap map-wrap-empty">
+      <p>{t.branches.loadingMap}</p>
+    </div>
+  );
+}
 
 // Google Maps' SDK is heavy and entirely browser-only — keep it out of the
 // initial bundle for a section that starts below the fold.
@@ -10,11 +22,7 @@ const BranchesMap = dynamic(
   () => import('./BranchesMap').then((m) => m.BranchesMap),
   {
     ssr: false,
-    loading: () => (
-      <div className="map-wrap map-wrap-empty">
-        <p>Cargando mapa…</p>
-      </div>
-    ),
+    loading: MapLoading,
   }
 );
 
@@ -40,7 +48,7 @@ export function Branches({ t, branches, active, setActive }: BranchesProps) {
         </div>
       </div>
       <div className="branches-layout">
-        <BranchesMap branches={branches} active={active} setActive={setActive} />
+        <BranchesMap t={t} branches={branches} active={active} setActive={setActive} />
         <div className="branches-list">
           {branches.map((b, i) => (
             <div key={b.id} className={'branch-row' + (active.id === b.id ? ' active' : '')}
@@ -69,7 +77,7 @@ export function Branches({ t, branches, active, setActive }: BranchesProps) {
               <div className="branch-card-stat"><div className="v">${active.price}</div><div className="l">{t.branches.price} /mes</div></div>
             </div>
             <div className="branch-card-actions">
-              <a href="#memberships" className="btn-primary text-sm px-6 py-3">VER PRECIOS</a>
+              <a href="#memberships" className="btn-primary text-sm px-6 py-3">{t.branches.viewPrices}</a>
               <a href="#contact" className="btn-ghost text-sm px-6 py-3">{t.branches.viewMore}</a>
             </div>
           </div>

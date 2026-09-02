@@ -1,12 +1,6 @@
 import type { UserProfile, MembershipInfo, Visit, Order, OrderItem } from '@mucho-loco/types';
 import { delay } from './delay';
 
-const MONTHS_ES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-
-export function formatOrderDate(d: Date): string {
-  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`;
-}
-
 const MOCK_PROFILE: UserProfile = {
   email: 'diego@mucholoco.mx',
   name: 'DIEGO RAMÍREZ',
@@ -36,7 +30,7 @@ const MOCK_HISTORY: Visit[] = [
 let MOCK_ORDERS: Order[] = [
   {
     id: '#ML-240619',
-    date: '19 JUN 2026',
+    date: '2026-06-19',
     status: 'ready',
     items: [
       { name: 'Pre-Entreno Bestia',  flav: 'Mango Chamoy', img: '/assets/prod-pre-mango.jpg', qty: 1 },
@@ -46,7 +40,7 @@ let MOCK_ORDERS: Order[] = [
   },
   {
     id: '#ML-240601',
-    date: '01 JUN 2026',
+    date: '2026-06-01',
     status: 'done',
     items: [{ name: 'Shaker Loco', flav: '700ml', img: '/assets/mucho-loco-logo.jpg', qty: 1 }],
     total: 290,
@@ -78,7 +72,7 @@ export class UserMockDatasource {
     await delay(150);
     const order: Order = {
       id: `#ML-${Date.now().toString().slice(-6)}`,
-      date: formatOrderDate(new Date()),
+      date: new Date().toISOString(),
       status: 'ready',
       items,
       total,
