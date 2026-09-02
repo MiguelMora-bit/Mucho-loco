@@ -78,7 +78,7 @@ export function Memberships({ t, branches, branch, setBranchId, mult, label, lan
                 <span className="amount">{heroPrice.toLocaleString()}</span>
                 <span className="per">{label[cur]}</span>
               </div>
-              <div className="font-mono text-[11px] text-ml-cream-dim tracking-wide-xl">
+              <div className="font-mono text-11 text-ml-cream-dim tracking-wide-xl">
                 📍 {location} · {hours}
               </div>
               <div className="memb-pills">

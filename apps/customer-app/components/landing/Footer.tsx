@@ -11,7 +11,7 @@ export function Footer({ t }: FooterProps) {
       <div className="footer-grid">
         <div>
           <div className="flex items-center gap-4 mb-4">
-            <Image src="/assets/bull-head.png" width={64} height={64} className="w-16 h-16 object-contain drop-shadow-[0_0_8px_rgba(225,20,28,0.7)]" alt="" />
+            <Image src="/assets/bull-head.png" width={64} height={64} className="w-16 h-16 object-contain drop-shadow-red" alt="" />
             <div className="font-display text-[28px]">MUCHO <span className="text-ml-red">LOCO</span></div>
           </div>
           <p className="text-ml-cream-dim text-sm max-w-[360px]">

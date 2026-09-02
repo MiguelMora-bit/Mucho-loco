@@ -55,8 +55,8 @@ export function CartStep({ delivery, setDelivery, onContinue }: CartStepProps) {
           <div className="ck-card">
             <div className="font-display text-xl mb-4">RESUMEN</div>
             <div className="row"><span>Subtotal</span><span>{formatPrice(subtotal)}</span></div>
-            <div className="mt-[14px]">
-              <div className="font-mono text-[11px] text-ml-cream-dim mb-2 uppercase tracking-wide">Entrega</div>
+            <div className="mt-3.5">
+              <div className="font-mono text-11 text-ml-cream-dim mb-2 uppercase tracking-wide">Entrega</div>
               <div className="pickup-options">
                 <div className={'pickup-opt' + (delivery === 'pickup' ? ' active' : '')} onClick={() => setDelivery('pickup')}>
                   <div className="lbl">🏪 SUCURSAL</div>

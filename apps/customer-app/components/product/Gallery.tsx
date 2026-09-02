@@ -10,7 +10,7 @@ export function Gallery({ product }: GalleryProps) {
     <div className="gallery">
       <div className="main-img">
         {product.tag && (
-          <div className={`absolute top-4 left-4 px-3 py-[6px] font-mono text-[11px] tracking-wide-2xl z-[2] ${product.tag === 'HOT' ? 'bg-ml-red-bright text-white' : product.tag === 'NEW' ? 'bg-ml-yellow text-ml-black' : 'bg-ml-red text-white'}`}>
+          <div className={`absolute top-4 left-4 px-3 py-[6px] font-mono text-11 tracking-wide-2xl z-[2] ${product.tag === 'HOT' ? 'bg-ml-red-bright text-white' : product.tag === 'NEW' ? 'bg-ml-yellow text-ml-black' : 'bg-ml-red text-white'}`}>
             {product.tag}
           </div>
         )}

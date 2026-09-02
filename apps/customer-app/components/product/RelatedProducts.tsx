@@ -24,7 +24,7 @@ export function RelatedProducts({ siblings, t }: RelatedProductsProps) {
             </div>
             <div className="rc-body">
               <div className="rc-name">{p.name}</div>
-              <div className="text-[11px] text-ml-cream-dim font-mono mt-0.5">{p.flav}</div>
+              <div className="text-11 text-ml-cream-dim font-mono mt-0.5">{p.flav}</div>
               <div className="rc-price">{formatPrice(p.price)}</div>
             </div>
           </Link>

@@ -35,7 +35,7 @@ export function PaymentStep({ delivery, payMethod, setPayMethod, placing, error,
 
         {delivery === 'home' && (
           <div className="ck-card mb-4">
-            <div className="font-display text-lg mb-[14px]">DIRECCIÓN DE ENVÍO</div>
+            <div className="font-display text-lg mb-3.5">DIRECCIÓN DE ENVÍO</div>
             <div className="field"><label>Calle y número</label><input placeholder="Av. Insurgentes 123" required /></div>
             <div className="field-row">
               <div className="field"><label>Ciudad</label><input placeholder="CDMX" required /></div>
@@ -45,7 +45,7 @@ export function PaymentStep({ delivery, payMethod, setPayMethod, placing, error,
         )}
 
         <div className="ck-card">
-          <div className="font-display text-lg mb-[14px]">MÉTODO DE PAGO</div>
+          <div className="font-display text-lg mb-3.5">MÉTODO DE PAGO</div>
           <div className="pay-grid">
             {(Object.keys(PAY_LABELS) as PayMethod[]).map((key) => (
               <div key={key} className={'pay-opt' + (payMethod === key ? ' active' : '')} onClick={() => setPayMethod(key)}>

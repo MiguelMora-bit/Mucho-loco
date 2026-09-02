@@ -21,11 +21,11 @@ export function Sidebar() {
 
   return (
     <aside className="[background:linear-gradient(180deg,#100606,#050202)] border-r border-ml-border flex flex-col py-6 sticky top-0 h-screen">
-      <div className="side-brand flex items-center gap-3 px-[22px] pb-6 border-b border-ml-border">
-        <Image src="/assets/bull-head.png" width={44} height={44} className="w-11 h-11 object-contain drop-shadow-[0_0_8px_rgba(225,20,28,0.7)]" alt="" />
+      <div className="side-brand flex items-center gap-3 px-5.5 pb-6 border-b border-ml-border">
+        <Image src="/assets/bull-head.png" width={44} height={44} className="w-11 h-11 object-contain drop-shadow-red" alt="" />
         <div className="side-brand-name font-display text-xl leading-none">MUCHO<br /><span className="text-ml-red">LOCO</span></div>
       </div>
-      <nav className="px-[14px] py-[18px] flex flex-col gap-1 flex-1">
+      <nav className="px-3.5 py-4.5 flex flex-col gap-1 flex-1">
         {NAV_ITEMS.map((item) => (
           <button key={item.key} className={'nav-item' + (onDashboard && pane === item.key ? ' active' : '')} onClick={() => goToPane(item.key)}>
             <span className="text-xl">{item.icon}</span>
@@ -37,9 +37,9 @@ export function Sidebar() {
           <span className="side-label">RENDIMIENTO</span>
         </Link>
       </nav>
-      <div className="side-foot px-[22px] py-[14px] border-t border-ml-border text-[11px] text-ml-muted font-mono tracking-wide uppercase">
+      <div className="side-foot px-5.5 py-3.5 border-t border-ml-border text-11 text-ml-muted font-mono tracking-wide uppercase">
         <Link href="/" className="text-ml-cream-dim no-underline block mb-2">← VOLVER AL SITIO</Link>
-        <button onClick={logout} className="bg-transparent border-none text-ml-cream-dim cursor-pointer font-mono text-[11px] tracking-wide uppercase p-0">CERRAR SESIÓN</button>
+        <button onClick={logout} className="bg-transparent border-none text-ml-cream-dim cursor-pointer font-mono text-11 tracking-wide uppercase p-0">CERRAR SESIÓN</button>
       </div>
     </aside>
   );

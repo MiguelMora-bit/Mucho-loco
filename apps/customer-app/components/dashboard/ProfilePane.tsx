@@ -14,7 +14,7 @@ export function ProfilePane({ active, profile, membership, onRenew, onLogout }: 
     <div className={'pane' + (active ? ' active' : '')}>
       <div className="grid grid-cols-2 gap-6 max-w-[900px]">
         <div className="bg-ml-card border border-ml-border p-6">
-          <div className="font-display text-[22px] mb-[18px]">DATOS PERSONALES</div>
+          <div className="font-display text-22 mb-4.5">DATOS PERSONALES</div>
           <InfoList
             items={[
               ['Nombre', profile.name],
@@ -25,7 +25,7 @@ export function ProfilePane({ active, profile, membership, onRenew, onLogout }: 
           />
         </div>
         <div className="bg-ml-card border border-ml-border p-6">
-          <div className="font-display text-[22px] mb-[18px]">MI MEMBRESÍA</div>
+          <div className="font-display text-22 mb-4.5">MI MEMBRESÍA</div>
           <InfoList
             items={[
               ['Plan', membership.plan],
@@ -34,13 +34,13 @@ export function ProfilePane({ active, profile, membership, onRenew, onLogout }: 
               ['TotalPass / Wellhub', 'NO VINCULADO'],
             ]}
           />
-          <button onClick={onRenew} className="mt-2 w-full p-[14px] bg-ml-red text-white font-display text-lg tracking-[0.04em] border-none cursor-pointer">
+          <button onClick={onRenew} className="mt-2 w-full p-3.5 bg-ml-red text-white font-display text-lg tracking-[0.04em] border-none cursor-pointer">
             RENOVAR MEMBRESÍA
           </button>
         </div>
       </div>
       <div className="mt-6">
-        <button onClick={onLogout} className="px-7 py-[14px] border border-ml-border text-ml-cream-dim font-display text-base tracking-[0.04em] bg-transparent cursor-pointer">
+        <button onClick={onLogout} className="px-7 py-3.5 border border-ml-border text-ml-cream-dim font-display text-base tracking-[0.04em] bg-transparent cursor-pointer">
           CERRAR SESIÓN
         </button>
       </div>

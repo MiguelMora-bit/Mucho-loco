@@ -79,6 +79,12 @@
       "skillPath": "skills/stripe-projects/SKILL.md",
       "computedHash": "d5b674901c9eb8b1c21e9d3a22728f9a4e0a8a6e22737ce7c284ff8daa51a765"
     },
+    "tailwind-css": {
+      "source": "paulrberg/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tailwind-css/SKILL.md",
+      "computedHash": "1a8ca4c248e6fb7d85be3b274a4631088833ee53dca4785a05d887b6727c1b57"
+    },
     "vercel-composition-patterns": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

@@ -18,7 +18,7 @@ export function HomePane({ active, profile, membership, onRenew }: HomePaneProps
       </div>
       <p className="text-ml-cream-dim text-[15px] mb-7">Sucursal principal: {membership.branch} · Plan: {membership.plan}</p>
 
-      <div className="flex items-center gap-4 px-[22px] py-4 mb-7 [background:linear-gradient(90deg,rgba(225,20,28,0.18),rgba(225,20,28,0.04))] border border-ml-red border-l-[4px] border-l-ml-red-bright">
+      <div className="flex items-center gap-4 px-5.5 py-4 mb-7 [background:linear-gradient(90deg,rgba(225,20,28,0.18),rgba(225,20,28,0.04))] border border-ml-red border-l-[4px] border-l-ml-red-bright">
         <span className="text-[26px]">⚠️</span>
         <div className="flex-1">
           <b className="font-display text-lg tracking-[0.04em]">MEMBRESÍA VENCE EN {membership.daysLeft} DÍAS</b>
@@ -35,19 +35,19 @@ export function HomePane({ active, profile, membership, onRenew }: HomePaneProps
           { lbl: 'SUCURSALES VISITADAS', num: 3, delta: 'Este mes' },
         ].map((s, i) => (
           <div key={i} className="stat-card">
-            <div className="font-mono text-[10px] text-ml-cream-dim uppercase tracking-wide-xl mb-1.5">{s.lbl}</div>
+            <div className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl mb-1.5">{s.lbl}</div>
             <div className="font-display text-[56px] leading-none">{s.num}</div>
-            <div className={`text-xs mt-2 ${s.up ? 'text-[#6dd56d]' : 'text-ml-cream-dim'}`}>{s.delta}</div>
+            <div className={`text-xs mt-2 ${s.up ? 'text-ml-green' : 'text-ml-cream-dim'}`}>{s.delta}</div>
           </div>
         ))}
       </div>
 
-      <div className="font-display text-[22px] mb-4">ESTA SEMANA</div>
+      <div className="font-display text-22 mb-4">ESTA SEMANA</div>
       <div className="week-grid">
         {DAYS.map((d, i) => (
           <div key={d} className={'week-day' + (i === TODAY_IDX ? ' today' : '') + (i < TODAY_IDX ? ' done' : '')}>
-            <div className="font-mono text-[10px] text-ml-cream-dim tracking-wide mb-2">{d}</div>
-            <div className="text-[22px]">{i < TODAY_IDX ? '✓' : i === TODAY_IDX ? '🔥' : '—'}</div>
+            <div className="font-mono text-10 text-ml-cream-dim tracking-wide mb-2">{d}</div>
+            <div className="text-22">{i < TODAY_IDX ? '✓' : i === TODAY_IDX ? '🔥' : '—'}</div>
           </div>
         ))}
       </div>

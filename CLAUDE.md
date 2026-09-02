@@ -101,6 +101,7 @@ Viven en la raíz del monorepo — aplican a todos los apps, no solo a `customer
 - `prisma-database-setup` (oficial Prisma) — ORM + PostgreSQL.
 - `database-schema-designer` — diseño de esquema multi-sucursal.
 - `nestjs-best-practices`, `nestjs-patterns`, `frontend-design`, `vercel-composition-patterns`, `vercel-react-native-skills`, `vercel-react-view-transitions`.
+- `tailwind-css` — se adapta a la versión de Tailwind instalada (hoy v3 en `customer-app`); no asume v4 aunque su metadata lo mencione.
 - `aws-amplify`, `aws-blocks` — instaladas pero no activas (ruta serverless-first no elegida).
 
 No hay skill confiable instalable para Mercado Pago, inventario/POS multi-sucursal ni mapa de sucursales — se diseñan directo con el usuario.

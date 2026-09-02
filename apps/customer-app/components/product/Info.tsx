@@ -44,18 +44,18 @@ export function Info({ product, catLabel, t }: InfoProps) {
           {wishlist ? '♥' : '♡'}
         </button>
       </div>
-      <div className="mt-6 p-[18px] bg-ml-card border border-ml-border grid grid-cols-3 gap-4">
+      <div className="mt-6 p-4.5 bg-ml-card border border-ml-border grid grid-cols-3 gap-4">
         <div className="text-center">
-          <div className="font-display text-[22px] text-ml-orange">🏪</div>
-          <div className="text-[11px] font-mono text-ml-cream-dim mt-1">{t.product.branchPickup}</div>
+          <div className="font-display text-22 text-ml-orange">🏪</div>
+          <div className="text-11 font-mono text-ml-cream-dim mt-1">{t.product.branchPickup}</div>
         </div>
         <div className="text-center">
-          <div className="font-display text-[22px] text-ml-orange">📦</div>
-          <div className="text-[11px] font-mono text-ml-cream-dim mt-1">{t.product.homeDelivery}</div>
+          <div className="font-display text-22 text-ml-orange">📦</div>
+          <div className="text-11 font-mono text-ml-cream-dim mt-1">{t.product.homeDelivery}</div>
         </div>
         <div className="text-center">
-          <div className="font-display text-[22px] text-ml-orange">🔒</div>
-          <div className="text-[11px] font-mono text-ml-cream-dim mt-1">{t.product.securePayment}</div>
+          <div className="font-display text-22 text-ml-orange">🔒</div>
+          <div className="text-11 font-mono text-ml-cream-dim mt-1">{t.product.securePayment}</div>
         </div>
       </div>
     </div>
