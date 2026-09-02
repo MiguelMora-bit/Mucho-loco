@@ -69,7 +69,7 @@ export function Contact({ t }: ContactProps) {
           <div className="feed-grid">
             {feed.map((p, i) => (
               <a key={i} className="feed-post" href={p.url} target="_blank" rel="noopener noreferrer" aria-label={p.cap}>
-                <Image src={p.img} alt={p.cap} fill sizes="(max-width: 768px) 33vw, 300px" className="object-cover" />
+                <Image src={p.img} alt={p.cap} fill sizes="(max-width: 768px) 33vw, 460px" className="object-cover" />
                 <span className={'feed-net ' + p.net}>{NET_ICON[p.net]}</span>
                 <span className="feed-overlay">
                   <span className="feed-cap">{p.cap}</span>

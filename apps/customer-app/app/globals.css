@@ -528,7 +528,7 @@ body.darker {
   color: var(--red); font-size: 20px; pointer-events: none;
 }
 .memb-branch-note {
-  font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.15em;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.15em;
   color: var(--cream-dim); text-transform: uppercase;
 }
 
@@ -596,13 +596,13 @@ body.darker {
 .memb-pill {
   flex: 1 1 auto; min-height: 40px; padding: 8px 6px;
   border: 1px solid var(--border); background: var(--card-2); color: var(--cream-dim);
-  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.06em;
   text-transform: uppercase; transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .memb-pill.selected { background: var(--red); border-color: var(--red); color: var(--cream); }
 .memb-card.popular .memb-pill.selected { background: var(--orange); border-color: var(--orange); color: var(--black); }
 
-.memb-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; padding-top: 4px; border-top: 1px dashed var(--border); }
+.memb-card ul { list-style: none; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; flex: 1; padding-top: 4px; border-top: 1px dashed var(--border); }
 .memb-card ul li { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--cream); padding-top: 8px; }
 .memb-card ul li::before { content: '🔥'; font-size: 14px; }
 .memb-card .select-btn {
@@ -683,7 +683,7 @@ body.darker {
 .product-card:hover { border-color: var(--red); transform: translateY(-4px); }
 .product-card:hover .product-name { color: var(--red-bright); }
 .product-img {
-  height: 240px;
+  height: 270px;
   background: radial-gradient(circle, rgba(225,20,28,0.2), transparent 70%), var(--card-2);
   display: flex; align-items: center; justify-content: center;
   position: relative; overflow: hidden;

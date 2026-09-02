@@ -133,10 +133,10 @@ export const SOCIAL_LINKS: SocialLink[] = [
 ];
 
 export const SOCIAL_FEED: FeedPost[] = [
-  { net: 'instagram', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=500&q=70', cap: 'Leg day no perdona 🔥 Roma Sur a tope', likes: '2.4K', ago: '3h', url: '#' },
-  { net: 'instagram', img: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=500&q=70', cap: 'Nueva clase de HIIT en Condesa 💥', likes: '1.8K', ago: '9h', url: '#' },
-  { net: 'facebook', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=500&q=70', cap: 'Reto de 30 días: ¿te atreves, bestia?', likes: '973', ago: '1d', url: '#' },
-  { net: 'instagram', img: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=500&q=70', cap: 'PR de peso muerto en Santa Fe 🏋️', likes: '3.1K', ago: '1d', url: '#' },
-  { net: 'facebook', img: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=500&q=70', cap: 'Coaches nuevos en Interlomas. Bienvenidos 🐂', likes: '654', ago: '2d', url: '#' },
-  { net: 'instagram', img: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=500&q=70', cap: 'Domingo de cardio al aire libre ☀️', likes: '2.0K', ago: '3d', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1000&q=70', cap: 'Leg day no perdona 🔥 Roma Sur a tope', likes: '2.4K', ago: '3h', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1000&q=70', cap: 'Nueva clase de HIIT en Condesa 💥', likes: '1.8K', ago: '9h', url: '#' },
+  { net: 'facebook', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1000&q=70', cap: 'Reto de 30 días: ¿te atreves, bestia?', likes: '973', ago: '1d', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1000&q=70', cap: 'PR de peso muerto en Santa Fe 🏋️', likes: '3.1K', ago: '1d', url: '#' },
+  { net: 'facebook', img: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=1000&q=70', cap: 'Coaches nuevos en Interlomas. Bienvenidos 🐂', likes: '654', ago: '2d', url: '#' },
+  { net: 'instagram', img: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=1000&q=70', cap: 'Domingo de cardio al aire libre ☀️', likes: '2.0K', ago: '3d', url: '#' },
 ];
