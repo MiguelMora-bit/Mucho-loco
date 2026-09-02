@@ -1,0 +1,25 @@
+{
+  "header": {
+    "label": "PANEL DEL DUEÑO"
+  },
+  "nav": {
+    "summary": "Resumen",
+    "transfers": "Transferencias",
+    "payroll": "Nómina",
+    "comingSoon": "próximamente"
+  },
+  "dashboard": {
+    "title": "Resumen de la cadena",
+    "readOnlyNote": "Solo lectura — corte de caja y transferencias llegan en Fase 2.",
+    "totalRevenue": "Ingresos totales",
+    "activeCustomers": "Clientes activos",
+    "byBranch": "Ventas y clientes activos por sucursal",
+    "statsError": "No pudimos cargar las estadísticas",
+    "branchLabel": "Sucursal",
+    "revenueLabel": "Ingresos",
+    "globalInventory": "Inventario global consolidado",
+    "inventoryError": "No pudimos cargar el inventario",
+    "productLabel": "Producto",
+    "totalStockLabel": "Stock total"
+  }
+}

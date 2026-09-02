@@ -11,10 +11,10 @@ Gestionado con **pnpm workspaces + Turborepo**. Un único desarrollador, así qu
 ```
 mucho-loco/
   apps/
-    customer-app/       # Next.js 14 — tienda + app del socio (único app activo hoy)
-    branch-app/         # futuro — Fase 1 (versión mínima) / Fase 2 (completa)
-    owner-panel/        # futuro — Fase 1 (solo lectura) / Fase 2 (completo)
-    backend/            # futuro — pendiente NestJS vs AWS Amplify/Lambda-native
+    customer-app/       # Next.js — tienda + app del socio
+    branch-app/         # Vite + React SPA — Fase 1 en progreso (versión mínima) / Fase 2 (completa)
+    owner-panel/        # Vite + React SPA — Fase 1 en progreso (solo lectura) / Fase 2 (completo)
+    backend/            # futuro — NestJS sobre AWS nativo, decidido (ver "Arquitectura de backend" abajo), sin código todavía
   packages/
     types/              # @mucho-loco/types — tipos de dominio compartidos (Branch, Product, etc.)
 ```
@@ -26,7 +26,9 @@ pnpm dev             # turbo run dev — corre dev de todos los apps (o pnpm --f
 pnpm build           # turbo run build — respeta orden de dependencias entre paquetes
 ```
 
-Cada app nuevo (`branch-app`, `owner-panel`, `backend`) tiene su propio `CLAUDE.md` con sus convenciones específicas cuando se cree. `apps/customer-app/CLAUDE.md` ya existe.
+Cada app nuevo tiene su propio `CLAUDE.md` con sus convenciones específicas. `apps/customer-app/CLAUDE.md`, `apps/branch-app/CLAUDE.md` y `apps/owner-panel/CLAUDE.md` ya existen; `apps/backend/CLAUDE.md` se crea cuando arranque ese app.
+
+**branch-app y owner-panel son Vite + React (SPA), no Next.js** — decisión explícita (2026-09-02): son herramientas internas para staff/dueño sin necesidad de SEO/SSR, y usar un framework distinto por app (se evaluó Vue/Angular para aprender) hubiera fragmentado el stack de un desarrollador solo sin ganancia real. Comparten `@mucho-loco/types` con customer-app, pero **no** comparten código de runtime (stores, hooks) todavía — `lib/stores/createAsyncResource.ts` (el factory de Zustand para el patrón mock-first) vive duplicado en los 3 apps a propósito: son ~20 líneas, y extraerlo a un paquete compartido ahora costaría más en wiring de workspace que lo que ahorra. Extraer solo si crece lógica real (retries, caché) o aparece un 4to consumidor.
 
 ## Visión completa del proyecto (negocio)
 

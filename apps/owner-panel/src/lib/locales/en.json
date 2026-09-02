@@ -1,0 +1,25 @@
+{
+  "header": {
+    "label": "OWNER PANEL"
+  },
+  "nav": {
+    "summary": "Summary",
+    "transfers": "Transfers",
+    "payroll": "Payroll",
+    "comingSoon": "coming soon"
+  },
+  "dashboard": {
+    "title": "Chain overview",
+    "readOnlyNote": "Read-only — cash reconciliation and transfers arrive in Phase 2.",
+    "totalRevenue": "Total revenue",
+    "activeCustomers": "Active customers",
+    "byBranch": "Sales and active customers by branch",
+    "statsError": "We couldn't load the stats",
+    "branchLabel": "Branch",
+    "revenueLabel": "Revenue",
+    "globalInventory": "Consolidated global inventory",
+    "inventoryError": "We couldn't load the inventory",
+    "productLabel": "Product",
+    "totalStockLabel": "Total stock"
+  }
+}
