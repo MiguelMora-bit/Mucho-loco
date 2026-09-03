@@ -36,11 +36,17 @@ export function AppShell() {
           >
             {t('nav.expenses')}
           </NavLink>
+          <NavLink
+            to="/payroll"
+            className={({ isActive }) =>
+              'px-3 py-1.5 rounded text-sm font-medium transition-colors ' +
+              (isActive ? 'bg-ml-red text-ml-cream' : 'text-ml-cream-dim hover:text-ml-cream')
+            }
+          >
+            {t('nav.payroll')}
+          </NavLink>
           <span className="px-3 py-1.5 rounded text-sm text-ml-muted cursor-not-allowed" title={t('nav.comingSoon')}>
             {t('nav.transfers')} <span className="text-xs">({t('nav.comingSoon')})</span>
-          </span>
-          <span className="px-3 py-1.5 rounded text-sm text-ml-muted cursor-not-allowed" title={t('nav.comingSoon')}>
-            {t('nav.payroll')} <span className="text-xs">({t('nav.comingSoon')})</span>
           </span>
           <div className="flex gap-1 ml-2">
             <button

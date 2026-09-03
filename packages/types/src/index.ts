@@ -560,3 +560,61 @@ export interface Expense {
   amount: number;
   date: string;
 }
+
+// --- owner-panel (Phase 3) ---
+
+export type EmployeeRole = 'manager' | 'counter' | 'coach';
+
+/** Unlike Expense, an Employee always belongs to a real branch — there's no
+ *  "corporate" employee in this feature yet. */
+export interface Employee {
+  id: string;
+  branchId: number;
+  name: string;
+  role: EmployeeRole;
+  dailyRate: number;
+  hireDate: string;
+  active: boolean; // reserved for a future manage-employees screen; unread by today's calculation
+}
+
+/** A "quincena" — the standard Mexican biweekly pay cycle. status flips
+ *  'open' → 'closed' the moment payroll is run for it; a closed period's
+ *  Payslips are final and can't be re-run. */
+export interface PayrollPeriod {
+  id: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  status: 'open' | 'closed';
+}
+
+/** Pre-seeded/consumed by owner-panel, never written by it — real attendance
+ *  capture is deferred to branch-app's future staff roles/login work and
+ *  will populate this same shape without changing the calculation. */
+export interface AttendanceSummary {
+  employeeId: string;
+  periodId: string;
+  daysWorked: number;
+}
+
+/** grossPay/isrDeduction/imssDeduction/netPay are computed once, when a
+ *  period is run, by owner-panel's lib/payroll.ts — ISR/IMSS there are a
+ *  simplified, illustrative approximation, NOT the real SAT/IMSS tables.
+ *  employeeName/role/branchId are denormalized for display, like
+ *  CounterSaleItem.productName. */
+export interface Payslip {
+  id: string;
+  periodId: string;
+  employeeId: string;
+  employeeName: string;
+  branchId: number;
+  role: EmployeeRole;
+  daysWorked: number;
+  totalDays: number;
+  dailyRate: number;
+  grossPay: number;
+  isrDeduction: number;
+  imssDeduction: number;
+  netPay: number;
+  generatedAt: string;
+}
