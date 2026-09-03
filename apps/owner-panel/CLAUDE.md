@@ -29,5 +29,6 @@ pnpm --filter owner-panel test
 ## Estado
 
 - ✅ Fase 1: resumen con ingresos/clientes activos por sucursal + inventario global consolidado, ambos de solo lectura.
-- ⏳ Pendiente Fase 2: transferencias de inventario, gastos.
+- ✅ Fase 2 (parcial), gastos (`/expenses`): registro y listado de gastos, por sucursal (`branchId: number`) o corporativos (`branchId: null`, ej. marketing nacional o nómina de oficina) — 6 categorías (renta, servicios, mantenimiento, insumos, marketing, otro). El selector de sucursal del formulario reusa `useBranchStatsStore()` (mismo store que el dashboard) en vez de importar `data.ts` directo, para no saltarse la capa de repository. `Expense.date` es ISO + `lib/dates.ts` (`Intl.DateTimeFormat`) para que la fecha sí cambie con el idioma, mismo patrón que se usó para arreglar fechas en customer-app.
+- ⏳ Pendiente Fase 2: transferencias de inventario.
 - ⏳ Pendiente Fase 3: nómina, reportes ejecutivos avanzados.

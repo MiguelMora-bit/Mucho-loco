@@ -4,9 +4,36 @@
   },
   "nav": {
     "summary": "Resumen",
+    "expenses": "Gastos",
     "transfers": "Transferencias",
     "payroll": "Nómina",
     "comingSoon": "próximamente"
+  },
+  "expenses": {
+    "title": "Gastos",
+    "subtitle": "Registra y consulta los gastos de la cadena, por sucursal o corporativos.",
+    "totalLabel": "Gasto total",
+    "newExpense": "Registrar gasto",
+    "branchLabel": "Sucursal",
+    "corporate": "Corporativo",
+    "categoryLabel": "Categoría",
+    "categories": {
+      "rent": "Renta",
+      "utilities": "Servicios",
+      "maintenance": "Mantenimiento",
+      "supplies": "Insumos",
+      "marketing": "Marketing",
+      "other": "Otro"
+    },
+    "descriptionLabel": "Descripción",
+    "descriptionPlaceholder": "¿En qué se gastó?",
+    "amountLabel": "Monto",
+    "dateLabel": "Fecha",
+    "addExpense": "Agregar gasto",
+    "saving": "Guardando…",
+    "errorGeneric": "No pudimos registrar el gasto",
+    "historyTitle": "Historial de gastos",
+    "loadError": "No pudimos cargar los gastos"
   },
   "dashboard": {
     "title": "Resumen de la cadena",

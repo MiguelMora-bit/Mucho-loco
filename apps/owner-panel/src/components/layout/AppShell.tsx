@@ -19,12 +19,22 @@ export function AppShell() {
         <nav className="flex items-center gap-2">
           <NavLink
             to="/"
+            end
             className={({ isActive }) =>
               'px-3 py-1.5 rounded text-sm font-medium transition-colors ' +
               (isActive ? 'bg-ml-red text-ml-cream' : 'text-ml-cream-dim hover:text-ml-cream')
             }
           >
             {t('nav.summary')}
+          </NavLink>
+          <NavLink
+            to="/expenses"
+            className={({ isActive }) =>
+              'px-3 py-1.5 rounded text-sm font-medium transition-colors ' +
+              (isActive ? 'bg-ml-red text-ml-cream' : 'text-ml-cream-dim hover:text-ml-cream')
+            }
+          >
+            {t('nav.expenses')}
           </NavLink>
           <span className="px-3 py-1.5 rounded text-sm text-ml-muted cursor-not-allowed" title={t('nav.comingSoon')}>
             {t('nav.transfers')} <span className="text-xs">({t('nav.comingSoon')})</span>

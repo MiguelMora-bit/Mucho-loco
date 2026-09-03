@@ -544,3 +544,19 @@ export interface GlobalInventoryItem {
   productName: string;
   totalQty: number;
 }
+
+// --- owner-panel (Phase 2) ---
+
+export type ExpenseCategory = 'rent' | 'utilities' | 'maintenance' | 'supplies' | 'marketing' | 'other';
+
+/** branchId is null for corporate-wide expenses (national marketing, HQ
+ *  payroll) that aren't tied to one location — everything else (rent,
+ *  utilities) belongs to a specific branch, like BranchStatsSummary. */
+export interface Expense {
+  id: string;
+  branchId: number | null;
+  category: ExpenseCategory;
+  description: string;
+  amount: number;
+  date: string;
+}

@@ -4,9 +4,36 @@
   },
   "nav": {
     "summary": "Summary",
+    "expenses": "Expenses",
     "transfers": "Transfers",
     "payroll": "Payroll",
     "comingSoon": "coming soon"
+  },
+  "expenses": {
+    "title": "Expenses",
+    "subtitle": "Track and review the chain's expenses, by branch or corporate-wide.",
+    "totalLabel": "Total expenses",
+    "newExpense": "Log an expense",
+    "branchLabel": "Branch",
+    "corporate": "Corporate",
+    "categoryLabel": "Category",
+    "categories": {
+      "rent": "Rent",
+      "utilities": "Utilities",
+      "maintenance": "Maintenance",
+      "supplies": "Supplies",
+      "marketing": "Marketing",
+      "other": "Other"
+    },
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What was it for?",
+    "amountLabel": "Amount",
+    "dateLabel": "Date",
+    "addExpense": "Add expense",
+    "saving": "Saving…",
+    "errorGeneric": "We couldn't log the expense",
+    "historyTitle": "Expense history",
+    "loadError": "We couldn't load the expenses"
   },
   "dashboard": {
     "title": "Chain overview",
