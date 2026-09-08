@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import AccountClient from '@/components/AccountClient';
+import { buildAlternates } from '@/lib/seo';
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -14,6 +15,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title: t('accountTitle'),
     description: t('accountDesc'),
+    alternates: buildAlternates('/account', locale),
   };
 }
 

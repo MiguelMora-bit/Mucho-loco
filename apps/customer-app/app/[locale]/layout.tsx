@@ -6,6 +6,7 @@ import { getMessages, getTranslations } from 'next-intl/server';
 import { setRequestLocale } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
 import { Providers } from '../providers';
+import { SITE_URL, buildAlternates } from '@/lib/seo';
 import '../globals.css';
 
 const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton', display: 'swap' });
@@ -30,8 +31,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   const { locale } = params;
   const t = await getTranslations({ locale, namespace: 'meta' });
   const isEn = locale === 'en';
-  const baseUrl = 'https://mucholoco.mx';
-  const canonical = isEn ? `${baseUrl}/en` : baseUrl;
+  const alternates = buildAlternates('/', locale);
 
   return {
     title: {
@@ -39,20 +39,14 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
       template: `%s · MUCHO LOCO GYM`,
     },
     description: t('homeDesc'),
-    metadataBase: new URL(baseUrl),
-    alternates: {
-      canonical,
-      languages: {
-        es: baseUrl,
-        en: `${baseUrl}/en`,
-      },
-    },
+    metadataBase: new URL(SITE_URL),
+    alternates,
     openGraph: {
       siteName: 'Mucho Loco Gym',
       locale: isEn ? 'en_US' : 'es_MX',
       alternateLocale: isEn ? 'es_MX' : 'en_US',
       type: 'website',
-      url: canonical,
+      url: alternates.canonical,
       title: t('homeTitle'),
       description: t('homeDesc'),
       images: [{ url: '/assets/bull-head.png', width: 512, height: 512, alt: 'Mucho Loco Gym' }],

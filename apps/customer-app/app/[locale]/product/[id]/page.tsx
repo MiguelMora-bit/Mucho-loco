@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import { productRepository } from '@/lib/repositories/product.repository';
 import ProductClient from '@/components/ProductClient';
+import { SITE_URL, buildAlternates } from '@/lib/seo';
 import type { Lang } from '@mucho-loco/types';
 
 interface Props {
@@ -20,9 +21,29 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const product = await getProduct(id);
   if (!product) return {};
   const t = await getTranslations({ locale, namespace: 'meta' });
+  const lang = locale as Lang;
+  const title = `${product.name[lang]} · ${t('productTitle')}`;
+  const description = `${product.name[lang]} — ${product.flav[lang]}. ${t('productDesc')}`;
+  const alternates = buildAlternates(`/product/${id}`, locale);
+  const image = `${SITE_URL}${product.img}`;
+
   return {
-    title: `${product.name[locale as Lang]} · ${t('productTitle')}`,
-    description: t('productDesc'),
+    title,
+    description,
+    alternates,
+    openGraph: {
+      type: 'website',
+      url: alternates.canonical,
+      title,
+      description,
+      images: [{ url: image, alt: product.name[lang] }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
   };
 }
 
@@ -46,5 +67,28 @@ export default async function ProductPage(props: Props) {
 
   const siblings = await productRepository.getSiblings(product.id, product.cat);
 
-  return <ProductClient product={product} siblings={siblings} lang={lang} />;
+  const alternates = buildAlternates(`/product/${id}`, locale);
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name[lang],
+    description: `${product.name[lang]} — ${product.flav[lang]}`,
+    image: `${SITE_URL}${product.img}`,
+    url: alternates.canonical,
+    brand: { '@type': 'Brand', name: 'Mucho Loco Gym' },
+    offers: {
+      '@type': 'Offer',
+      url: alternates.canonical,
+      priceCurrency: 'MXN',
+      price: product.price,
+      availability: 'https://schema.org/InStock',
+    },
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <ProductClient product={product} siblings={siblings} lang={lang} />
+    </>
+  );
 }

@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { setRequestLocale } from 'next-intl/server';
 import { userRepository } from '@/lib/repositories/user.repository';
 import DashboardClient from '@/components/DashboardClient';
+import { buildAlternates } from '@/lib/seo';
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -15,6 +16,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title: t('panelTitle'),
     description: t('panelDesc'),
+    alternates: buildAlternates('/dashboard', locale),
     robots: { index: false, follow: false },
   };
 }

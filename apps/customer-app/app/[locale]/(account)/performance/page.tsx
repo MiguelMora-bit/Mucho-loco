@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { performanceRepository } from '@/lib/repositories/performance.repository';
 import PerformanceClient from '@/components/PerformanceClient';
+import { buildAlternates } from '@/lib/seo';
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -14,6 +15,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title: t('performanceTitle'),
     description: t('performanceDesc'),
+    alternates: buildAlternates('/performance', locale),
     robots: { index: false, follow: false },
   };
 }
