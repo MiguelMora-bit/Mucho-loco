@@ -17,7 +17,7 @@ export function ConfirmationStep({ t, delivery }: ConfirmationStepProps) {
         {t.checkout.confirmation.emailNote} {delivery === 'pickup' ? t.checkout.confirmation.pickupNote : t.checkout.confirmation.homeNote}
       </p>
       <div className="flex gap-3.5 justify-center flex-wrap">
-        <Link href="/dashboard" className="btn-primary inline-block no-underline px-8 py-4 font-display text-xl tracking-[0.06em] bg-ml-red text-white">{t.checkout.confirmation.viewAccount}</Link>
+        <Link href="/dashboard" className="inline-block no-underline px-8 py-4 font-display text-xl tracking-[0.06em] bg-ml-red text-ml-cream">{t.checkout.confirmation.viewAccount}</Link>
         <Link href="/" className="inline-block no-underline px-8 py-4 font-display text-xl tracking-[0.06em] border border-ml-border text-ml-cream">{t.checkout.confirmation.keepShopping}</Link>
       </div>
     </div>

@@ -15,7 +15,7 @@ export function Header({ t, pane, avatarInitial }: HeaderProps) {
         <h1 className="font-display text-[32px] leading-none">{t.dashboard.nav[pane]}</h1>
       </div>
       <span className="flex-1" />
-      <div className="w-[42px] h-[42px] rounded-full bg-ml-red grid place-items-center font-display text-xl text-white">
+      <div className="w-[42px] h-[42px] rounded-full bg-ml-red grid place-items-center font-display text-xl text-ml-cream">
         {avatarInitial}
       </div>
     </div>

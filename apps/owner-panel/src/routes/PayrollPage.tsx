@@ -125,7 +125,7 @@ export function PayrollPage() {
               <select
                 value={selectedPeriodId ?? ''}
                 onChange={(e) => setPeriodOverride(e.target.value)}
-                className="bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm"
+                className="bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
               >
                 {periods.map((p) => (
                   <option key={p.id} value={p.id}>{formatPeriodRange(p.startDate, p.endDate, lang)}</option>
@@ -138,7 +138,7 @@ export function PayrollPage() {
                   'px-2 py-1 rounded text-xs font-mono uppercase border ' +
                   (selectedPeriod.status === 'open'
                     ? 'bg-ml-green/10 border-ml-green text-ml-green'
-                    : 'bg-ml-muted/10 border-ml-border text-ml-muted')
+                    : 'bg-ml-muted/10 border-ml-muted text-ml-muted')
                 }
               >
                 {selectedPeriod.status === 'open' ? t('payroll.statusOpen') : t('payroll.statusClosed')}
@@ -218,7 +218,7 @@ export function PayrollPage() {
                     <tr className="border-b border-ml-border">
                       <td colSpan={9} className="py-4">
                         <div className="bg-ml-card-2 border border-ml-border rounded p-4 max-w-md">
-                          <div className="font-display text-lg mb-2">{t('payroll.receiptTitle')}</div>
+                          <div className="font-bold text-lg mb-2">{t('payroll.receiptTitle')}</div>
                           <div className="text-sm text-ml-cream-dim mb-3">
                             {employee.name} · {branchLabelFor(employee.branchId)} · {t(`payroll.roles.${employee.role}`)}
                           </div>

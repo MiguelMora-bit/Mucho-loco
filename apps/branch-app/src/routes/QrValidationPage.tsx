@@ -89,7 +89,7 @@ export function QrValidationPage() {
           ) : (
             <>
               <div className="text-4xl mb-2">{result.record.status === 'active' ? '✓' : result.record.status === 'grace' ? '⚠' : '✕'}</div>
-              <div className={'inline-block px-3 py-1 rounded border font-bold text-sm mb-3 ' + STATUS_COPY[result.record.status].className}>
+              <div className={'inline-block px-2 py-1 rounded border font-mono text-xs uppercase mb-3 ' + STATUS_COPY[result.record.status].className}>
                 {STATUS_COPY[result.record.status].label}
               </div>
               <div className="font-medium text-lg">{result.record.memberName}</div>

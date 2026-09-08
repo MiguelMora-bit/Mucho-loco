@@ -27,7 +27,7 @@ export function AccessPane({ t, active, profile, membership, history, onShowQr }
               <div><div className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl mb-1">{t.dashboard.access.expiresLabel}</div><b className="font-display text-lg">{membership.expiresAt}</b></div>
               <div><div className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl mb-1">{t.dashboard.access.branchLabel}</div><b className="font-display text-lg">15 GYMS</b></div>
             </div>
-            <button onClick={onShowQr} className="w-full mt-4.5 p-4 bg-ml-red text-white font-display text-22 tracking-[0.04em] border-none cursor-pointer">
+            <button onClick={onShowQr} className="w-full mt-4.5 p-4 bg-ml-red text-ml-cream font-display text-22 tracking-[0.04em] border-none cursor-pointer">
               {t.dashboard.access.showQr}
             </button>
           </div>

@@ -35,7 +35,7 @@ export function ProfilePane({ t, active, profile, membership, onRenew, onLogout 
               [t.dashboard.profile.partnersLabel, t.dashboard.profile.notLinked],
             ]}
           />
-          <button onClick={onRenew} className="mt-2 w-full p-3.5 bg-ml-red text-white font-display text-lg tracking-[0.04em] border-none cursor-pointer">
+          <button onClick={onRenew} className="mt-2 w-full p-3.5 bg-ml-red text-ml-cream font-display text-lg tracking-[0.04em] border-none cursor-pointer">
             {t.dashboard.profile.renewMembership}
           </button>
         </div>

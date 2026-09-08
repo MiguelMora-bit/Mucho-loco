@@ -48,8 +48,8 @@ function OrderCard({ order, onDelivered }: { order: PickupOrder; onDelivered: (i
           className={
             'px-2 py-1 rounded text-xs font-mono uppercase ' +
             (order.status === 'ready'
-              ? 'bg-ml-orange/20 text-ml-orange border border-ml-orange'
-              : 'bg-ml-green/20 text-ml-green border border-ml-green')
+              ? 'bg-ml-orange/10 text-ml-orange border border-ml-orange'
+              : 'bg-ml-green/10 text-ml-green border border-ml-green')
           }
         >
           {order.status === 'ready' ? t('pickup.statusReady') : t('pickup.statusDelivered')}

@@ -86,7 +86,7 @@ export function ExpensesPage() {
             <select
               value={branchValue}
               onChange={(e) => setBranchValue(e.target.value)}
-              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm"
+              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
             >
               <option value={CORPORATE_VALUE}>{t('expenses.corporate')}</option>
               {branches.map((b) => (
@@ -99,7 +99,7 @@ export function ExpensesPage() {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm"
+              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{t(`expenses.categories.${c}`)}</option>

@@ -12,7 +12,7 @@ export function QrModal({ t, open, onClose }: QrModalProps) {
   return (
     <div className="qr-full" onClick={onClose}>
       <div className="w-[380px] max-w-[80vw] aspect-square bg-white p-6 shadow-orange grid place-items-center">
-        <div className="font-mono text-11 text-[#333] text-center">
+        <div className="font-mono text-11 text-ml-muted text-center">
           <div className="text-[60px] mb-4">▓▓▓▓▓▓</div>
           <div>▓ · · · ▓</div>
           <div>▓ ▓▓▓ · ▓</div>

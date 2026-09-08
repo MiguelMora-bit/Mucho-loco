@@ -117,7 +117,7 @@ export function TransfersPage() {
             <select
               value={selectedProductId}
               onChange={(e) => setProductId(e.target.value)}
-              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm"
+              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
             >
               {products.map((p) => (
                 <option key={p.productId} value={p.productId}>{p.productName}</option>
@@ -129,7 +129,7 @@ export function TransfersPage() {
             <select
               value={selectedFromBranchId}
               onChange={(e) => setFromBranchId(e.target.value)}
-              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm"
+              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
             >
               {branches.map((b) => (
                 <option key={b.branchId} value={b.branchId}>{b.branchName}</option>
@@ -142,7 +142,7 @@ export function TransfersPage() {
             <select
               value={selectedToBranchId}
               onChange={(e) => setToBranchId(e.target.value)}
-              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm"
+              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
             >
               {branches.map((b) => (
                 <option key={b.branchId} value={b.branchId}>{b.branchName}</option>

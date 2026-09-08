@@ -31,7 +31,7 @@ export function HomePane({ t, active, profile, membership, onRenew }: HomePanePr
           <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.membershipExpiringPrefix} {membership.daysLeft} {t.dashboard.home.membershipExpiringSuffix}</b>
           <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.renewNotePrefix} {membership.streak} {t.dashboard.home.renewNoteSuffix}</p>
         </div>
-        <button onClick={onRenew} className="px-5 py-2.5 bg-ml-red text-white font-bebas tracking-wide text-sm border-none cursor-pointer">{t.dashboard.home.renew}</button>
+        <button onClick={onRenew} className="px-5 py-2.5 bg-ml-red text-ml-cream font-bebas tracking-wide text-sm border-none cursor-pointer">{t.dashboard.home.renew}</button>
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-7">

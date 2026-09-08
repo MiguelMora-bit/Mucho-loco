@@ -218,8 +218,21 @@ export function MembershipTab() {
             {foundMember && (
               <div className="bg-ml-card-2 border border-ml-border rounded p-3 text-sm">
                 <div className="font-medium">{foundMember.memberName}</div>
-                <div className="text-ml-cream-dim">
-                  {t('counter.membership.currentStatus')} <span className="uppercase">{foundMember.status}</span> · {t('counter.membership.expiresLabel')} {foundMember.expiresAt}
+                <div className="text-ml-cream-dim flex items-center gap-2 mt-1">
+                  {t('counter.membership.currentStatus')}
+                  <span
+                    className={
+                      'px-2 py-1 rounded text-xs font-mono uppercase border ' +
+                      (foundMember.status === 'active'
+                        ? 'bg-ml-green/10 border-ml-green text-ml-green'
+                        : foundMember.status === 'grace'
+                          ? 'bg-ml-orange/10 border-ml-orange text-ml-orange'
+                          : 'bg-ml-red/10 border-ml-red text-ml-red')
+                    }
+                  >
+                    {foundMember.status}
+                  </span>
+                  · {t('counter.membership.expiresLabel')} {foundMember.expiresAt}
                 </div>
               </div>
             )}
