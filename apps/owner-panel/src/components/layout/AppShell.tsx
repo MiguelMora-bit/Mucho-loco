@@ -10,7 +10,8 @@ export function AppShell() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-ml-border bg-ml-black-2 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
+        <div className="flex items-center gap-3">
+          <img src="/assets/bull-head.png" alt="Mucho Loco" className="h-8 w-8 object-contain" />
           <span className="font-bold text-lg tracking-wide">
             MUCHO <span className="text-ml-red">LOCO</span>
           </span>
@@ -37,6 +38,15 @@ export function AppShell() {
             {t('nav.expenses')}
           </NavLink>
           <NavLink
+            to="/transfers"
+            className={({ isActive }) =>
+              'px-3 py-1.5 rounded text-sm font-medium transition-colors ' +
+              (isActive ? 'bg-ml-red text-ml-cream' : 'text-ml-cream-dim hover:text-ml-cream')
+            }
+          >
+            {t('nav.transfers')}
+          </NavLink>
+          <NavLink
             to="/payroll"
             className={({ isActive }) =>
               'px-3 py-1.5 rounded text-sm font-medium transition-colors ' +
@@ -45,9 +55,6 @@ export function AppShell() {
           >
             {t('nav.payroll')}
           </NavLink>
-          <span className="px-3 py-1.5 rounded text-sm text-ml-muted cursor-not-allowed" title={t('nav.comingSoon')}>
-            {t('nav.transfers')} <span className="text-xs">({t('nav.comingSoon')})</span>
-          </span>
           <div className="flex gap-1 ml-2">
             <button
               onClick={() => setLanguage('es')}

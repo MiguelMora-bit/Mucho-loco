@@ -1,5 +1,5 @@
 import type { BranchStatsSummary, GlobalInventoryItem } from '@mucho-loco/types';
-import { BRANCH_STATS, GLOBAL_INVENTORY } from '../../data';
+import { BRANCH_STATS, BRANCH_INVENTORY } from '../../data';
 import { delay } from './delay';
 
 export class StatsMockDatasource {
@@ -10,6 +10,15 @@ export class StatsMockDatasource {
 
   async getGlobalInventory(): Promise<GlobalInventoryItem[]> {
     await delay(140);
-    return GLOBAL_INVENTORY;
+    const byProduct = new Map<string, GlobalInventoryItem>();
+    for (const level of BRANCH_INVENTORY) {
+      const existing = byProduct.get(level.productId);
+      if (existing) {
+        existing.totalQty += level.qty;
+      } else {
+        byProduct.set(level.productId, { productId: level.productId, productName: level.productName, totalQty: level.qty });
+      }
+    }
+    return Array.from(byProduct.values());
   }
 }

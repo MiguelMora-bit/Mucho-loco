@@ -6,8 +6,7 @@
     "summary": "Summary",
     "expenses": "Expenses",
     "transfers": "Transfers",
-    "payroll": "Payroll",
-    "comingSoon": "coming soon"
+    "payroll": "Payroll"
   },
   "expenses": {
     "title": "Expenses",
@@ -69,9 +68,31 @@
     "loadError": "We couldn't load payroll",
     "emptyState": "No pay periods yet."
   },
+  "transfers": {
+    "title": "Inventory transfers",
+    "subtitle": "Move stock between branches and check each branch's current level.",
+    "newTransfer": "New transfer",
+    "productLabel": "Product",
+    "fromBranchLabel": "Source branch",
+    "toBranchLabel": "Destination branch",
+    "qtyLabel": "Quantity",
+    "availableLabel": "Available at source",
+    "submit": "Transfer",
+    "submitting": "Transferring…",
+    "errorSameBranch": "Source and destination branch must be different",
+    "errorInsufficientStock": "Not enough {{product}} at the source branch",
+    "errorGeneric": "We couldn't complete the transfer",
+    "stockByBranchTitle": "Current stock by branch",
+    "branchLabel": "Branch",
+    "qtyColumnLabel": "Quantity",
+    "historyTitle": "Transfer history",
+    "dateLabel": "Date",
+    "loadError": "We couldn't load the transfers",
+    "emptyState": "No transfers logged yet."
+  },
   "dashboard": {
     "title": "Chain overview",
-    "readOnlyNote": "Read-only — cash reconciliation and transfers arrive in Phase 2.",
+    "readOnlyNote": "Read-only — cash reconciliation arrives with branch-app Phase 2.",
     "totalRevenue": "Total revenue",
     "activeCustomers": "Active customers",
     "byBranch": "Sales and active customers by branch",

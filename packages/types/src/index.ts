@@ -561,6 +561,21 @@ export interface Expense {
   date: string;
 }
 
+/** A completed movement of stock between two branches — branch inventory
+ *  levels (BranchInventoryLevel) are updated immediately when one is
+ *  created, same as CounterSale decrementing stock on sale. */
+export interface InventoryTransfer {
+  id: string;
+  productId: string;
+  productName: string;
+  fromBranchId: number;
+  fromBranchName: string;
+  toBranchId: number;
+  toBranchName: string;
+  qty: number;
+  createdAt: string;
+}
+
 // --- owner-panel (Phase 3) ---
 
 export type EmployeeRole = 'manager' | 'counter' | 'coach';

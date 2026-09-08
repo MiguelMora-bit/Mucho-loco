@@ -6,8 +6,7 @@
     "summary": "Resumen",
     "expenses": "Gastos",
     "transfers": "Transferencias",
-    "payroll": "Nómina",
-    "comingSoon": "próximamente"
+    "payroll": "Nómina"
   },
   "expenses": {
     "title": "Gastos",
@@ -69,9 +68,31 @@
     "loadError": "No pudimos cargar la nómina",
     "emptyState": "Todavía no hay quincenas registradas."
   },
+  "transfers": {
+    "title": "Transferencias de inventario",
+    "subtitle": "Mueve stock entre sucursales y consulta el nivel actual de cada una.",
+    "newTransfer": "Nueva transferencia",
+    "productLabel": "Producto",
+    "fromBranchLabel": "Sucursal origen",
+    "toBranchLabel": "Sucursal destino",
+    "qtyLabel": "Cantidad",
+    "availableLabel": "Disponible en origen",
+    "submit": "Transferir",
+    "submitting": "Transfiriendo…",
+    "errorSameBranch": "La sucursal origen y destino deben ser diferentes",
+    "errorInsufficientStock": "No hay suficiente {{product}} en la sucursal origen",
+    "errorGeneric": "No pudimos completar la transferencia",
+    "stockByBranchTitle": "Stock actual por sucursal",
+    "branchLabel": "Sucursal",
+    "qtyColumnLabel": "Cantidad",
+    "historyTitle": "Historial de transferencias",
+    "dateLabel": "Fecha",
+    "loadError": "No pudimos cargar las transferencias",
+    "emptyState": "Todavía no hay transferencias registradas."
+  },
   "dashboard": {
     "title": "Resumen de la cadena",
-    "readOnlyNote": "Solo lectura — corte de caja y transferencias llegan en Fase 2.",
+    "readOnlyNote": "Solo lectura — corte de caja llega con la Fase 2 de sucursal.",
     "totalRevenue": "Ingresos totales",
     "activeCustomers": "Clientes activos",
     "byBranch": "Ventas y clientes activos por sucursal",

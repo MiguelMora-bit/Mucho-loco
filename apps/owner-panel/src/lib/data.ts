@@ -1,4 +1,4 @@
-import type { AttendanceSummary, BranchStatsSummary, Employee, Expense, GlobalInventoryItem, Payslip, PayrollPeriod } from '@mucho-loco/types';
+import type { AttendanceSummary, BranchInventoryLevel, BranchStatsSummary, Employee, Expense, InventoryTransfer, Payslip, PayrollPeriod } from '@mucho-loco/types';
 
 export const BRANCH_STATS: BranchStatsSummary[] = [
   { branchId: 1, branchName: 'Roma Sur', revenue: 186400, activeCustomers: 312 },
@@ -7,11 +7,36 @@ export const BRANCH_STATS: BranchStatsSummary[] = [
   { branchId: 5, branchName: 'Santa Fe', revenue: 231500, activeCustomers: 401 },
 ];
 
-export const GLOBAL_INVENTORY: GlobalInventoryItem[] = [
-  { productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', totalQty: 84 },
-  { productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', totalQty: 156 },
-  { productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', totalQty: 612 },
-  { productId: 'p18', productName: 'Shaker Loco', totalQty: 340 },
+// Per-branch stock — statsRepository.getGlobalInventory() sums this at call
+// time (never a separately-tracked total), so a transfer between branches
+// can never leave the dashboard's total out of sync with reality.
+export const BRANCH_INVENTORY: BranchInventoryLevel[] = [
+  { branchId: 1, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 30 },
+  { branchId: 1, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 50 },
+  { branchId: 1, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 200 },
+  { branchId: 1, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 120 },
+
+  { branchId: 2, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 20 },
+  { branchId: 2, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 40 },
+  { branchId: 2, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 150 },
+  { branchId: 2, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 80 },
+
+  // Condesa doesn't stock 'p1' yet — the level opens the first time a
+  // transfer brings stock in, instead of every branch listing every SKU.
+  { branchId: 3, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 26 },
+  { branchId: 3, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 112 },
+  { branchId: 3, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 60 },
+
+  { branchId: 5, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 20 },
+  { branchId: 5, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 40 },
+  { branchId: 5, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 150 },
+  { branchId: 5, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 80 },
+];
+
+// Mutated in place by inventoryTransfer.mock.ts on each transfer — same
+// pattern as EXPENSES/BRANCH_INVENTORY (branch-app).
+export const INVENTORY_TRANSFERS: InventoryTransfer[] = [
+  { id: 'transfer-1', productId: 'p18', productName: 'Shaker Loco', fromBranchId: 1, fromBranchName: 'Roma Sur', toBranchId: 3, toBranchName: 'Condesa', qty: 15, createdAt: '2026-08-20T14:00:00.000Z' },
 ];
 
 export const EMPLOYEES: Employee[] = [

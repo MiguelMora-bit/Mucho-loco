@@ -12,7 +12,8 @@ export function AppShell() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-ml-border bg-ml-black-2 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
+        <div className="flex items-center gap-3">
+          <img src="/assets/bull-head.png" alt="Mucho Loco" className="h-8 w-8 object-contain" />
           <span className="font-bold text-lg tracking-wide">
             MUCHO <span className="text-ml-red">LOCO</span>
           </span>
