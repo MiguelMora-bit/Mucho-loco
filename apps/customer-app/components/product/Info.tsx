@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LuDumbbell, LuTruck } from 'react-icons/lu';
 import { formatPrice } from '@/lib/pricing';
 import type { Lang, Product, Translations } from '@mucho-loco/types';
 
@@ -47,11 +48,11 @@ export function Info({ product, catLabel, t, lang }: InfoProps) {
       </div>
       <div className="mt-6 p-4.5 bg-ml-card border border-ml-border grid grid-cols-3 gap-4">
         <div className="text-center">
-          <div className="font-display text-22 text-ml-orange">🏪</div>
+          <div className="flex justify-center text-ml-orange"><LuDumbbell size={22} /></div>
           <div className="text-11 font-mono text-ml-cream-dim mt-1">{t.product.branchPickup}</div>
         </div>
         <div className="text-center">
-          <div className="font-display text-22 text-ml-orange">📦</div>
+          <div className="flex justify-center text-ml-orange"><LuTruck size={22} /></div>
           <div className="text-11 font-mono text-ml-cream-dim mt-1">{t.product.homeDelivery}</div>
         </div>
         <div className="text-center">

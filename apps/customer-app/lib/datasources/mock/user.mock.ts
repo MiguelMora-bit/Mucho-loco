@@ -1,4 +1,4 @@
-import type { UserProfile, MembershipInfo, Visit, Order, OrderItem } from '@mucho-loco/types';
+import type { UserProfile, MembershipInfo, Visit, Order, OrderItem, OnlinePaymentMethod } from '@mucho-loco/types';
 import { delay } from './delay';
 
 const MOCK_PROFILE: UserProfile = {
@@ -16,6 +16,7 @@ const MOCK_MEMBERSHIP: MembershipInfo = {
   visits: 18,
   streak: 7,
   daysLeft: 12,
+  accessCode: 'ML-DIEGO-2026-ALLGYMS',
 };
 
 const MOCK_HISTORY: Visit[] = [
@@ -37,6 +38,9 @@ let MOCK_ORDERS: Order[] = [
       { name: 'Whey Protein 5LBS',   flav: 'Strawberry',   img: '/assets/prod-whey-strawberry.jpg', qty: 1 },
     ],
     total: 2080,
+    paymentMethod: 'card',
+    delivery: 'pickup',
+    branch: 'Roma Sur',
   },
   {
     id: '#ML-240601',
@@ -44,6 +48,10 @@ let MOCK_ORDERS: Order[] = [
     status: 'done',
     items: [{ name: 'Shaker Loco', flav: '700ml', img: '/assets/mucho-loco-logo.jpg', qty: 1 }],
     total: 290,
+    paymentMethod: 'cash',
+    delivery: 'pickup',
+    branch: 'Roma Sur',
+    deliveredAt: '2026-06-01T18:42:00Z',
   },
 ];
 
@@ -68,7 +76,7 @@ export class UserMockDatasource {
     return MOCK_ORDERS;
   }
 
-  async createOrder(items: OrderItem[], total: number): Promise<Order> {
+  async createOrder(items: OrderItem[], total: number, paymentMethod: OnlinePaymentMethod, delivery: 'pickup' | 'home'): Promise<Order> {
     await delay(150);
     const order: Order = {
       id: `#ML-${Date.now().toString().slice(-6)}`,
@@ -76,6 +84,9 @@ export class UserMockDatasource {
       status: 'ready',
       items,
       total,
+      paymentMethod,
+      delivery,
+      branch: delivery === 'pickup' ? MOCK_PROFILE.branch : undefined,
     };
     MOCK_ORDERS = [order, ...MOCK_ORDERS];
     return order;

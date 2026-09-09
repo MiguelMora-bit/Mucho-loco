@@ -1,24 +1,22 @@
+import { QRCodeSVG } from 'qrcode.react';
 import type { Translations } from '@mucho-loco/types';
 
 interface QrModalProps {
   t: Translations;
   open: boolean;
   onClose: () => void;
+  accessCode: string;
 }
 
-export function QrModal({ t, open, onClose }: QrModalProps) {
+export function QrModal({ t, open, onClose, accessCode }: QrModalProps) {
   if (!open) return null;
 
   return (
     <div className="qr-full" onClick={onClose}>
       <div className="w-[380px] max-w-[80vw] aspect-square bg-white p-6 shadow-orange grid place-items-center">
-        <div className="font-mono text-11 text-ml-muted text-center">
-          <div className="text-[60px] mb-4">▓▓▓▓▓▓</div>
-          <div>▓ · · · ▓</div>
-          <div>▓ ▓▓▓ · ▓</div>
-          <div>▓ · · · ▓</div>
-          <div>▓▓▓▓▓▓▓▓</div>
-          <div className="mt-3 text-[9px] tracking-wide-2xl">ML-DIEGO-2026-ALLGYMS</div>
+        <div className="text-center">
+          <QRCodeSVG value={accessCode} size={260} marginSize={0} level="M" />
+          <div className="mt-3 font-mono text-[9px] text-ml-muted tracking-wide-2xl">{accessCode}</div>
         </div>
       </div>
       <h2 className="font-display text-5xl mt-7">{t.dashboard.qr.title}</h2>

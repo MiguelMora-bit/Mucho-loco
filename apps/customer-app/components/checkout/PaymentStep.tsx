@@ -3,16 +3,15 @@
 import type { SubmitEvent } from 'react';
 import { useCartStore, selectSubtotal } from '../../lib/stores/cart.store';
 import { formatPrice } from '../../lib/pricing';
-import type { Lang, Translations } from '@mucho-loco/types';
-
-type PayMethod = 'card' | 'oxxo' | 'transfer' | 'crypto';
+import { PAY_ICON, payLabels as buildPayLabels } from '../paymentMethodIcons';
+import type { Lang, OnlinePaymentMethod, Translations } from '@mucho-loco/types';
 
 interface PaymentStepProps {
   t: Translations;
   lang: Lang;
   delivery: 'pickup' | 'home';
-  payMethod: PayMethod;
-  setPayMethod: (m: PayMethod) => void;
+  payMethod: OnlinePaymentMethod;
+  setPayMethod: (m: OnlinePaymentMethod) => void;
   placing: boolean;
   error: string | null;
   onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
@@ -24,12 +23,10 @@ export function PaymentStep({ t, lang, delivery, payMethod, setPayMethod, placin
   const shipping = delivery === 'home' ? 99 : 0;
   const total = subtotal + shipping;
 
-  const payLabels: Record<PayMethod, string> = {
-    card: t.checkout.payment.payCard,
-    oxxo: t.checkout.payment.payOxxo,
-    transfer: t.checkout.payment.payTransfer,
-    crypto: t.checkout.payment.payCrypto,
-  };
+  const payLabels = buildPayLabels(t);
+  const availableMethods = (Object.keys(payLabels) as OnlinePaymentMethod[]).filter(
+    (key) => key !== 'cash' || delivery === 'pickup'
+  );
 
   return (
     <div className="ck-grid">
@@ -50,8 +47,9 @@ export function PaymentStep({ t, lang, delivery, payMethod, setPayMethod, placin
         <div className="ck-card">
           <div className="font-display text-lg mb-3.5">{t.checkout.payment.paymentMethod}</div>
           <div className="pay-grid">
-            {(Object.keys(payLabels) as PayMethod[]).map((key) => (
+            {availableMethods.map((key) => (
               <div key={key} className={'pay-opt' + (payMethod === key ? ' active' : '')} onClick={() => setPayMethod(key)}>
+                <span className="shrink-0 grid place-items-center text-ml-cream">{PAY_ICON[key]}</span>
                 <span className="font-bebas tracking-[0.08em]">{payLabels[key]}</span>
               </div>
             ))}
@@ -66,14 +64,19 @@ export function PaymentStep({ t, lang, delivery, payMethod, setPayMethod, placin
               <div className="field"><label>{t.checkout.payment.cardNameLabel}</label><input placeholder="DIEGO RAMÍREZ" required /></div>
             </>
           )}
-          {payMethod === 'oxxo' && (
-            <div className="p-4 bg-[rgba(255,182,39,0.1)] border border-ml-yellow text-center font-mono text-xs text-ml-yellow">
-              {t.checkout.payment.oxxoNote}
-            </div>
-          )}
-          {(payMethod === 'transfer' || payMethod === 'crypto') && (
+          {payMethod === 'transfer' && (
             <div className="p-4 bg-[rgba(255,107,26,0.1)] border border-ml-orange text-center font-mono text-xs text-ml-orange">
               {t.checkout.payment.transferNote}
+            </div>
+          )}
+          {(payMethod === 'mercadopago' || payMethod === 'stripe' || payMethod === 'paypal') && (
+            <div className="p-4 bg-[rgba(255,107,26,0.1)] border border-ml-orange text-center font-mono text-xs text-ml-orange">
+              {t.checkout.payment.redirectNote}
+            </div>
+          )}
+          {payMethod === 'cash' && (
+            <div className="p-4 bg-[rgba(255,182,39,0.1)] border border-ml-yellow text-center font-mono text-xs text-ml-yellow">
+              {t.checkout.payment.cashNote}
             </div>
           )}
         </div>

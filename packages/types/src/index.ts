@@ -93,6 +93,7 @@ export interface MembershipInfo {
   visits: number;
   streak: number;
   daysLeft: number;
+  accessCode: string;
 }
 
 export interface Visit {
@@ -103,6 +104,10 @@ export interface Visit {
 }
 
 export type OrderStatus = 'ready' | 'done';
+
+/** Online checkout methods (customer-app). Distinct from the in-person
+ *  `PaymentMethod` below (counter sales) — see that type's comment. */
+export type OnlinePaymentMethod = 'card' | 'transfer' | 'mercadopago' | 'stripe' | 'paypal' | 'cash';
 
 export interface OrderItem {
   name: string;
@@ -117,6 +122,12 @@ export interface Order {
   status: OrderStatus;
   items: OrderItem[];
   total: number;
+  paymentMethod: OnlinePaymentMethod;
+  delivery: 'pickup' | 'home';
+  /** Pickup branch — set only when delivery is 'pickup' (home orders ship from the central warehouse, no branch involved). */
+  branch?: string;
+  /** ISO datetime — set once status becomes 'done'. */
+  deliveredAt?: string;
 }
 
 export interface Translations {
@@ -312,8 +323,8 @@ export interface Translations {
       access: string;
       orders: string;
       profile: string;
+      settings: string;
       performance: string;
-      backToSite: string;
       logout: string;
     };
     home: {
@@ -346,6 +357,12 @@ export interface Translations {
     orders: {
       ready: string;
       delivered: string;
+      showQrLabel: string;
+      pickupNote: string;
+      deliveredBranchPrefix: string;
+      deliveredAtPrefix: string;
+      paymentMethodLabel: string;
+      close: string;
     };
     profile: {
       personalData: string;
@@ -360,6 +377,15 @@ export interface Translations {
       partnersLabel: string;
       notLinked: string;
       renewMembership: string;
+    };
+    settings: {
+      title: string;
+      languageLabel: string;
+      notificationsLabel: string;
+      notificationsSub: string;
+      notifMembership: string;
+      notifOrderReady: string;
+      notifPayment: string;
     };
     qr: {
       title: string;
@@ -397,15 +423,18 @@ export interface Translations {
       zipLabel: string;
       paymentMethod: string;
       payCard: string;
-      payOxxo: string;
       payTransfer: string;
-      payCrypto: string;
+      payMercadopago: string;
+      payStripe: string;
+      payPaypal: string;
+      payCash: string;
       cardNumberLabel: string;
       cardExpiryLabel: string;
       cardCvcLabel: string;
       cardNameLabel: string;
-      oxxoNote: string;
       transferNote: string;
+      redirectNote: string;
+      cashNote: string;
       processing: string;
       confirmOrder: string;
       yourOrder: string;

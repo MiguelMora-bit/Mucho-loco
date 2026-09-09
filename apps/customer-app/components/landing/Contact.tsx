@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Image from 'next/image';
+import { SiWhatsapp } from 'react-icons/si';
 import { Link } from '@/i18n/routing';
 import { useSocialLinksStore } from '../../lib/stores/socialLinks.store';
 import { useSocialFeedStore } from '../../lib/stores/socialFeed.store';
@@ -98,11 +99,12 @@ export function Contact({ t, lang }: ContactProps) {
             ))}
           </div>
           <a
-            className="sf-wa"
+            className="sf-wa inline-flex items-center gap-2"
             href={`https://wa.me/${WHATSAPP.number}?text=${encodeURIComponent(t.contact.whatsappMessage)}`}
             target="_blank"
             rel="noopener noreferrer"
           >
+            <SiWhatsapp size={18} color="#25D366" />
             {t.contact.whatsappCta} <b>{WHATSAPP.display}</b>
           </a>
         </div>

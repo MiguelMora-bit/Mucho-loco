@@ -6,12 +6,15 @@ describe('userRepository', () => {
     const before = await userRepository.getOrders();
     const items = [{ name: 'Test Product', flav: 'Test Flavor', img: '/assets/test.jpg', qty: 2 }];
 
-    const created = await userRepository.createOrder(items, 123);
+    const created = await userRepository.createOrder(items, 123, 'card', 'pickup');
 
     expect(created.items).toEqual(items);
     expect(created.total).toBe(123);
     expect(created.status).toBe('ready');
     expect(created.id).toMatch(/^#ML-/);
+    expect(created.paymentMethod).toBe('card');
+    expect(created.delivery).toBe('pickup');
+    expect(created.branch).toBeTruthy();
 
     const after = await userRepository.getOrders();
     expect(after).toHaveLength(before.length + 1);

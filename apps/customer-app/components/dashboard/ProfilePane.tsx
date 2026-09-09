@@ -1,3 +1,4 @@
+import { LuUser, LuMail, LuPhone, LuCake } from 'react-icons/lu';
 import type { MembershipInfo, Translations, UserProfile } from '@mucho-loco/types';
 import { InfoList } from './InfoList';
 
@@ -7,10 +8,9 @@ interface ProfilePaneProps {
   profile: UserProfile;
   membership: MembershipInfo;
   onRenew: () => void;
-  onLogout: () => void;
 }
 
-export function ProfilePane({ t, active, profile, membership, onRenew, onLogout }: ProfilePaneProps) {
+export function ProfilePane({ t, active, profile, membership, onRenew }: ProfilePaneProps) {
   return (
     <div className={'pane' + (active ? ' active' : '')}>
       <div className="grid grid-cols-2 gap-6 max-w-[900px]">
@@ -18,10 +18,10 @@ export function ProfilePane({ t, active, profile, membership, onRenew, onLogout 
           <div className="font-display text-22 mb-4.5">{t.dashboard.profile.personalData}</div>
           <InfoList
             items={[
-              [t.dashboard.profile.nameLabel, profile.name],
-              [t.dashboard.profile.emailLabel, profile.email],
-              [t.dashboard.profile.phoneLabel, profile.phone],
-              [t.dashboard.profile.birthdateLabel, profile.birthdate],
+              [t.dashboard.profile.nameLabel, profile.name, <LuUser key="i" size={14} />, 'info-anim-breathe'],
+              [t.dashboard.profile.emailLabel, profile.email, <LuMail key="i" size={14} />, 'info-anim-bounce'],
+              [t.dashboard.profile.phoneLabel, profile.phone, <LuPhone key="i" size={14} />, 'info-anim-wobble'],
+              [t.dashboard.profile.birthdateLabel, profile.birthdate, <LuCake key="i" size={14} />, 'info-anim-flicker'],
             ]}
           />
         </div>
@@ -39,11 +39,6 @@ export function ProfilePane({ t, active, profile, membership, onRenew, onLogout 
             {t.dashboard.profile.renewMembership}
           </button>
         </div>
-      </div>
-      <div className="mt-6">
-        <button onClick={onLogout} className="px-7 py-3.5 border border-ml-border text-ml-cream-dim font-display text-base tracking-[0.04em] bg-transparent cursor-pointer">
-          {t.dashboard.nav.logout}
-        </button>
       </div>
     </div>
   );

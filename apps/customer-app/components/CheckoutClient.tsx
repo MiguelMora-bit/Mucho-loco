@@ -10,10 +10,9 @@ import { postJson } from '../lib/api-client';
 import { useAsyncSubmit } from '../lib/hooks/useAsyncSubmit';
 import { useT } from '../lib/hooks/useT';
 import { Stepper, CartStep, PaymentStep, ConfirmationStep } from './checkout';
-import type { Lang, Order, OrderItem } from '@mucho-loco/types';
+import type { Lang, Order, OrderItem, OnlinePaymentMethod } from '@mucho-loco/types';
 
 type Delivery = 'pickup' | 'home';
-type PayMethod = 'card' | 'oxxo' | 'transfer' | 'crypto';
 
 export default function CheckoutClient() {
   const t = useT();
@@ -23,7 +22,7 @@ export default function CheckoutClient() {
   const _hydrated = useCartStore((s) => s._hydrated);
   const [step, setStep] = useState(0);
   const [delivery, setDelivery] = useState<Delivery>('pickup');
-  const [payMethod, setPayMethod] = useState<PayMethod>('card');
+  const [payMethod, setPayMethod] = useState<OnlinePaymentMethod>('card');
   const { loading: placing, error, run } = useAsyncSubmit({
     errorMessage: t.checkout.errorPlacingOrder,
     connectionErrorMessage: t.common.connectionError,
@@ -35,7 +34,7 @@ export default function CheckoutClient() {
     const total = cart.reduce((n, i) => n + i.price * i.qty, 0) + shipping;
     const items: OrderItem[] = cart.map(({ name, flav, img, qty }) => ({ name: name[lang], flav: flav[lang], img, qty }));
     await run(async () => {
-      await postJson<Order>('/api/orders', { items, total });
+      await postJson<Order>('/api/orders', { items, total, paymentMethod: payMethod, delivery });
       clear();
       setStep(2);
     });

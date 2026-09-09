@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { LuDumbbell, LuTruck } from 'react-icons/lu';
 import { Link } from '@/i18n/routing';
 import { useCartStore, selectSubtotal } from '../../lib/stores/cart.store';
 import { formatPrice } from '../../lib/pricing';
@@ -62,11 +63,17 @@ export function CartStep({ t, lang, delivery, setDelivery, onContinue }: CartSte
               <div className="font-mono text-11 text-ml-cream-dim mb-2 uppercase tracking-wide">{t.checkout.cart.deliveryLabel}</div>
               <div className="pickup-options">
                 <div className={'pickup-opt' + (delivery === 'pickup' ? ' active' : '')} onClick={() => setDelivery('pickup')}>
-                  <div className="lbl">{t.checkout.cart.pickupOption}</div>
+                  <div className="lbl flex items-center justify-center gap-2">
+                    <LuDumbbell size={18} className={'text-ml-orange shrink-0' + (delivery === 'pickup' ? ' icon-pump' : '')} />
+                    {t.checkout.cart.pickupOption}
+                  </div>
                   <div className="sub">{t.checkout.cart.pickupSub}</div>
                 </div>
                 <div className={'pickup-opt' + (delivery === 'home' ? ' active' : '')} onClick={() => setDelivery('home')}>
-                  <div className="lbl">{t.checkout.cart.homeOption}</div>
+                  <div className="lbl flex items-center justify-center gap-2">
+                    <LuTruck size={18} className={'text-ml-orange shrink-0' + (delivery === 'home' ? ' icon-drive' : '')} />
+                    {t.checkout.cart.homeOption}
+                  </div>
                   <div className="sub">{t.checkout.cart.homeSub}</div>
                 </div>
               </div>

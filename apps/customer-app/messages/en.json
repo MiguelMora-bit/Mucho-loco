@@ -207,8 +207,8 @@
       "access": "MY ACCESS",
       "orders": "MY ORDERS",
       "profile": "MY PROFILE",
+      "settings": "SETTINGS",
       "performance": "PERFORMANCE",
-      "backToSite": "BACK TO SITE",
       "logout": "LOG OUT"
     },
     "home": {
@@ -240,7 +240,13 @@
     },
     "orders": {
       "ready": "READY FOR PICKUP",
-      "delivered": "DELIVERED"
+      "delivered": "DELIVERED",
+      "showQrLabel": "SHOW THIS QR",
+      "pickupNote": "Show this code when you arrive. Pick up at:",
+      "deliveredBranchPrefix": "Delivered at",
+      "deliveredAtPrefix": "on",
+      "paymentMethodLabel": "PAYMENT METHOD",
+      "close": "CLOSE"
     },
     "profile": {
       "personalData": "PERSONAL DATA",
@@ -255,6 +261,15 @@
       "partnersLabel": "TotalPass / Wellhub",
       "notLinked": "NOT LINKED",
       "renewMembership": "RENEW MEMBERSHIP"
+    },
+    "settings": {
+      "title": "SETTINGS",
+      "languageLabel": "Language",
+      "notificationsLabel": "Notifications",
+      "notificationsSub": "Via WhatsApp",
+      "notifMembership": "Membership expiry reminders",
+      "notifOrderReady": "Order ready for pickup",
+      "notifPayment": "Payment confirmation"
     },
     "qr": {
       "title": "SHOW THIS QR",
@@ -276,9 +291,9 @@
       "summary": "SUMMARY",
       "subtotal": "Subtotal",
       "deliveryLabel": "Delivery",
-      "pickupOption": "🏪 BRANCH",
+      "pickupOption": "BRANCH",
       "pickupSub": "Free · 24-48h",
-      "homeOption": "📦 HOME DELIVERY",
+      "homeOption": "HOME DELIVERY",
       "homeSub": "$99 · 2-3 days",
       "shippingLabel": "Shipping",
       "total": "TOTAL",
@@ -291,16 +306,19 @@
       "cityLabel": "City",
       "zipLabel": "ZIP",
       "paymentMethod": "PAYMENT METHOD",
-      "payCard": "💳 CARD",
-      "payOxxo": "🏪 OXXO PAY",
-      "payTransfer": "🏦 TRANSFER",
-      "payCrypto": "₿ CRYPTO",
+      "payCard": "CARD",
+      "payTransfer": "TRANSFER",
+      "payMercadopago": "MERCADO PAGO",
+      "payStripe": "STRIPE",
+      "payPaypal": "PAYPAL",
+      "payCash": "CASH AT BRANCH",
       "cardNumberLabel": "Card number",
       "cardExpiryLabel": "Expiry",
       "cardCvcLabel": "CVC",
       "cardNameLabel": "Name on card",
-      "oxxoNote": "You'll get an OXXO Pay reference by email after confirming. You have 48h to pay.",
       "transferNote": "Instructions will arrive by email after confirming.",
+      "redirectNote": "You'll be redirected to complete your payment securely.",
+      "cashNote": "Pay in cash when you pick up your order at the selected branch.",
       "processing": "PROCESSING...",
       "confirmOrder": "CONFIRM ORDER",
       "yourOrder": "YOUR ORDER",

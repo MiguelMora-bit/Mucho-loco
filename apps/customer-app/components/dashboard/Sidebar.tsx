@@ -1,12 +1,29 @@
 'use client';
 
-import Image from 'next/image';
+import type { ReactNode } from 'react';
+import { LuHouse, LuQrCode, LuPackage, LuCircleUser, LuSettings, LuTrendingUp, LuLogOut } from 'react-icons/lu';
 import { Link, usePathname, useRouter } from '@/i18n/routing';
 import { useLogout } from '@/lib/hooks/useLogout';
 import { useDashboardPaneStore } from '@/lib/stores/dashboardPane.store';
 import { useT } from '@/lib/hooks/useT';
 import { NAV_ITEMS } from './types';
 import type { PaneKey } from './types';
+
+const NAV_ICON: Record<PaneKey, ReactNode> = {
+  home: <LuHouse size={20} />,
+  access: <LuQrCode size={20} />,
+  orders: <LuPackage size={20} />,
+  profile: <LuCircleUser size={20} />,
+  settings: <LuSettings size={20} />,
+};
+
+const NAV_ANIM: Record<PaneKey, string> = {
+  home: 'icon-bounce',
+  access: 'icon-glow',
+  orders: 'icon-wobble',
+  profile: 'icon-breathe',
+  settings: 'icon-spin',
+};
 
 export function Sidebar() {
   const t = useT();
@@ -22,26 +39,27 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="[background:linear-gradient(180deg,#100606,#050202)] border-r border-ml-border flex flex-col py-6 sticky top-0 h-screen">
-      <div className="side-brand flex items-center gap-3 px-5.5 pb-6 border-b border-ml-border">
-        <Image src="/assets/bull-head.png" width={44} height={44} className="w-11 h-11 object-contain drop-shadow-red" alt="" />
-        <div className="side-brand-name font-display text-xl leading-none">MUCHO<br /><span className="text-ml-red">LOCO</span></div>
-      </div>
+    <aside className="[background:linear-gradient(180deg,#100606,#050202)] border-r border-ml-border flex flex-col py-6 h-full overflow-y-auto">
       <nav className="px-3.5 py-4.5 flex flex-col gap-1 flex-1">
-        {NAV_ITEMS.map((item) => (
-          <button key={item.key} className={'nav-item' + (onDashboard && pane === item.key ? ' active' : '')} onClick={() => goToPane(item.key)}>
-            <span className="text-xl">{item.icon}</span>
-            <span className="side-label">{t.dashboard.nav[item.key]}</span>
-          </button>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const isActive = onDashboard && pane === item.key;
+          return (
+            <button key={item.key} className={'nav-item' + (isActive ? ' active' : '')} onClick={() => goToPane(item.key)}>
+              <span className={'nav-icon' + (isActive ? ' ' + NAV_ANIM[item.key] : '')}>{NAV_ICON[item.key]}</span>
+              <span className="side-label">{t.dashboard.nav[item.key]}</span>
+            </button>
+          );
+        })}
         <Link href="/performance" className={'nav-item no-underline' + (pathname === '/performance' ? ' active' : '')}>
-          <span className="text-xl">📈</span>
+          <span className={'nav-icon' + (pathname === '/performance' ? ' icon-rise' : '')}><LuTrendingUp size={20} /></span>
           <span className="side-label">{t.dashboard.nav.performance}</span>
         </Link>
       </nav>
-      <div className="side-foot px-5.5 py-3.5 border-t border-ml-border text-11 text-ml-muted font-mono tracking-wide uppercase">
-        <Link href="/" className="text-ml-cream-dim no-underline block mb-2">← {t.dashboard.nav.backToSite}</Link>
-        <button onClick={logout} className="bg-transparent border-none text-ml-cream-dim cursor-pointer font-mono text-11 tracking-wide uppercase p-0">{t.dashboard.nav.logout}</button>
+      <div className="side-foot px-3.5 py-3.5 border-t border-ml-border">
+        <button onClick={logout} className="logout-btn">
+          <LuLogOut size={18} className="logout-icon" />
+          <span className="font-mono text-11 tracking-wide uppercase">{t.dashboard.nav.logout}</span>
+        </button>
       </div>
     </aside>
   );

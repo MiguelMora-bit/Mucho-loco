@@ -1,8 +1,9 @@
-export type PaneKey = 'home' | 'access' | 'orders' | 'profile';
+export type PaneKey = 'home' | 'access' | 'orders' | 'profile' | 'settings';
 
-export const NAV_ITEMS: Array<{ key: PaneKey; icon: string }> = [
-  { key: 'home', icon: '🏠' },
-  { key: 'access', icon: '🎫' },
-  { key: 'orders', icon: '📦' },
-  { key: 'profile', icon: '⚙️' },
+export const NAV_ITEMS: Array<{ key: PaneKey }> = [
+  { key: 'home' },
+  { key: 'access' },
+  { key: 'orders' },
+  { key: 'profile' },
+  { key: 'settings' },
 ];

@@ -44,7 +44,7 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 - **QR de acceso**: código fijo, válido mientras la membresía esté vigente (no rota).
 - **Pago recurrente de mensualidad**: si falla el cobro, hay periodo de gracia con avisos antes de suspender el acceso.
 - **Inventario por sucursal**: cada sucursal sabe su stock físico real. Venta de mostrador descuenta del stock LOCAL de esa sucursal. Envíos a domicilio siempre salen de una bodega central única. "Recoger en gym" = la sucursal que el cliente elige al comprar.
-- **Pagos en línea**: tarjeta, Mercado Pago, PayPal, Stripe. Efectivo solo aplica a venta de mostrador en sucursal, no en línea.
+- **Pagos en línea**: tarjeta, transferencia, Mercado Pago, PayPal, Stripe. También se puede elegir "efectivo" en el checkout online, pero solo cuando la entrega es "recoger en gym" (decidido 2026-09-08) — el pedido queda pendiente de pago y se cobra en efectivo al recoger; no aplica si la entrega es a domicilio. Fuera de esto, efectivo sigue siendo exclusivo de venta de mostrador en sucursal.
 - **Control de dinero en sucursal**: corte de caja por turno/día, auditable desde el panel del dueño.
 - **Roles en sucursal**: diferenciados — gerente (caja, reportes, inventario local) vs. mostrador (pedidos, cobro, QR).
 - **Nómina**: cálculo completo (asistencia, deducciones, recibos), no solo registro de gasto.

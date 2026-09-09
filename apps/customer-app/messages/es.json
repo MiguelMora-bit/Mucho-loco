@@ -207,8 +207,8 @@
       "access": "MI ACCESO",
       "orders": "MIS PEDIDOS",
       "profile": "MI PERFIL",
+      "settings": "CONFIGURACIÓN",
       "performance": "RENDIMIENTO",
-      "backToSite": "VOLVER AL SITIO",
       "logout": "CERRAR SESIÓN"
     },
     "home": {
@@ -240,7 +240,13 @@
     },
     "orders": {
       "ready": "LISTO PARA RETIRO",
-      "delivered": "ENTREGADO"
+      "delivered": "ENTREGADO",
+      "showQrLabel": "MUESTRA ESTE QR",
+      "pickupNote": "Muestra este código al llegar. Recoger en:",
+      "deliveredBranchPrefix": "Entregado en",
+      "deliveredAtPrefix": "el",
+      "paymentMethodLabel": "MÉTODO DE PAGO",
+      "close": "CERRAR"
     },
     "profile": {
       "personalData": "DATOS PERSONALES",
@@ -255,6 +261,15 @@
       "partnersLabel": "TotalPass / Wellhub",
       "notLinked": "NO VINCULADO",
       "renewMembership": "RENOVAR MEMBRESÍA"
+    },
+    "settings": {
+      "title": "CONFIGURACIÓN",
+      "languageLabel": "Idioma",
+      "notificationsLabel": "Notificaciones",
+      "notificationsSub": "Vía WhatsApp",
+      "notifMembership": "Avisos de vencimiento de membresía",
+      "notifOrderReady": "Pedido listo para recoger",
+      "notifPayment": "Confirmación de pago"
     },
     "qr": {
       "title": "MUESTRA ESTE QR",
@@ -276,9 +291,9 @@
       "summary": "RESUMEN",
       "subtotal": "Subtotal",
       "deliveryLabel": "Entrega",
-      "pickupOption": "🏪 SUCURSAL",
+      "pickupOption": "SUCURSAL",
       "pickupSub": "Gratis · 24-48h",
-      "homeOption": "📦 A DOMICILIO",
+      "homeOption": "A DOMICILIO",
       "homeSub": "$99 · 2-3 días",
       "shippingLabel": "Envío",
       "total": "TOTAL",
@@ -291,16 +306,19 @@
       "cityLabel": "Ciudad",
       "zipLabel": "C.P.",
       "paymentMethod": "MÉTODO DE PAGO",
-      "payCard": "💳 TARJETA",
-      "payOxxo": "🏪 OXXO PAY",
-      "payTransfer": "🏦 TRANSFERENCIA",
-      "payCrypto": "₿ CRYPTO",
+      "payCard": "TARJETA",
+      "payTransfer": "TRANSFERENCIA",
+      "payMercadopago": "MERCADO PAGO",
+      "payStripe": "STRIPE",
+      "payPaypal": "PAYPAL",
+      "payCash": "EFECTIVO EN SUCURSAL",
       "cardNumberLabel": "Número de tarjeta",
       "cardExpiryLabel": "Vencimiento",
       "cardCvcLabel": "CVC",
       "cardNameLabel": "Nombre en tarjeta",
-      "oxxoNote": "Al confirmar recibirás una referencia OXXO Pay por email. Tienes 48h para pagar.",
       "transferNote": "Las instrucciones llegarán a tu correo después de confirmar.",
+      "redirectNote": "Serás redirigido para completar tu pago de forma segura.",
+      "cashNote": "Paga en efectivo al recoger tu pedido en la sucursal seleccionada.",
       "processing": "PROCESANDO...",
       "confirmOrder": "CONFIRMAR PEDIDO",
       "yourOrder": "TU PEDIDO",

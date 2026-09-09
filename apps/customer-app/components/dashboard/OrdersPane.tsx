@@ -8,13 +8,14 @@ interface OrdersPaneProps {
   lang: Lang;
   active: boolean;
   orders: Order[];
+  onSelectOrder: (order: Order) => void;
 }
 
-export function OrdersPane({ t, lang, active, orders }: OrdersPaneProps) {
+export function OrdersPane({ t, lang, active, orders, onSelectOrder }: OrdersPaneProps) {
   return (
     <div className={'pane' + (active ? ' active' : '')}>
       {orders.map((order) => (
-        <div key={order.id} className="order-card">
+        <div key={order.id} className="order-card cursor-pointer" onClick={() => onSelectOrder(order)}>
           <div className="flex items-center justify-between mb-3.5">
             <span className="font-mono text-xs text-ml-cream-dim uppercase tracking-[0.12em]">{order.id} · {formatDate(order.date, lang)}</span>
             <span className={'status ' + order.status}>{order.status === 'ready' ? t.dashboard.orders.ready : t.dashboard.orders.delivered}</span>
