@@ -2,6 +2,22 @@
   "header": {
     "label": "OWNER PANEL"
   },
+  "auth": {
+    "title": "Log in",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "submit": "Log in",
+    "submitting": "Logging in...",
+    "logout": "Log out",
+    "errors": {
+      "wrongCredentials": "Wrong email or password.",
+      "notConfirmed": "Account not confirmed. Contact the administrator.",
+      "passwordResetRequired": "Password reset required. Contact the administrator.",
+      "tooManyAttempts": "Too many attempts. Wait a bit.",
+      "notOwner": "This account doesn't have owner access.",
+      "unknown": "Something went wrong. Try again."
+    }
+  },
   "nav": {
     "summary": "Summary",
     "expenses": "Expenses",

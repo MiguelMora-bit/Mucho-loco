@@ -14,6 +14,16 @@ Diferencia propia de este app: **no hay contexto de sucursal actual** (no existe
 
 **i18n con `react-i18next`**, misma configuración que `branch-app` pero duplicada de forma independiente (`lib/i18n.ts` + `lib/locales/{es,en}.json` propios, sin paquete compartido) — ver `apps/branch-app/CLAUDE.md` para el razonamiento completo. Toggle de idioma en `AppShell`, persistido en `localStorage['ml_lang']`.
 
+## Auth (real, Cognito — 2026-09-10)
+
+SPA pura sin servidor propio, así que a diferencia de `customer-app` (donde Cognito se llama desde Route Handlers de Next.js) acá `InitiateAuthCommand`/`RefreshToken` se llaman **directo desde el browser** (`src/lib/cognito.ts`) — el App Client (`owner_panel` en `infra/modules/cognito`, separado del `web` de `customer-app`) es público y sin secreto, pensado para eso.
+
+- Mismo User Pool compartido con `customer-app` (ver CLAUDE.md raíz) — cualquier cliente registrado puede autenticarse contra Cognito, así que el gate real es pertenecer al grupo `owner` (`cognito:groups` en el ID token). `LoginPage.tsx` rechaza con `NOT_OWNER` a cualquier login válido que no traiga ese grupo. Altas de dueño son `AdminCreateUser` + `AdminAddUserToGroup owner` (nunca self-signup, no hay pantalla de registro en este app).
+- Sesión (`src/lib/stores/auth.store.ts`, zustand + `persist`) vive en `localStorage['ml_owner_session']` — sin servidor no hay cookie httpOnly posible. `useSessionRefresh` (montado en `AppShell`) renueva el ID token cada 15 min vía `REFRESH_TOKEN_AUTH`, y también al montar (cubre el caso de reabrir el browser con el ID token ya vencido).
+- `ProtectedRoute.tsx` envuelve todas las rutas salvo `/login`.
+- `lib/jwt.ts` y `lib/cognito-errors.ts` están duplicados de `customer-app` a propósito (sin runtime compartido entre apps) — la única diferencia real es decodificar con `atob()` en vez de `Buffer` (browser puro, sin Node).
+- Variables de entorno con prefijo `VITE_` (`VITE_COGNITO_REGION`, `VITE_COGNITO_CLIENT_ID`) — se exponen al bundle del cliente a propósito, es un App Client público. Ver `.env.example`, valores desde `terraform output` en `infra/envs/dev`.
+
 ## Capas en `src/lib/`
 
 Mismo patrón mock-first: `datasources/mock/stats.mock.ts` (un solo datasource cubre `getBranchStats()` y `getGlobalInventory()`, porque son dos vistas del mismo "dashboard de solo lectura", no dominios independientes) → `repositories/stats.repository.ts` → dos stores independientes (`branchStats.store.ts`, `globalInventory.store.ts`) — uno por sección de la página, no un mega-store combinado.

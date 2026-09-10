@@ -4,6 +4,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { userRepository } from '@/lib/repositories/user.repository';
 import DashboardClient from '@/components/DashboardClient';
 import { buildAlternates } from '@/lib/seo';
+import { getCurrentUserEmail } from '@/lib/session';
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -25,11 +26,12 @@ export default async function DashboardPage(props: Props) {
   const params = await props.params;
   setRequestLocale(params.locale);
 
+  const email = (await getCurrentUserEmail()) ?? '';
   const [profile, membership, history, orders] = await Promise.all([
-    userRepository.getProfile(),
-    userRepository.getMembership(),
-    userRepository.getVisitHistory(),
-    userRepository.getOrders(),
+    userRepository.getProfile(email),
+    userRepository.getMembership(email),
+    userRepository.getVisitHistory(email),
+    userRepository.getOrders(email),
   ]);
 
   return (

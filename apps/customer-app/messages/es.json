@@ -173,6 +173,23 @@
     "loginTab": "Iniciar sesión",
     "signupTab": "Registrarme",
     "errorLogin": "No pudimos iniciar tu sesión. Intenta de nuevo.",
+    "errors": {
+      "userExists": "Ya existe una cuenta con ese email. Inicia sesión mejor.",
+      "invalidPassword": "La contraseña necesita mayúscula, minúscula y número (mín. 8 caracteres).",
+      "notConfirmed": "Todavía no confirmas tu cuenta. Te mandamos un código nuevo.",
+      "wrongCredentials": "Email o contraseña incorrectos.",
+      "codeMismatch": "Código incorrecto. Revisa e intenta de nuevo.",
+      "codeExpired": "Ese código ya expiró. Pide uno nuevo.",
+      "tooManyAttempts": "Demasiados intentos. Espera un momento y vuelve a intentar."
+    },
+    "confirm": {
+      "sentPrefix": "Te mandamos un código de 6 dígitos a",
+      "codeLabel": "Código de confirmación",
+      "submit": "CONFIRMAR CUENTA",
+      "submitting": "CONFIRMANDO...",
+      "resend": "Reenviar código",
+      "resent": "Código reenviado."
+    },
     "login": {
       "emailLabel": "Email o usuario",
       "passwordLabel": "Contraseña",
@@ -234,6 +251,7 @@
     "access": {
       "expiresLabel": "VENCE",
       "branchLabel": "SUCURSAL",
+      "allGyms": "15 SUCURSALES",
       "showQr": "📲 MOSTRAR QR DE ACCESO",
       "accessHistory": "HISTORIAL DE ACCESOS",
       "entryNote": "Entrada registrada · QR válido"

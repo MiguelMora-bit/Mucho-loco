@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { userRepository } from '../../../lib/repositories/user.repository';
+import { getCurrentUserEmail } from '../../../lib/session';
 import type { OrderItem, OnlinePaymentMethod } from '@mucho-loco/types';
 
 // Runs server-side so the order lands in the same userRepository instance the
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
     paymentMethod: OnlinePaymentMethod;
     delivery: 'pickup' | 'home';
   };
-  const order = await userRepository.createOrder(items, total, paymentMethod, delivery);
+  const email = (await getCurrentUserEmail()) ?? '';
+  const order = await userRepository.createOrder(email, items, total, paymentMethod, delivery);
   return NextResponse.json(order);
 }

@@ -1,11 +1,22 @@
-import { Outlet, NavLink } from 'react-router';
+import { Outlet, NavLink, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { setLanguage } from '../../lib/i18n';
+import { useSessionRefresh } from '../../lib/hooks/useSessionRefresh';
+import { useAuthStore } from '../../lib/stores/auth.store';
 import type { Lang } from '@mucho-loco/types';
 
 export function AppShell() {
+  useSessionRefresh();
   const { t, i18n } = useTranslation();
   const lang = i18n.language as Lang;
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const clear = useAuthStore((s) => s.clear);
+
+  function handleLogout() {
+    clear();
+    navigate('/login');
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -69,6 +80,14 @@ export function AppShell() {
               EN
             </button>
           </div>
+          {user && (
+            <div className="flex items-center gap-3 ml-2 pl-3 border-l border-ml-border">
+              <span className="text-ml-cream-dim text-xs font-mono">{user.name || user.email}</span>
+              <button onClick={handleLogout} className="px-3 py-1.5 rounded text-sm font-medium text-ml-cream-dim hover:text-ml-cream">
+                {t('auth.logout')}
+              </button>
+            </div>
+          )}
         </nav>
       </header>
       <main className="flex-1 px-6 py-8">

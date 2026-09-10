@@ -2,6 +2,22 @@
   "header": {
     "label": "PANEL DEL DUEÑO"
   },
+  "auth": {
+    "title": "Iniciar sesión",
+    "emailLabel": "Email",
+    "passwordLabel": "Contraseña",
+    "submit": "Entrar",
+    "submitting": "Entrando...",
+    "logout": "Cerrar sesión",
+    "errors": {
+      "wrongCredentials": "Email o contraseña incorrectos.",
+      "notConfirmed": "Cuenta sin confirmar. Contacta al administrador.",
+      "passwordResetRequired": "Hay que restablecer la contraseña. Contacta al administrador.",
+      "tooManyAttempts": "Demasiados intentos. Espera un momento.",
+      "notOwner": "Esta cuenta no tiene permiso de dueño.",
+      "unknown": "Algo salió mal. Intenta de nuevo."
+    }
+  },
   "nav": {
     "summary": "Resumen",
     "expenses": "Gastos",

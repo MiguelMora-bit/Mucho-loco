@@ -89,6 +89,7 @@ export interface UserProfile {
 export interface MembershipInfo {
   plan: string;
   branch: string;
+  tierKey: TierKey;
   expiresAt: string;
   visits: number;
   streak: number;
@@ -289,6 +290,23 @@ export interface Translations {
     loginTab: string;
     signupTab: string;
     errorLogin: string;
+    errors: {
+      userExists: string;
+      invalidPassword: string;
+      notConfirmed: string;
+      wrongCredentials: string;
+      codeMismatch: string;
+      codeExpired: string;
+      tooManyAttempts: string;
+    };
+    confirm: {
+      sentPrefix: string;
+      codeLabel: string;
+      submit: string;
+      submitting: string;
+      resend: string;
+      resent: string;
+    };
     login: {
       emailLabel: string;
       passwordLabel: string;
@@ -350,6 +368,7 @@ export interface Translations {
     access: {
       expiresLabel: string;
       branchLabel: string;
+      allGyms: string;
       showQr: string;
       accessHistory: string;
       entryNote: string;

@@ -8,6 +8,7 @@ import { Link } from '@/i18n/routing';
 import { useCartStore } from '../lib/stores/cart.store';
 import { postJson } from '../lib/api-client';
 import { useAsyncSubmit } from '../lib/hooks/useAsyncSubmit';
+import { useSessionRefresh } from '../lib/hooks/useSessionRefresh';
 import { useT } from '../lib/hooks/useT';
 import { Stepper, CartStep, PaymentStep, ConfirmationStep } from './checkout';
 import type { Lang, Order, OrderItem, OnlinePaymentMethod } from '@mucho-loco/types';
@@ -15,6 +16,7 @@ import type { Lang, Order, OrderItem, OnlinePaymentMethod } from '@mucho-loco/ty
 type Delivery = 'pickup' | 'home';
 
 export default function CheckoutClient() {
+  useSessionRefresh();
   const t = useT();
   const lang = useLocale() as Lang;
   const cart = useCartStore((s) => s.items);

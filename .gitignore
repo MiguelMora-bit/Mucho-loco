@@ -55,3 +55,12 @@ next-env.d.ts
 # ── Misc ─────────────────────────────────────────────
 *.pem
 .agents/
+
+# ── Terraform ─────────────────────────────────────────
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log

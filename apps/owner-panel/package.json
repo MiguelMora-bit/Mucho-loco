@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1128.0",
     "@mucho-loco/types": "workspace:*",
     "i18next": "^26.4.1",
     "react": "^19",

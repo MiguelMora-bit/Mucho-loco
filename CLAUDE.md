@@ -40,8 +40,8 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 
 ### Reglas de negocio confirmadas
 
-- **Membresía única para toda la cadena**: precio/promoción según la sucursal de inscripción, pero el QR de acceso funciona en cualquiera de las 15 sucursales.
-- **QR de acceso**: código fijo, válido mientras la membresía esté vigente (no rota).
+- **Membresía y alcance de acceso (corregido 2026-09-10 — el código ya lo tenía así, el texto viejo de esta regla estaba desactualizado)**: dos tiers ortogonales a la duración (visita/semanal/mensual/trimestral/anual), cada uno con su propio precio — `single` ("1 sucursal", factor 1.0): acceso solo a la sucursal de inscripción; `all` ("15 sucursales", factor 1.5, tier popular): acceso a cualquiera de las 15. Ver `TierKey`/`MembershipTier` en `@mucho-loco/types` y `lib/pricing.ts` en `customer-app`.
+- **QR de acceso**: código fijo, válido mientras la membresía esté vigente (no rota). Con tier `single`, el validador de sucursal (Fase 1 mínima de `branch-app`, sin construir todavía) debe RECHAZAR el check-in fuera de la sucursal de inscripción con un mensaje claro (ej. "Tu membresía es solo para [sucursal]"); con tier `all`, se acepta en cualquiera de las 15. `customer-app` ya refleja el tier del usuario en el dashboard (`AccessPane`), pero la validación real de "rechazar en otra sucursal" vive en `branch-app`, no aquí.
 - **Pago recurrente de mensualidad**: si falla el cobro, hay periodo de gracia con avisos antes de suspender el acceso.
 - **Inventario por sucursal**: cada sucursal sabe su stock físico real. Venta de mostrador descuenta del stock LOCAL de esa sucursal. Envíos a domicilio siempre salen de una bodega central única. "Recoger en gym" = la sucursal que el cliente elige al comprar.
 - **Pagos en línea**: tarjeta, transferencia, Mercado Pago, PayPal, Stripe. También se puede elegir "efectivo" en el checkout online, pero solo cuando la entrega es "recoger en gym" (decidido 2026-09-08) — el pedido queda pendiente de pago y se cobra en efectivo al recoger; no aplica si la entrega es a domicilio. Fuera de esto, efectivo sigue siendo exclusivo de venta de mostrador en sucursal.
@@ -65,7 +65,7 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 - **PostgreSQL en RDS + Prisma** como ORM — no DynamoDB. Relacional encaja mejor con el dominio (sucursales, membresías, inventario, nómina tienen relaciones fuertes) y es lo que se ve en la mayoría de backends NestJS reales.
 - **Cognito User Pools** para auth (emite JWT, NestJS lo valida vía Passport) — se mantiene aunque no se use Amplify; Cognito es independiente de Amplify.
 - **Docker → ECR → ECS Fargate detrás de un ALB** para desplegar NestJS — el patrón estándar para un servidor persistente en AWS (no Lambda, que es para funciones cortas/stateless).
-- **AWS CDK (TypeScript)** como infraestructura como código — mismo lenguaje que el resto del monorepo.
+- **Terraform** como infraestructura como código (decisión revisada 2026-09-09, reemplaza CDK) — prioridad: levantar y destruir recursos rápido durante aprendizaje/pruebas (`terraform apply` / `terraform destroy`), sobre la ventaja de "mismo lenguaje que el monorepo" que ofrecía CDK. Vive en `infra/` (Terraform, no en `apps/`) con backend remoto de state (S3 + DynamoDB para lock) una vez que haya recursos reales que proteger.
 - **@nestjs/swagger** para documentar la API (OpenAPI) — librería oficial de Nest, no requiere skill aparte.
 - Frontend (`customer-app`) se despliega en **Vercel**, no en AWS — es lo que hace la mayoría de empresas reales con stack Next.js + backend propio en AWS, y mantiene el foco de aprendizaje de AWS en el backend/infra en vez de en hosting de frontend.
 - **WhatsApp Business Platform (Cloud API de Meta)** para notificaciones — avisos de vencimiento de membresía/periodo de gracia, pedido listo para retiro, confirmación de pago. Se elige sobre email porque WhatsApp es el canal dominante en México. Requiere un módulo de backend (webhook + credenciales de Meta Business verificado) — se construye junto con el resto del backend NestJS, no antes. Distinto de WhatsApp Business (la app gratis) que solo son links `wa.me` — eso ya está en el frontend, sin backend.
@@ -79,7 +79,7 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 Orden de fases:
 1. `customer-app` 100% mock-funcional (flujos completos: tienda, cuenta, checkout, panel, rendimiento).
 2. Definir contrato de API (DTOs/OpenAPI) a partir de los repositorios ya existentes.
-3. Fundaciones AWS vía CDK: VPC, RDS Postgres, Cognito User Pool.
+3. Fundaciones AWS vía Terraform: VPC, RDS Postgres, Cognito User Pool.
 4. Backend NestJS: módulos de dominio (branches, products, orders, memberships) + Prisma + auth con Cognito.
 5. Conectar: swap de datasource mock → HTTP en `customer-app`, Docker + ECS Fargate, CI/CD.
 6. Pagos (Stripe/PayPal/Mercado Pago) sobre la base ya funcional.
@@ -98,7 +98,7 @@ Viven en la raíz del monorepo — aplican a todos los apps, no solo a `customer
 - `stripe-best-practices`, `stripe-projects` (oficial Stripe) — pagos con tarjeta/Stripe.
 - `paypal-integration` — pagos PayPal.
 - `aws-auth` (oficial AWS) — Cognito.
-- `aws-cdk` (oficial AWS) — infraestructura como código.
+- `aws-cdk` (oficial AWS) — instalada pero no activa (IaC cambió a Terraform, ver "Arquitectura de backend"); no hay skill oficial de Terraform instalada, se trabaja directo con el usuario.
 - `aws-containers` (oficial AWS) — Docker/ECS/Fargate.
 - `prisma-database-setup` (oficial Prisma) — ORM + PostgreSQL.
 - `database-schema-designer` — diseño de esquema multi-sucursal.

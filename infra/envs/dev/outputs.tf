@@ -1,0 +1,15 @@
+output "user_pool_id" {
+  value = module.cognito.user_pool_id
+}
+
+output "web_client_id" {
+  value = module.cognito.web_client_id
+}
+
+output "owner_panel_client_id" {
+  value = module.cognito.owner_panel_client_id
+}
+
+output "staff_group_names" {
+  value = module.cognito.staff_group_names
+}

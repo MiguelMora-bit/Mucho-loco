@@ -6,7 +6,7 @@ Visión de negocio completa y estructura del monorepo: ver [`CLAUDE.md`](../../C
 
 Tienda y app de membresías para "Mucho Loco Gym". Next.js 14 con App Router y TypeScript strict mode. El diseño original fue un prototipo HTML estático + React vía Babel; este repo es la migración idiomática a Next.js.
 
-El backend (AWS: Cognito, DynamoDB, Lambda) se construirá después, probablemente como `apps/backend` aparte. Por ahora todos los datos son mock y el auth usa una cookie `ml_session` simulada.
+El backend de dominio (NestJS + RDS Postgres, ver CLAUDE.md raíz) se construirá después, probablemente como `apps/backend` aparte — todos los datos de negocio (productos, pedidos, membresías) siguen siendo mock. **Auth es la excepción**: desde 2026-09-09 es real contra Cognito (ver "Auth flow" abajo), adelantado porque no depende del contrato de API del resto del backend.
 
 ## Arquitectura
 
@@ -15,7 +15,7 @@ El backend (AWS: Cognito, DynamoDB, Lambda) se construirá después, probablemen
 - **Server Components** — las páginas de rutas son Server Components por defecto. Solo marcar como cliente cuando sea necesario.
 - **i18n** — `next-intl`, rutas bajo `app/[locale]/`. Config en `i18n/routing.ts` y `i18n/request.ts`, mensajes en `messages/es.json` y `messages/en.json`.
 - **Middleware** — `middleware.ts` en la raíz del app protege `/dashboard`, `/performance`, `/checkout` verificando la cookie `ml_session` (constantes en `lib/auth.ts`), y corre el middleware de `next-intl` para el locale.
-- **Route Handlers** — `app/api/auth/login/route.ts` y `logout/route.ts` manejan la autenticación mock.
+- **Route Handlers** — `app/api/auth/{register,confirm,resend-code,login,logout}/route.ts` hablan con Cognito real (`lib/cognito.ts`). El browser nunca llama a AWS directo, solo a estas rutas.
 - **Capas en `lib/`** — `datasources/mock/` (datos crudos), `repositories/` (acceso a datos), `stores/` (zustand: `auth.store.ts`, `cart.store.ts`), `hooks/` (`useT.ts` para traducciones).
 
 ## Tipos compartidos
@@ -30,19 +30,29 @@ Los tipos de dominio (`Branch`, `Product`, `CartItem`, `UserProfile`, etc.) vive
 
 Cargadas con `next/font/google` en `layout.tsx`: `'Anton'`, `'Bebas Neue'`, `'Inter'`, `'JetBrains Mono'`, `'Permanent Marker'` — expuestas como variables `--font-*` en el `<html>`.
 
-## Auth flow
+## Auth flow (real, Cognito — decidido/implementado 2026-09-09)
+
+Un solo User Pool compartido para toda la cadena de apps (`infra/modules/cognito` en la raíz), con Grupos `staff`/`manager`/`owner` para roles internos — la ausencia de esos grupos en el JWT implica rol `customer`. Ver CLAUDE.md raíz, sección "Arquitectura de backend".
 
 ```
-Usuario sin sesión → /dashboard → middleware → /account?next=/dashboard
-                                                    ↓
-                                         Login form submit
-                                                    ↓
-                                         POST /api/auth/login
-                                                    ↓
-                                         Cookie ml_session seteada
-                                                    ↓
-                                         router.push(next || '/dashboard')
+Registro:
+  SignupForm → POST /api/auth/register (SignUpCommand)
+    → Cognito manda código por email → tab 'confirm'
+    → ConfirmForm → POST /api/auth/confirm (ConfirmSignUpCommand + auto-login)
+    → cookie ml_session (ID token real) → router.push(next || '/dashboard')
+
+Login:
+  Usuario sin sesión → /dashboard → middleware → /account?next=/dashboard
+    → LoginForm → POST /api/auth/login (InitiateAuth USER_PASSWORD_AUTH)
+    → cookie ml_session (ID token real) → router.push(next || '/dashboard')
 ```
+
+- El middleware SOLO verifica que `ml_session` exista (no valida el JWT) — el flujo de rutas protegidas no cambió.
+- **Refresh automático (2026-09-09):** `ml_session` (ID token) dura 60 min, igual al `id_token_validity` del App Client en Terraform. `ml_refresh` (refresh token, 30 días — `refresh_token_validity` en Terraform) se guarda aparte en login/confirm. `SessionRefresher`/`useSessionRefresh` (`lib/hooks/useSessionRefresh.ts`) se monta en las 3 páginas protegidas (`(account)/layout.tsx` para dashboard/performance, `CheckoutClient` para checkout) y cada 15 min llama `POST /api/auth/refresh` (`REFRESH_TOKEN_AUTH`) para renovar `ml_session` sin pedir contraseña. El refresh token no rota — Cognito no devuelve uno nuevo en `REFRESH_TOKEN_AUTH`. Si el refresh falla (token revocado/expirado a los 30 días), se limpia todo y se manda a `/account`.
+- Errores de Cognito se mapean a códigos cortos (`lib/cognito-errors.ts`) → `{ error: 'CODE' }` en la respuesta → `AccountClient` los traduce vía `t.account.errors.*`. Nunca se le muestra al usuario el mensaje crudo de AWS.
+- Self-signup abierto solo para clientes (rol implícito). Cuentas de staff/gerente/dueño se dan de alta con `AdminCreateUser` + `AdminSetUserPassword` (nunca self-signup) — mismo patrón que usa `tests/e2e/global-setup.ts` para el usuario fijo de e2e.
+- Login social (botones en `SocialButtons.tsx`) sigue sin IdP real detrás — pendiente decidir qué redes (ver CLAUDE.md raíz). Hoy simplemente falla contra Cognito con credenciales inválidas, que es el comportamiento correcto mientras tanto.
+- Variables de entorno: `COGNITO_REGION`, `COGNITO_CLIENT_ID` (runtime), `COGNITO_USER_POOL_ID` (solo test e2e) — ver `.env.example`. Vienen de `terraform output` en `infra/envs/dev`.
 
 ## Convenciones
 
@@ -83,11 +93,10 @@ O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 
 `Memberships`, `Contact` y `AnnouncementsBoard` no reciben su data por props: la leen de un store de Zustand (`lib/stores/announcements.store.ts`, `membershipTiers.store.ts`, `socialLinks.store.ts`, `socialFeed.store.ts`), todos construidos con el factory `lib/stores/createAsyncResource.ts` (`{ data, loading, error, hydrate, fetch }`). El Server Component de home (`app/[locale]/page.tsx`) sigue precargando estos datos vía repository — igual que branches/products — y `MuchoLoco.tsx` los recibe como props y los usa solo para llamar `hydrate()` una vez al montar (así no hay flash de loader en la primera carga). `loading`/`fetch()` quedan disponibles para cuando el componente sí necesita mostrar el loader — `AnnouncementsBoard` re-hace `fetch()` cada vez que se abre, y el botón "EN VIVO VÍA API" del feed de `Contact` lo dispara manualmente. Nuevo contenido de landing sin repository propio (nada de arrays sueltos en el componente) debería seguir este mismo patrón.
 
-## Próximo hito: backend AWS
+## Próximo hito: backend NestJS
 
-Cuando se integre AWS (o el backend que se decida), los cambios serán en:
-1. `app/api/auth/login/route.ts` → llamar a Cognito en vez de setear cookie directamente
-2. `lib/repositories/*.ts` → reemplazar datasources mock con fetches a la API real
-3. Las páginas protegidas → pasar de datos mock a datos reales del usuario
+Auth ya es real (Cognito, ver "Auth flow" arriba). Cuando exista `apps/backend`, los cambios serán en:
+1. `lib/repositories/*.ts` → reemplazar datasources mock con fetches a la API real (autenticados con el ID token de `ml_session`).
+2. Las páginas protegidas → pasar de datos mock (`MOCK_PROFILE`, etc.) a datos reales del usuario logueado.
 
 El middleware y el flujo de rutas NO cambian.

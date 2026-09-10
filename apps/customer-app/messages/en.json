@@ -173,6 +173,23 @@
     "loginTab": "Log in",
     "signupTab": "Sign up",
     "errorLogin": "We couldn't log you in. Try again.",
+    "errors": {
+      "userExists": "There's already an account with that email. Try logging in instead.",
+      "invalidPassword": "Password needs an uppercase, lowercase and number (min. 8 characters).",
+      "notConfirmed": "You haven't confirmed your account yet. We sent you a new code.",
+      "wrongCredentials": "Wrong email or password.",
+      "codeMismatch": "Wrong code. Check it and try again.",
+      "codeExpired": "That code expired. Ask for a new one.",
+      "tooManyAttempts": "Too many attempts. Wait a bit and try again."
+    },
+    "confirm": {
+      "sentPrefix": "We sent a 6-digit code to",
+      "codeLabel": "Confirmation code",
+      "submit": "CONFIRM ACCOUNT",
+      "submitting": "CONFIRMING...",
+      "resend": "Resend code",
+      "resent": "Code resent."
+    },
     "login": {
       "emailLabel": "Email or username",
       "passwordLabel": "Password",
@@ -234,6 +251,7 @@
     "access": {
       "expiresLabel": "EXPIRES",
       "branchLabel": "BRANCH",
+      "allGyms": "15 GYMS",
       "showQr": "📲 SHOW ACCESS QR",
       "accessHistory": "ACCESS HISTORY",
       "entryNote": "Entry logged · QR valid"

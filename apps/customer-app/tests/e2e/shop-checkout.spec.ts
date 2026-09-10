@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { E2E_TEST_EMAIL, E2E_TEST_PASSWORD } from './global-setup';
 
 async function login(page: import('@playwright/test').Page) {
   await page.goto('/account');
-  await page.fill('input[name="email"]', 'diego@mucholoco.mx');
+  await page.fill('input[name="email"]', E2E_TEST_EMAIL);
+  await page.fill('input[name="password"]', E2E_TEST_PASSWORD);
   await page.locator('button:has-text("PRENDER LA MECHA")').click();
   await expect(page).toHaveURL(/\/dashboard$/);
 }
