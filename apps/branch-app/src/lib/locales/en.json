@@ -35,7 +35,15 @@
     "markDelivered": "Mark as delivered",
     "marking": "Marking…",
     "statusReady": "Ready for pickup",
-    "statusDelivered": "Delivered"
+    "statusDelivered": "Delivered",
+    "scan": {
+      "instructions": "Scan the customer's order QR to find it fast, or look it up by hand.",
+      "placeholder": "Order id (#ML-######)",
+      "find": "Find",
+      "notFound": "ORDER NOT FOUND",
+      "alreadyDelivered": "ALREADY DELIVERED",
+      "scanNext": "Scan another"
+    }
   },
   "counter": {
     "title": "Counter",
@@ -97,7 +105,7 @@
   },
   "qr": {
     "title": "Validate QR access",
-    "instructions": "Scan the member's fixed QR or type it — the scanner acts like a keyboard.",
+    "instructions": "Scan with the camera, a physical scanner (types + Enter), or by hand.",
     "placeholder": "QR code",
     "validate": "Validate",
     "validating": "Validating…",
@@ -106,7 +114,15 @@
     "statusActive": "ACCESS GRANTED",
     "statusGrace": "GRACE PERIOD — ALLOW AND NOTIFY",
     "statusExpired": "ACCESS DENIED — MEMBERSHIP EXPIRED",
+    "wrongBranch": "ACCESS DENIED — WRONG BRANCH",
+    "wrongBranchNote": "This membership is only valid at",
     "expiresOn": "Expires on",
-    "expiredOn": "Expired on"
+    "expiredOn": "Expired on",
+    "scanNext": "Scan another"
+  },
+  "qrScanner": {
+    "start": "📷 Turn on camera",
+    "stop": "Turn off camera",
+    "cameraError": "We couldn't access the camera. Check your browser permissions."
   }
 }

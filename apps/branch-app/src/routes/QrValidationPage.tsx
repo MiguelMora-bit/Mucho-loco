@@ -1,18 +1,21 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { qrAccessRepository } from '../lib/repositories/qrAccess.repository';
+import type { QrValidationResult } from '../lib/repositories/qrAccess.repository';
+import { getCurrentBranchId } from '../lib/currentBranch';
+import { QrCameraScanner } from '../components/QrCameraScanner';
 import type { MemberAccessRecord } from '@mucho-loco/types';
 
-type Result = { record: MemberAccessRecord } | { record: null } | null;
-
-// Demo codes — a real QR scanner just types this plus Enter.
-const DEMO_CODES = ['ML-QR-DIEGO01', 'ML-QR-ANA02', 'ML-QR-CARLOS03'];
+// Demo codes — los dos primeros son los QR reales de customer-app (ver
+// lib/data.ts): Diego (all gyms) siempre pasa, Valeria (single, Condesa) debe
+// ser rechazada acá porque el staff de prueba está en Roma Sur.
+const DEMO_CODES = ['ML-DIEGO-2026-ALLGYMS', 'ML-VALERIA-2026-CONDESA', 'ML-QR-ANA02', 'ML-QR-CARLOS03'];
 
 export function QrValidationPage() {
   const { t } = useTranslation();
   const [code, setCode] = useState('');
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<Result>(null);
+  const [result, setResult] = useState<QrValidationResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const STATUS_COPY: Record<MemberAccessRecord['status'], { label: string; className: string }> = {
@@ -22,12 +25,12 @@ export function QrValidationPage() {
   };
 
   async function validate(qrCode: string) {
-    if (!qrCode.trim()) return;
+    if (!qrCode.trim() || checking) return;
     setChecking(true);
     setResult(null);
     try {
-      const record = await qrAccessRepository.validate(qrCode);
-      setResult(record ? { record } : { record: null });
+      const outcome = await qrAccessRepository.validate(qrCode, getCurrentBranchId());
+      setResult(outcome);
     } finally {
       setChecking(false);
       setCode('');
@@ -35,12 +38,20 @@ export function QrValidationPage() {
     }
   }
 
+  // Mientras se muestra un resultado, un frame nuevo de la cámara no dispara
+  // otra validación — evita re-escanear el mismo QR en bucle. Hay que limpiar
+  // el resultado ("Escanear otro") antes de que un scan cuente de nuevo.
+  function handleCameraScan(scanned: string) {
+    if (result || checking) return;
+    validate(scanned);
+  }
+
   return (
     <div className="max-w-lg mx-auto">
       <h1 className="text-2xl font-bold mb-2">{t('qr.title')}</h1>
-      <p className="text-ml-cream-dim text-sm mb-6">
-        {t('qr.instructions')}
-      </p>
+      <p className="text-ml-cream-dim text-sm mb-6">{t('qr.instructions')}</p>
+
+      <QrCameraScanner onScan={handleCameraScan} />
 
       <form
         onSubmit={(e) => {
@@ -66,7 +77,7 @@ export function QrValidationPage() {
         </button>
       </form>
 
-      <div className="flex gap-2 mb-8">
+      <div className="flex gap-2 mb-8 flex-wrap">
         {DEMO_CODES.map((c) => (
           <button
             key={c}
@@ -80,13 +91,28 @@ export function QrValidationPage() {
 
       {result && (
         <div className="rounded border p-6 text-center border-ml-border bg-ml-card">
-          {result.record === null ? (
+          {result.outcome === 'not_found' && (
             <>
               <div className="text-4xl mb-2">✕</div>
               <div className="font-bold text-ml-red">{t('qr.notFound')}</div>
               <p className="text-ml-cream-dim text-sm mt-1">{t('qr.notFoundNote')}</p>
             </>
-          ) : (
+          )}
+
+          {result.outcome === 'wrong_branch' && (
+            <>
+              <div className="text-4xl mb-2">⛔</div>
+              <div className="inline-block px-2 py-1 rounded border font-mono text-xs uppercase mb-3 bg-ml-red/10 border-ml-red text-ml-red">
+                {t('qr.wrongBranch')}
+              </div>
+              <div className="font-medium text-lg">{result.record.memberName}</div>
+              <p className="text-ml-cream-dim text-sm mt-1">
+                {t('qr.wrongBranchNote')} <b>{result.record.homeBranchName}</b>
+              </p>
+            </>
+          )}
+
+          {result.outcome === 'valid' && (
             <>
               <div className="text-4xl mb-2">{result.record.status === 'active' ? '✓' : result.record.status === 'grace' ? '⚠' : '✕'}</div>
               <div className={'inline-block px-2 py-1 rounded border font-mono text-xs uppercase mb-3 ' + STATUS_COPY[result.record.status].className}>
@@ -98,6 +124,13 @@ export function QrValidationPage() {
               </p>
             </>
           )}
+
+          <button
+            onClick={() => setResult(null)}
+            className="mt-4 px-3 py-1.5 rounded border border-ml-border text-xs text-ml-cream-dim hover:text-ml-cream"
+          >
+            {t('qr.scanNext')}
+          </button>
         </div>
       )}
     </div>

@@ -1,19 +1,31 @@
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { COGNITO_CLIENT_ID } from './cognito';
+
 interface IdTokenClaims {
   email: string;
   name: string;
 }
 
+const issuer = `https://cognito-idp.${process.env.COGNITO_REGION}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`;
+const jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+
 /**
- * Decodifica el payload de un ID token de Cognito SIN verificar firma.
- * Seguro acá porque el token viene directo de la respuesta de InitiateAuth/
- * ConfirmSignUp en el mismo request server-side — no de un cliente no confiable.
+ * Verifica firma + expiración + issuer + audience contra el JWKS público de
+ * Cognito (jose cachea las llaves). SIN esto, cualquiera podía editar la
+ * cookie ml_session a mano con un JWT fabricado y suplantar a otro usuario —
+ * decodeIdToken() nunca comprobaba que Cognito realmente hubiera emitido el
+ * token. Ver auditoría de seguridad 2026-09-10.
  */
-export function decodeIdToken(idToken: string): IdTokenClaims {
-  const payload = idToken.split('.')[1];
-  const json = Buffer.from(payload, 'base64url').toString('utf-8');
-  const claims = JSON.parse(json) as Record<string, unknown>;
+export async function verifyIdToken(idToken: string): Promise<IdTokenClaims> {
+  const { payload } = await jwtVerify(idToken, jwks, {
+    issuer,
+    audience: COGNITO_CLIENT_ID,
+  });
+  if (payload.token_use !== 'id') {
+    throw new Error('Token is not a Cognito ID token');
+  }
   return {
-    email: typeof claims.email === 'string' ? claims.email : '',
-    name: typeof claims.name === 'string' ? claims.name : '',
+    email: typeof payload.email === 'string' ? payload.email : '',
+    name: typeof payload.name === 'string' ? payload.name : '',
   };
 }

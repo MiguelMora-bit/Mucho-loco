@@ -4,7 +4,19 @@ import { CURRENT_BRANCH_PRICE, PERIOD_DAYS, PERIOD_MULTIPLIERS, TIER_FACTORS } f
 import { calculateMembershipPrice } from '../../pricing';
 import { delay } from './delay';
 
-let nextQrSeq = 100;
+/**
+ * Antes era un contador secuencial (ML-QR-0100, 0101, ...) — solo 9900
+ * combinaciones, enumerable en segundos probando el rango completo. Un QR de
+ * acceso real necesita ser criptográficamente impredecible: crypto.randomUUID
+ * usa el generador seguro del navegador/Node, así que adivinar un código
+ * ajeno deja de ser viable por fuerza bruta. Ver auditoría de seguridad
+ * 2026-09-10 (sigue sin resolver el problema de fondo: estos códigos viven en
+ * el bundle JS de esta SPA, visibles para quien lea el código fuente — eso
+ * requiere backend real).
+ */
+function generateQrCode(): string {
+  return `ML-QR-${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
+}
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase().replace('.', '');
@@ -32,6 +44,7 @@ export class MembershipMockDatasource {
 
   async renewMembership(
     branchId: number,
+    branchName: string,
     qrCode: string,
     tierKey: TierKey,
     periodKey: PlanKey,
@@ -43,6 +56,11 @@ export class MembershipMockDatasource {
 
     member.status = 'active';
     member.expiresAt = formatDate(addDays(new Date(), PERIOD_DAYS[periodKey]));
+    // Una renovación puede cambiar de tier/sucursal de inscripción — el
+    // alcance de acceso (ver qrAccess.mock.ts) debe reflejar el plan nuevo.
+    member.tierKey = tierKey;
+    member.homeBranchId = branchId;
+    member.homeBranchName = branchName;
 
     const payment: MembershipPayment = {
       id: `#MP-${Date.now()}`,
@@ -61,14 +79,17 @@ export class MembershipMockDatasource {
     return payment;
   }
 
-  async signUpNewMember(branchId: number, input: SignUpInput): Promise<MembershipPayment> {
+  async signUpNewMember(branchId: number, branchName: string, input: SignUpInput): Promise<MembershipPayment> {
     await delay(280);
-    const qrCode = `ML-QR-${(nextQrSeq++).toString().padStart(4, '0')}`;
+    const qrCode = generateQrCode();
     const record: MemberAccessRecord = {
       qrCode,
       memberName: input.memberName,
       status: 'active',
       expiresAt: formatDate(addDays(new Date(), PERIOD_DAYS[input.periodKey])),
+      tierKey: input.tierKey,
+      homeBranchId: branchId,
+      homeBranchName: branchName,
     };
     MEMBER_ACCESS_RECORDS.push(record);
 

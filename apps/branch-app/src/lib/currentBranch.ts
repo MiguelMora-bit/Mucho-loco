@@ -12,3 +12,11 @@ export function getCurrentBranchId(): number {
   }
   return branchId;
 }
+
+export function getCurrentBranchName(): string {
+  const branchName = useAuthStore.getState().user?.branchName;
+  if (!branchName) {
+    throw new Error('getCurrentBranchName() llamado sin sesión de staff activa');
+  }
+  return branchName;
+}

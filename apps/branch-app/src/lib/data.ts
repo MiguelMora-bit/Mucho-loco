@@ -46,10 +46,17 @@ export const BRANCH_INVENTORY: BranchInventoryLevel[] = [
 
 // Mutated by membership.mock.ts on sign-up or renewal — same pattern as
 // BRANCH_INVENTORY.
+// Los primeros dos códigos son EXACTAMENTE los que customer-app genera para
+// sus usuarios de prueba reales (lib/datasources/mock/user.mock.ts) — así el
+// QR que un socio ve en su dashboard sí se puede escanear acá de verdad.
+// Diego (tier 'all') entra en cualquier sucursal; Valeria (tier 'single',
+// Condesa) debe ser RECHAZADA si se escanea en otra sucursal (Roma Sur, donde
+// están dados de alta el staff de prueba) — ver CLAUDE.md raíz.
 export const MEMBER_ACCESS_RECORDS: MemberAccessRecord[] = [
-  { qrCode: 'ML-QR-DIEGO01', memberName: 'Diego Ramírez', status: 'active', expiresAt: '20 JUL 2026' },
-  { qrCode: 'ML-QR-ANA02', memberName: 'Ana López', status: 'grace', expiresAt: '05 JUN 2026' },
-  { qrCode: 'ML-QR-CARLOS03', memberName: 'Carlos Mendoza', status: 'expired', expiresAt: '10 MAY 2026' },
+  { qrCode: 'ML-DIEGO-2026-ALLGYMS', memberName: 'Diego Ramírez', status: 'active', expiresAt: '20 JUL 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
+  { qrCode: 'ML-VALERIA-2026-CONDESA', memberName: 'Valeria Torres', status: 'active', expiresAt: '05 AGO 2026', tierKey: 'single', homeBranchId: 3, homeBranchName: 'Condesa' },
+  { qrCode: 'ML-QR-ANA02', memberName: 'Ana López', status: 'grace', expiresAt: '05 JUN 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
+  { qrCode: 'ML-QR-CARLOS03', memberName: 'Carlos Mendoza', status: 'expired', expiresAt: '10 MAY 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
 ];
 
 // Log of membership payments (sign-up or renewal) made at the counter.

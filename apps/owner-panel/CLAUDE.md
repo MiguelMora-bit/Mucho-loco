@@ -19,10 +19,10 @@ Diferencia propia de este app: **no hay contexto de sucursal actual** (no existe
 SPA pura sin servidor propio, así que a diferencia de `customer-app` (donde Cognito se llama desde Route Handlers de Next.js) acá `InitiateAuthCommand`/`RefreshToken` se llaman **directo desde el browser** (`src/lib/cognito.ts`) — el App Client (`owner_panel` en `infra/modules/cognito`, separado del `web` de `customer-app`) es público y sin secreto, pensado para eso.
 
 - Mismo User Pool compartido con `customer-app` (ver CLAUDE.md raíz) — cualquier cliente registrado puede autenticarse contra Cognito, así que el gate real es pertenecer al grupo `owner` (`cognito:groups` en el ID token). `LoginPage.tsx` rechaza con `NOT_OWNER` a cualquier login válido que no traiga ese grupo. Altas de dueño son `AdminCreateUser` + `AdminAddUserToGroup owner` (nunca self-signup, no hay pantalla de registro en este app).
-- Sesión (`src/lib/stores/auth.store.ts`, zustand + `persist`) vive en `localStorage['ml_owner_session']` — sin servidor no hay cookie httpOnly posible. `useSessionRefresh` (montado en `AppShell`) renueva el ID token cada 15 min vía `REFRESH_TOKEN_AUTH`, y también al montar (cubre el caso de reabrir el browser con el ID token ya vencido).
-- `ProtectedRoute.tsx` envuelve todas las rutas salvo `/login`.
+- Sesión (`src/lib/stores/auth.store.ts`, zustand + `persist`) vive en `localStorage['ml_owner_session']` — sin servidor no hay cookie httpOnly posible.
+- **`ProtectedRoute.tsx` re-verifica la sesión en cada acceso, nunca confía en el `user` cacheado (corregido 2026-09-10, auditoría de seguridad):** verifica firma+expiración del `idToken` contra el JWKS de Cognito (`lib/jwt.ts`, `jose`); si no es válido, intenta un `REFRESH_TOKEN_AUTH` real; si eso también falla, `clear()` + redirect a `/login`. En ambos caminos exitosos, re-deriva `user` (`lib/deriveOwnerUser.ts`, mismo chequeo de grupo `owner` que el login) desde el token verificado y lo vuelve a guardar — así que editar `ml_owner_session` a mano en devtools ya no sirve de nada, ni para fabricar una sesión desde cero ni para que una cuenta real se auto-asigne otro email/nombre. Antes solo comprobaba `if (!user)`. `useSessionRefresh` (montado en `AppShell`, ya con la sesión concedida) solo hace el keep-alive periódico cada 15 min — la verificación inicial la hace `ProtectedRoute`.
 - `lib/jwt.ts` y `lib/cognito-errors.ts` están duplicados de `customer-app` a propósito (sin runtime compartido entre apps) — la única diferencia real es decodificar con `atob()` en vez de `Buffer` (browser puro, sin Node).
-- Variables de entorno con prefijo `VITE_` (`VITE_COGNITO_REGION`, `VITE_COGNITO_CLIENT_ID`) — se exponen al bundle del cliente a propósito, es un App Client público. Ver `.env.example`, valores desde `terraform output` en `infra/envs/dev`.
+- Variables de entorno con prefijo `VITE_` (`VITE_COGNITO_REGION`, `VITE_COGNITO_CLIENT_ID`, `VITE_COGNITO_USER_POOL_ID`) — se exponen al bundle del cliente a propósito, es un App Client público y el JWKS de Cognito también es público. Ver `.env.example`, valores desde `terraform output` en `infra/envs/dev`.
 
 ## Capas en `src/lib/`
 
@@ -37,7 +37,8 @@ Transferencias (`inventoryTransfer.repository.ts` / `.mock.ts` / `.errors.ts`) e
 ```bash
 pnpm --filter owner-panel dev
 pnpm --filter owner-panel build
-pnpm --filter owner-panel test
+pnpm --filter owner-panel test       # Vitest — repositorios + lib pura (payroll.ts, deriveOwnerUser.ts, cognito-errors.ts)
+pnpm --filter owner-panel test:e2e   # Playwright (agregado 2026-09-10) — login real contra Cognito, incluida la sesión fabricada en localStorage
 ```
 
 ## Estado

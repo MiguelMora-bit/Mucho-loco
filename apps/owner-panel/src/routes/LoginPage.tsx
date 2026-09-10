@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { cognitoClient, COGNITO_CLIENT_ID } from '../lib/cognito';
-import { decodeIdToken } from '../lib/jwt';
+import { verifyIdToken } from '../lib/jwt';
 import { mapCognitoError } from '../lib/cognito-errors';
+import { deriveOwnerUser } from '../lib/deriveOwnerUser';
 import { useAuthStore } from '../lib/stores/auth.store';
 
 function errorMessageFor(t: (key: string) => string, code: string): string {
@@ -47,21 +48,17 @@ export function LoginPage() {
         return;
       }
 
-      const claims = decodeIdToken(idToken);
+      const claims = await verifyIdToken(idToken);
       // Un solo User Pool compartido con customer-app/branch-app (ver
       // CLAUDE.md raíz) — cualquier cliente registrado puede autenticarse acá,
       // así que el gate real es pertenecer al grupo 'owner'.
-      if (!claims.groups.includes('owner')) {
+      const user = deriveOwnerUser(claims, email);
+      if (!user) {
         setError(errorMessageFor(t, 'NOT_OWNER'));
         return;
       }
 
-      setSession({
-        user: { email: claims.email || email, name: claims.name },
-        idToken,
-        refreshToken,
-        idTokenExp: claims.exp,
-      });
+      setSession({ user, idToken, refreshToken, idTokenExp: claims.exp });
       navigate('/');
     } catch (err) {
       setError(errorMessageFor(t, mapCognitoError(err)));

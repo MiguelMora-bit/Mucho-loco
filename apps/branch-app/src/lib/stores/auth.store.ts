@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export type StaffRole = 'staff' | 'manager';
 
-interface StaffUser {
+export interface StaffUser {
   email: string;
   name: string;
   role: StaffRole;

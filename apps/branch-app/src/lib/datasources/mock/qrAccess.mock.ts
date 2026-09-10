@@ -1,10 +1,16 @@
-import type { MemberAccessRecord } from '@mucho-loco/types';
 import { MEMBER_ACCESS_RECORDS } from '../../data';
 import { delay } from './delay';
+import type { QrValidationResult } from '../../repositories/qrAccess.repository';
 
 export class QrAccessMockDatasource {
-  async validate(qrCode: string): Promise<MemberAccessRecord | null> {
+  async validate(qrCode: string, branchId: number): Promise<QrValidationResult> {
     await delay(220); // simulates the scan + lookup roundtrip
-    return MEMBER_ACCESS_RECORDS.find((r) => r.qrCode === qrCode.trim()) ?? null;
+    const record = MEMBER_ACCESS_RECORDS.find((r) => r.qrCode === qrCode.trim());
+    if (!record) return { outcome: 'not_found' };
+
+    if (record.tierKey === 'single' && record.homeBranchId !== branchId) {
+      return { outcome: 'wrong_branch', record };
+    }
+    return { outcome: 'valid', record };
   }
 }

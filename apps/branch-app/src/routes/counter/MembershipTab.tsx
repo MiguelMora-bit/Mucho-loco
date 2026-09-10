@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { membershipRepository } from '../../lib/repositories/membership.repository';
-import { getCurrentBranchId } from '../../lib/currentBranch';
+import { getCurrentBranchId, getCurrentBranchName } from '../../lib/currentBranch';
 import { CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS, TIER_FACTORS } from '../../lib/membershipPlans';
 import { calculateMembershipPrice } from '../../lib/pricing';
 import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
@@ -144,7 +144,7 @@ export function MembershipTab() {
   async function handleSignUp() {
     setSubmitting(true); setSubmitError(null);
     try {
-      const payment = await membershipRepository.signUpNewMember(getCurrentBranchId(), { memberName, phone, tierKey, periodKey, paymentMethod });
+      const payment = await membershipRepository.signUpNewMember(getCurrentBranchId(), getCurrentBranchName(), { memberName, phone, tierKey, periodKey, paymentMethod });
       setSuccessPayment(payment); resetForm();
     } catch (e) { console.error(e); setSubmitError(t('counter.membership.errorSignUp')); }
     finally { setSubmitting(false); }
@@ -154,7 +154,7 @@ export function MembershipTab() {
     if (!foundMember) return;
     setSubmitting(true); setSubmitError(null);
     try {
-      const payment = await membershipRepository.renewMembership(getCurrentBranchId(), foundMember.qrCode, tierKey, periodKey, paymentMethod);
+      const payment = await membershipRepository.renewMembership(getCurrentBranchId(), getCurrentBranchName(), foundMember.qrCode, tierKey, periodKey, paymentMethod);
       setSuccessPayment(payment); resetForm();
     } catch (e) { console.error(e); setSubmitError(t('counter.membership.errorRenew')); }
     finally { setSubmitting(false); }

@@ -3,7 +3,7 @@ import { ConfirmSignUpCommand, InitiateAuthCommand } from '@aws-sdk/client-cogni
 import type { AuthUser } from '@mucho-loco/types';
 import { cognitoClient, COGNITO_CLIENT_ID } from '../../../../lib/cognito';
 import { mapCognitoError } from '../../../../lib/cognito-errors';
-import { decodeIdToken } from '../../../../lib/jwt';
+import { verifyIdToken } from '../../../../lib/jwt';
 import { setSessionCookies } from '../../../../lib/session';
 
 export async function POST(request: Request) {
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    const claims = decodeIdToken(idToken);
+    const claims = await verifyIdToken(idToken);
     const user: AuthUser = { email: claims.email || email, name: claims.name };
     const response = NextResponse.json({ ok: true, user });
     setSessionCookies(response, { idToken, refreshToken });

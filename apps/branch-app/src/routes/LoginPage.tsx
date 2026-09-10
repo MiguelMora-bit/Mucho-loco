@@ -4,11 +4,10 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { cognitoClient, COGNITO_CLIENT_ID } from '../lib/cognito';
-import { decodeIdToken } from '../lib/jwt';
+import { verifyIdToken } from '../lib/jwt';
 import { mapCognitoError } from '../lib/cognito-errors';
-import { lookupStaffBranch } from '../lib/staffDirectory';
+import { deriveStaffUser, roleFromGroups } from '../lib/deriveStaffUser';
 import { useAuthStore } from '../lib/stores/auth.store';
-import type { StaffRole } from '../lib/stores/auth.store';
 
 function errorMessageFor(t: (key: string) => string, code: string): string {
   switch (code) {
@@ -20,12 +19,6 @@ function errorMessageFor(t: (key: string) => string, code: string): string {
     case 'NO_BRANCH_ASSIGNED': return t('auth.errors.noBranchAssigned');
     default: return t('auth.errors.unknown');
   }
-}
-
-function roleFromGroups(groups: string[]): StaffRole | null {
-  if (groups.includes('manager')) return 'manager';
-  if (groups.includes('staff')) return 'staff';
-  return null;
 }
 
 export function LoginPage() {
@@ -56,27 +49,21 @@ export function LoginPage() {
         return;
       }
 
-      const claims = decodeIdToken(idToken);
+      const claims = await verifyIdToken(idToken);
       // Un solo User Pool compartido con customer-app/owner-panel (ver
       // CLAUDE.md raíz) — el gate real es pertenecer a staff o manager.
-      const role = roleFromGroups(claims.groups);
-      if (!role) {
+      if (!roleFromGroups(claims.groups)) {
         setError(errorMessageFor(t, 'NOT_STAFF'));
         return;
       }
 
-      const branch = lookupStaffBranch(claims.email || email);
-      if (!branch) {
+      const user = deriveStaffUser(claims, email);
+      if (!user) {
         setError(errorMessageFor(t, 'NO_BRANCH_ASSIGNED'));
         return;
       }
 
-      setSession({
-        user: { email: claims.email || email, name: claims.name, role, branchId: branch.branchId, branchName: branch.branchName },
-        idToken,
-        refreshToken,
-        idTokenExp: claims.exp,
-      });
+      setSession({ user, idToken, refreshToken, idTokenExp: claims.exp });
       navigate('/');
     } catch (err) {
       setError(errorMessageFor(t, mapCognitoError(err)));

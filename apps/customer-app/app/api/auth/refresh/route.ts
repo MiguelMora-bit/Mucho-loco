@@ -4,7 +4,7 @@ import { InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider';
 import type { AuthUser } from '@mucho-loco/types';
 import { cognitoClient, COGNITO_CLIENT_ID } from '../../../../lib/cognito';
 import { mapCognitoError } from '../../../../lib/cognito-errors';
-import { decodeIdToken } from '../../../../lib/jwt';
+import { verifyIdToken } from '../../../../lib/jwt';
 import { REFRESH_COOKIE } from '../../../../lib/auth';
 import { setSessionCookie, clearSessionCookies } from '../../../../lib/session';
 
@@ -31,7 +31,7 @@ export async function POST() {
 
     // REFRESH_TOKEN_AUTH no devuelve un refresh token nuevo — el mismo se
     // reusa hasta su propio vencimiento (30 días), no hace falta rotarlo.
-    const claims = decodeIdToken(idToken);
+    const claims = await verifyIdToken(idToken);
     const user: AuthUser = { email: claims.email, name: claims.name };
     const response = NextResponse.json({ ok: true, user });
     setSessionCookie(response, idToken);

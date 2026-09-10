@@ -1,19 +1,35 @@
 import { describe, it, expect } from 'vitest';
 import { qrAccessRepository } from './qrAccess.repository';
 
+const ROMA_SUR = 1;
+const CONDESA = 3;
+
 describe('qrAccessRepository', () => {
-  it('validate finds an active member by QR code', async () => {
-    const record = await qrAccessRepository.validate('ML-QR-DIEGO01');
-    expect(record?.status).toBe('active');
+  it('validate allows an active all-gyms member at any branch', async () => {
+    const result = await qrAccessRepository.validate('ML-DIEGO-2026-ALLGYMS', ROMA_SUR);
+    expect(result.outcome).toBe('valid');
+    if (result.outcome === 'valid') expect(result.record.status).toBe('active');
+  });
+
+  it('validate allows a single-gym member at their home branch', async () => {
+    const result = await qrAccessRepository.validate('ML-VALERIA-2026-CONDESA', CONDESA);
+    expect(result.outcome).toBe('valid');
+  });
+
+  it('validate rejects a single-gym member scanned at a different branch', async () => {
+    const result = await qrAccessRepository.validate('ML-VALERIA-2026-CONDESA', ROMA_SUR);
+    expect(result.outcome).toBe('wrong_branch');
+    if (result.outcome === 'wrong_branch') expect(result.record.homeBranchName).toBe('Condesa');
   });
 
   it('validate finds a member in the grace period', async () => {
-    const record = await qrAccessRepository.validate('ML-QR-ANA02');
-    expect(record?.status).toBe('grace');
+    const result = await qrAccessRepository.validate('ML-QR-ANA02', ROMA_SUR);
+    expect(result.outcome).toBe('valid');
+    if (result.outcome === 'valid') expect(result.record.status).toBe('grace');
   });
 
-  it('validate returns null for an unknown code', async () => {
-    const record = await qrAccessRepository.validate('NOPE');
-    expect(record).toBeNull();
+  it('validate returns not_found for an unknown code', async () => {
+    const result = await qrAccessRepository.validate('NOPE', ROMA_SUR);
+    expect(result.outcome).toBe('not_found');
   });
 });

@@ -559,6 +559,10 @@ export interface MemberAccessRecord {
   memberName: string;
   status: AccessStatus;
   expiresAt: string;
+  /** Alcance de la membresía (ver "Membresía y alcance de acceso" en CLAUDE.md raíz): 'single' solo da acceso en homeBranchId, 'all' en cualquier sucursal. */
+  tierKey: TierKey;
+  homeBranchId: number;
+  homeBranchName: string;
 }
 
 /** A membership sold or renewed in person at the counter — covers both

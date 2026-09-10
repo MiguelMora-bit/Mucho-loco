@@ -1,8 +1,14 @@
 import type { MemberAccessRecord } from '@mucho-loco/types';
 import { QrAccessMockDatasource } from '../datasources/mock/qrAccess.mock';
 
+export type QrValidationResult =
+  | { outcome: 'not_found' }
+  | { outcome: 'wrong_branch'; record: MemberAccessRecord }
+  | { outcome: 'valid'; record: MemberAccessRecord };
+
 export interface IQrAccessRepository {
-  validate(qrCode: string): Promise<MemberAccessRecord | null>;
+  /** branchId = sucursal donde se está escaneando (ver getCurrentBranchId) — decide 'wrong_branch' para tier 'single'. */
+  validate(qrCode: string, branchId: number): Promise<QrValidationResult>;
 }
 
 // Swap this line to plug in a real API datasource

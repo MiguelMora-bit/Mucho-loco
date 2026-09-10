@@ -42,4 +42,36 @@ test.describe('auth', () => {
     await page.locator('button:has-text("PRENDER LA MECHA")').click();
     await expect(page).toHaveURL(/\/performance$/);
   });
+
+  test('a forged ml_session cookie is rejected, not trusted', async ({ page, context, request }) => {
+    // El middleware solo comprueba que la cookie EXISTA (ver middleware.ts) —
+    // esta prueba confirma que lib/jwt.ts realmente verifica la firma contra
+    // Cognito y no solo decodifica el payload. Sin esto, cualquiera podía
+    // editar la cookie a mano en devtools con un JWT fabricado y suplantar a
+    // otro usuario (ver auditoría de seguridad 2026-09-10).
+    const forgeHeader = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+    const forgePayload = Buffer.from(JSON.stringify({
+      email: 'victima@mucholoco.mx',
+      name: 'IMPOSTOR',
+      token_use: 'id',
+      exp: 9999999999,
+    })).toString('base64url');
+    const forgedJwt = `${forgeHeader}.${forgePayload}.firma-inventada`;
+
+    await context.addCookies([{
+      name: 'ml_session',
+      value: forgedJwt,
+      domain: 'localhost',
+      path: '/',
+    }]);
+
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/\/account$/);
+
+    const ordersResponse = await request.post('/api/orders', {
+      headers: { Cookie: `ml_session=${forgedJwt}` },
+      data: { items: [], total: 0, paymentMethod: 'card', delivery: 'pickup' },
+    });
+    expect(ordersResponse.status()).toBe(401);
+  });
 });

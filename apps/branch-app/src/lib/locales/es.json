@@ -35,7 +35,15 @@
     "markDelivered": "Marcar como entregado",
     "marking": "Marcando…",
     "statusReady": "Listo para recoger",
-    "statusDelivered": "Entregado"
+    "statusDelivered": "Entregado",
+    "scan": {
+      "instructions": "Escanea el QR del pedido del cliente para encontrarlo rápido, o búscalo a mano.",
+      "placeholder": "Folio del pedido (#ML-######)",
+      "find": "Buscar",
+      "notFound": "PEDIDO NO ENCONTRADO",
+      "alreadyDelivered": "YA FUE ENTREGADO",
+      "scanNext": "Escanear otro"
+    }
   },
   "counter": {
     "title": "Mostrador",
@@ -97,7 +105,7 @@
   },
   "qr": {
     "title": "Validar acceso QR",
-    "instructions": "Escanea el QR fijo del socio o escríbelo — el lector actúa como teclado.",
+    "instructions": "Escanea con la cámara, con un lector físico (teclea + Enter), o a mano.",
     "placeholder": "Código QR",
     "validate": "Validar",
     "validating": "Validando…",
@@ -106,7 +114,15 @@
     "statusActive": "ACCESO PERMITIDO",
     "statusGrace": "PERIODO DE GRACIA — PERMITIR Y AVISAR",
     "statusExpired": "ACCESO DENEGADO — MEMBRESÍA VENCIDA",
+    "wrongBranch": "ACCESO DENEGADO — SUCURSAL INCORRECTA",
+    "wrongBranchNote": "Esta membresía solo es válida en",
     "expiresOn": "Vence el",
-    "expiredOn": "Venció el"
+    "expiredOn": "Venció el",
+    "scanNext": "Escanear otro"
+  },
+  "qrScanner": {
+    "start": "📷 Activar cámara",
+    "stop": "Detener cámara",
+    "cameraError": "No pudimos acceder a la cámara. Revisa los permisos del navegador."
   }
 }

@@ -41,7 +41,7 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 ### Reglas de negocio confirmadas
 
 - **Membresía y alcance de acceso (corregido 2026-09-10 — el código ya lo tenía así, el texto viejo de esta regla estaba desactualizado)**: dos tiers ortogonales a la duración (visita/semanal/mensual/trimestral/anual), cada uno con su propio precio — `single` ("1 sucursal", factor 1.0): acceso solo a la sucursal de inscripción; `all` ("15 sucursales", factor 1.5, tier popular): acceso a cualquiera de las 15. Ver `TierKey`/`MembershipTier` en `@mucho-loco/types` y `lib/pricing.ts` en `customer-app`.
-- **QR de acceso**: código fijo, válido mientras la membresía esté vigente (no rota). Con tier `single`, el validador de sucursal (Fase 1 mínima de `branch-app`, sin construir todavía) debe RECHAZAR el check-in fuera de la sucursal de inscripción con un mensaje claro (ej. "Tu membresía es solo para [sucursal]"); con tier `all`, se acepta en cualquiera de las 15. `customer-app` ya refleja el tier del usuario en el dashboard (`AccessPane`), pero la validación real de "rechazar en otra sucursal" vive en `branch-app`, no aquí.
+- **QR de acceso**: código fijo, válido mientras la membresía esté vigente (no rota). Con tier `single`, el validador de sucursal (`branch-app`, `/qr`, implementado 2026-09-10) RECHAZA el check-in fuera de la sucursal de inscripción con un mensaje claro ("sucursal incorrecta"); con tier `all`, se acepta en cualquiera de las 15. El QR es el mismo código real de punta a punta: lo que `customer-app` genera en el dashboard del socio es exactamente lo que `branch-app` escanea (cámara real o lector físico) y valida — ver CLAUDE.md de `branch-app`, sección "QR real".
 - **Pago recurrente de mensualidad**: si falla el cobro, hay periodo de gracia con avisos antes de suspender el acceso.
 - **Inventario por sucursal**: cada sucursal sabe su stock físico real. Venta de mostrador descuenta del stock LOCAL de esa sucursal. Envíos a domicilio siempre salen de una bodega central única. "Recoger en gym" = la sucursal que el cliente elige al comprar.
 - **Pagos en línea**: tarjeta, transferencia, Mercado Pago, PayPal, Stripe. También se puede elegir "efectivo" en el checkout online, pero solo cuando la entrega es "recoger en gym" (decidido 2026-09-08) — el pedido queda pendiente de pago y se cobra en efectivo al recoger; no aplica si la entrega es a domicilio. Fuera de esto, efectivo sigue siendo exclusivo de venta de mostrador en sucursal.
@@ -111,3 +111,13 @@ No hay skill confiable instalable para Mercado Pago, inventario/POS multi-sucurs
 ### Nota operativa
 
 Solo `README.md` estaba trackeado en git antes de la migración a monorepo (todo el resto de `apps/customer-app` nunca se hizo `git add`). Revisar `git status` antes del próximo commit para confirmar qué se está agregando.
+
+**Infra destruida a propósito (2026-09-10) para no pagar mientras no hay desarrollo activo.** `terraform destroy` en `infra/envs/dev` corrido — cero recursos vivos en la cuenta AWS (verificado: `terraform state list` vacío, `list-user-pools` vacío). El código en `infra/` sigue intacto, solo hace falta volver a aplicarlo. Para retomar:
+
+1. `cd infra/envs/dev && terraform apply` — recrea el User Pool y los 3 App Clients (`web`, `owner_panel`, `branch_app`) con IDs NUEVOS (no van a coincidir con los que están en el historial de este chat).
+2. Actualizar `.env.local` en `apps/customer-app`, `apps/owner-panel` y `apps/branch-app` con los IDs nuevos (`terraform output`) — los `.env.local` viejos van a tener valores obsoletos.
+3. Recrear los 6 usuarios de prueba reales (`AdminCreateUser` + `AdminSetUserPassword --permanent`, y `AdminAddUserToGroup` para los que tienen rol) — la destrucción del User Pool los borró a todos:
+   - `diego@mucholoco.mx` / `valeria@mucholoco.mx` — clientes (customer-app, sin grupo), passwords `Bestia123!`.
+   - `rodrigo@mucholoco.mx` — grupo `owner`.
+   - `ana@mucholoco.mx` — grupo `manager`. `luis@mucholoco.mx` — grupo `staff`. Ambos ya están en `branch-app/src/lib/staffDirectory.ts` (Roma Sur) — no hace falta tocar ese archivo.
+   - `e2e.playwright@mucholoco.mx` — lo recrea solo `tests/e2e/global-setup.ts` de `customer-app` al correr `pnpm test:e2e`, no hace falta hacerlo a mano.
