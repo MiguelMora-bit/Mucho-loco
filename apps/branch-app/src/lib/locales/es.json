@@ -3,7 +3,28 @@
     "pickup": "Pedidos",
     "counter": "Mostrador",
     "qr": "Acceso QR",
-    "branchLabel": "SUCURSAL"
+    "branchLabel": "SUCURSAL",
+    "role": {
+      "staff": "Mostrador",
+      "manager": "Gerente"
+    }
+  },
+  "auth": {
+    "title": "Iniciar sesión",
+    "emailLabel": "Email",
+    "passwordLabel": "Contraseña",
+    "submit": "Entrar",
+    "submitting": "Entrando...",
+    "logout": "Cerrar sesión",
+    "errors": {
+      "wrongCredentials": "Email o contraseña incorrectos.",
+      "notConfirmed": "Cuenta sin confirmar. Contacta al administrador.",
+      "passwordResetRequired": "Hay que restablecer la contraseña. Contacta al administrador.",
+      "tooManyAttempts": "Demasiados intentos. Espera un momento.",
+      "notStaff": "Esta cuenta no tiene permiso de staff de sucursal.",
+      "noBranchAssigned": "Tu cuenta no tiene sucursal asignada. Contacta al administrador.",
+      "unknown": "Algo salió mal. Intenta de nuevo."
+    }
   },
   "pickup": {
     "title": "Pedidos para recoger",

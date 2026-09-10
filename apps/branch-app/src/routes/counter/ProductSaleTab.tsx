@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBranchInventoryStore } from '../../lib/stores/branchInventory.store';
 import { counterSaleRepository, ProductNotFoundError, InsufficientStockError } from '../../lib/repositories/counterSale.repository';
-import { CURRENT_BRANCH_ID } from '../../lib/currentBranch';
+import { getCurrentBranchId } from '../../lib/currentBranch';
 import type { PaymentMethod } from '@mucho-loco/types';
 
 function formatPrice(n: number) {
@@ -62,7 +62,7 @@ export function ProductSaleTab() {
     setSubmitError(null);
     try {
       const sale = await counterSaleRepository.createSale(
-        CURRENT_BRANCH_ID,
+        getCurrentBranchId(),
         cartLines.map((l) => ({ productId: l.productId, qty: l.qty })),
         paymentMethod
       );

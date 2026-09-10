@@ -10,6 +10,10 @@ output "owner_panel_client_id" {
   value = module.cognito.owner_panel_client_id
 }
 
+output "branch_app_client_id" {
+  value = module.cognito.branch_app_client_id
+}
+
 output "staff_group_names" {
   value = module.cognito.staff_group_names
 }

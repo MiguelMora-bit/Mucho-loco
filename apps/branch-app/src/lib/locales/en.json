@@ -3,7 +3,28 @@
     "pickup": "Orders",
     "counter": "Counter",
     "qr": "QR Access",
-    "branchLabel": "BRANCH"
+    "branchLabel": "BRANCH",
+    "role": {
+      "staff": "Counter",
+      "manager": "Manager"
+    }
+  },
+  "auth": {
+    "title": "Log in",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "submit": "Log in",
+    "submitting": "Logging in...",
+    "logout": "Log out",
+    "errors": {
+      "wrongCredentials": "Wrong email or password.",
+      "notConfirmed": "Account not confirmed. Contact the administrator.",
+      "passwordResetRequired": "Password reset required. Contact the administrator.",
+      "tooManyAttempts": "Too many attempts. Wait a bit.",
+      "notStaff": "This account doesn't have branch staff access.",
+      "noBranchAssigned": "Your account has no branch assigned. Contact the administrator.",
+      "unknown": "Something went wrong. Try again."
+    }
   },
   "pickup": {
     "title": "Pickup orders",
