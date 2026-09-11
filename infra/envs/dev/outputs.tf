@@ -17,3 +17,7 @@ output "branch_app_client_id" {
 output "staff_group_names" {
   value = module.cognito.staff_group_names
 }
+
+output "cognito_domain" {
+  value = "https://${module.cognito.cognito_domain_prefix}.auth.${var.aws_region}.amazoncognito.com"
+}

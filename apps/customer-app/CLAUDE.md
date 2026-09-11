@@ -51,8 +51,20 @@ Login:
 - **Refresh automático (2026-09-09):** `ml_session` (ID token) dura 60 min, igual al `id_token_validity` del App Client en Terraform. `ml_refresh` (refresh token, 30 días — `refresh_token_validity` en Terraform) se guarda aparte en login/confirm. `SessionRefresher`/`useSessionRefresh` (`lib/hooks/useSessionRefresh.ts`) se monta en las 3 páginas protegidas (`(account)/layout.tsx` para dashboard/performance, `CheckoutClient` para checkout) y cada 15 min llama `POST /api/auth/refresh` (`REFRESH_TOKEN_AUTH`) para renovar `ml_session` sin pedir contraseña. El refresh token no rota — Cognito no devuelve uno nuevo en `REFRESH_TOKEN_AUTH`. Si el refresh falla (token revocado/expirado a los 30 días), se limpia todo y se manda a `/account`.
 - Errores de Cognito se mapean a códigos cortos (`lib/cognito-errors.ts`) → `{ error: 'CODE' }` en la respuesta → `AccountClient` los traduce vía `t.account.errors.*`. Nunca se le muestra al usuario el mensaje crudo de AWS.
 - Self-signup abierto solo para clientes (rol implícito). Cuentas de staff/gerente/dueño se dan de alta con `AdminCreateUser` + `AdminSetUserPassword` (nunca self-signup) — mismo patrón que usa `tests/e2e/global-setup.ts` para el usuario fijo de e2e.
-- Login social (botones en `SocialButtons.tsx`) sigue sin IdP real detrás — pendiente decidir qué redes (ver CLAUDE.md raíz). Hoy simplemente falla contra Cognito con credenciales inválidas, que es el comportamiento correcto mientras tanto.
-- Variables de entorno: `COGNITO_REGION`, `COGNITO_CLIENT_ID` (runtime), `COGNITO_USER_POOL_ID` (solo test e2e) — ver `.env.example`. Vienen de `terraform output` en `infra/envs/dev`.
+- **Login social (decidido/implementado 2026-09-11): Google y Facebook**, vía Hosted UI de Cognito (`infra/modules/cognito`) — a diferencia del login normal (`InitiateAuth` directo), la federación con un IdP externo requiere el flujo OAuth de redirect, no hay forma de hacerlo por SDK server-to-server:
+  ```
+  SocialButtons (<a href="/api/auth/social/start?provider=Google&next=...">)
+    → GET /api/auth/social/start: genera PKCE (verifier/challenge S256) + state (nonce + next path),
+      guarda {nonce, verifier} en cookie httpOnly de corta vida (ml_oauth, path /api/auth/social)
+      → redirect 302 a <COGNITO_DOMAIN>/oauth2/authorize?identity_provider=Google&...
+        (identity_provider salta el picker de Hosted UI, va directo al consent screen de Google/Facebook)
+    → Cognito redirige a GET /api/auth/social/callback?code=...&state=...
+      → valida nonce (CSRF) contra la cookie, intercambia code en <COGNITO_DOMAIN>/oauth2/token
+        (grant_type=authorization_code + code_verifier, sin client_secret — cliente público)
+      → verifyIdToken() + cookie ml_session igual que login normal → redirect a next (o /dashboard)
+  ```
+  Sin `code_verifier`/nonce válidos o si Cognito devuelve `error`, redirect a `/account?error=SOCIAL_LOGIN_FAILED` (mapeado a `t.account.errors.socialLoginFailed`, mismo patrón que los demás códigos de error). Lógica de PKCE/state en `lib/pkce.ts` (con tests en Vitest). Solo el app client `web` tiene los IdPs habilitados — staff/gerente/dueño (`owner_panel`, `branch_app`) siguen siendo email/password únicamente. Sin cuenta linking: el mismo email por Google vs Facebook vs password crea usuarios separados en Cognito (comportamiento default, aceptado por ahora).
+- Variables de entorno: `COGNITO_REGION`, `COGNITO_CLIENT_ID`, `COGNITO_DOMAIN` (Hosted UI, solo login social) — runtime; `COGNITO_USER_POOL_ID` solo test e2e — ver `.env.example`. Vienen de `terraform output` en `infra/envs/dev`. Las credenciales de Google/Facebook viven en `infra/envs/dev/terraform.tfvars` (gitignored, no en este app) — ver CLAUDE.md raíz.
 
 ## Convenciones
 

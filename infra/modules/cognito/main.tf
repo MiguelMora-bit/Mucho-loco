@@ -32,6 +32,53 @@ resource "aws_cognito_user_pool" "this" {
   deletion_protection = "INACTIVE"
 }
 
+resource "aws_cognito_user_pool_domain" "this" {
+  domain       = var.domain_prefix
+  user_pool_id = aws_cognito_user_pool.this.id
+}
+
+# Los IdPs solo se crean si hay credenciales (default "" hasta dar de alta las
+# apps en Google Cloud Console / Meta for Developers — ver terraform.tfvars.example).
+resource "aws_cognito_identity_provider" "google" {
+  count = var.google_client_id != "" ? 1 : 0
+
+  user_pool_id  = aws_cognito_user_pool.this.id
+  provider_name = "Google"
+  provider_type = "Google"
+
+  provider_details = {
+    client_id        = var.google_client_id
+    client_secret    = var.google_client_secret
+    authorize_scopes = "openid email profile"
+  }
+
+  attribute_mapping = {
+    email    = "email"
+    username = "sub"
+    name     = "name"
+  }
+}
+
+resource "aws_cognito_identity_provider" "facebook" {
+  count = var.facebook_app_id != "" ? 1 : 0
+
+  user_pool_id  = aws_cognito_user_pool.this.id
+  provider_name = "Facebook"
+  provider_type = "Facebook"
+
+  provider_details = {
+    client_id        = var.facebook_app_id
+    client_secret    = var.facebook_app_secret
+    authorize_scopes = "public_profile,email"
+  }
+
+  attribute_mapping = {
+    email    = "email"
+    username = "id"
+    name     = "name"
+  }
+}
+
 resource "aws_cognito_user_pool_client" "web" {
   name         = "${var.project}-${var.environment}-web"
   user_pool_id = aws_cognito_user_pool.this.id
@@ -55,6 +102,21 @@ resource "aws_cognito_user_pool_client" "web" {
     id_token      = "minutes"
     refresh_token = "days"
   }
+
+  # Hosted UI solo se usa para login social (redirect a Google/Facebook con
+  # identity_provider=<nombre>, salta el picker). Login normal por
+  # email/password sigue yendo directo por InitiateAuth arriba, no toca esto.
+  supported_identity_providers = concat(
+    ["COGNITO"],
+    length(aws_cognito_identity_provider.google) > 0 ? [aws_cognito_identity_provider.google[0].provider_name] : [],
+    length(aws_cognito_identity_provider.facebook) > 0 ? [aws_cognito_identity_provider.facebook[0].provider_name] : [],
+  )
+
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  callback_urls                        = var.callback_urls
+  logout_urls                          = var.logout_urls
 }
 
 resource "aws_cognito_user_pool_client" "owner_panel" {

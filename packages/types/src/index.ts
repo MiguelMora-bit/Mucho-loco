@@ -298,6 +298,7 @@ export interface Translations {
       codeMismatch: string;
       codeExpired: string;
       tooManyAttempts: string;
+      socialLoginFailed: string;
     };
     confirm: {
       sentPrefix: string;

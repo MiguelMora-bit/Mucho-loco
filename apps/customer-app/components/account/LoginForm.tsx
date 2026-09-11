@@ -6,11 +6,11 @@ interface LoginFormProps {
   t: Translations;
   loading: boolean;
   onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
-  onSocialLogin: () => void;
+  next: string;
   onSwitchToSignup: () => void;
 }
 
-export function LoginForm({ t, loading, onSubmit, onSocialLogin, onSwitchToSignup }: LoginFormProps) {
+export function LoginForm({ t, loading, onSubmit, next, onSwitchToSignup }: LoginFormProps) {
   return (
     <form onSubmit={onSubmit}>
       <div className="field">
@@ -29,7 +29,7 @@ export function LoginForm({ t, loading, onSubmit, onSocialLogin, onSwitchToSignu
         {loading ? t.account.login.submitting : t.account.login.submit}
       </button>
       <div className="or-divider">{t.account.login.orDivider}</div>
-      <SocialButtons onClick={onSocialLogin} />
+      <SocialButtons next={next} />
       <p className="terms">{t.account.login.firstTime} <button type="button" className="bg-transparent border-none text-ml-cream-dim underline cursor-pointer text-xs" onClick={onSwitchToSignup}>{t.account.login.createAccount}</button> {t.account.login.freeDayNote}</p>
     </form>
   );

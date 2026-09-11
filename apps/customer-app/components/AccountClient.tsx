@@ -22,6 +22,7 @@ function errorMessageFor(t: Translations, code?: string): string {
     case 'CODE_MISMATCH': return t.account.errors.codeMismatch;
     case 'CODE_EXPIRED': return t.account.errors.codeExpired;
     case 'TOO_MANY_ATTEMPTS': return t.account.errors.tooManyAttempts;
+    case 'SOCIAL_LOGIN_FAILED': return t.account.errors.socialLoginFailed;
     default: return t.account.errorLogin;
   }
 }
@@ -40,7 +41,9 @@ export default function AccountClient() {
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   const [resent, setResent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    () => (searchParams.get('error') === 'SOCIAL_LOGIN_FAILED' ? errorMessageFor(t, 'SOCIAL_LOGIN_FAILED') : null),
+  );
   const fireRef = useFireCanvas({ count: 70 });
 
   const setUser = useAuthStore((s) => s.setUser);
@@ -145,11 +148,6 @@ export default function AccountClient() {
     await performConfirm(code);
   }
 
-  // El login social todavía no tiene un IdP real detrás (pendiente decidir qué
-  // redes — ver CLAUDE.md raíz); intentarlo hoy siempre cae en credenciales
-  // inválidas contra Cognito, lo cual es el comportamiento correcto por ahora.
-  const handleSocialLogin = () => performLogin('bestia@mucholoco.mx', '');
-
   return (
     <div className="auth-layout">
       <aside className="auth-side">
@@ -180,10 +178,10 @@ export default function AccountClient() {
           {error && <p className="text-ml-red text-xs font-mono mb-4">{error}</p>}
 
           {tab === 'login' && (
-            <LoginForm t={t} loading={loading} onSubmit={handleLoginSubmit} onSocialLogin={handleSocialLogin} onSwitchToSignup={() => setTab('signup')} />
+            <LoginForm t={t} loading={loading} onSubmit={handleLoginSubmit} next={nextPath} onSwitchToSignup={() => setTab('signup')} />
           )}
           {tab === 'signup' && (
-            <SignupForm t={t} loading={loading} onSubmit={handleSignupSubmit} onSocialLogin={handleSocialLogin} />
+            <SignupForm t={t} loading={loading} onSubmit={handleSignupSubmit} next={nextPath} />
           )}
           {tab === 'confirm' && pendingConfirm && (
             <ConfirmForm t={t} email={pendingConfirm.email} loading={loading} resent={resent} onSubmit={handleConfirmSubmit} onResend={performResend} />

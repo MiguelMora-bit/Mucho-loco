@@ -21,3 +21,7 @@ output "branch_app_client_id" {
 output "staff_group_names" {
   value = [for g in aws_cognito_user_group.staff : g.name]
 }
+
+output "cognito_domain_prefix" {
+  value = aws_cognito_user_pool_domain.this.domain
+}

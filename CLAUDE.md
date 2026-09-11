@@ -48,6 +48,7 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 - **Control de dinero en sucursal**: corte de caja por turno/día, auditable desde el panel del dueño.
 - **Roles en sucursal**: diferenciados — gerente (caja, reportes, inventario local) vs. mostrador (pedidos, cobro, QR).
 - **Nómina**: cálculo completo (asistencia, deducciones, recibos), no solo registro de gasto.
+- **Login social (decidido 2026-09-11): Google y Facebook**, solo para `customer-app` (staff/gerente/dueño siguen email/password). Implementado vía Hosted UI de Cognito (IdPs `aws_cognito_identity_provider` en `infra/modules/cognito`) — ver detalle del flujo OAuth/PKCE en `apps/customer-app/CLAUDE.md`, sección "Auth flow". Credenciales de Google/Facebook van en `infra/envs/dev/terraform.tfvars` (gitignored, plantilla en `terraform.tfvars.example`), nunca en el código ni en el chat.
 - **Sin clases con reservación** (por ahora): acceso libre a pesas/máquinas. Coaches son parte del staff/ambiente, sin agenda con cupo.
 - **Comunidad**: feed social básico entre socios (posts, likes, comentarios). Sin rankings ni conexión automática con el módulo Rendimiento por ahora.
 
@@ -88,7 +89,6 @@ Orden de fases:
 ### Pendiente de decidir
 
 - Qué pasa con socios/empleados si cierra una sucursal.
-- Qué redes sociales exactas para login social.
 - Política de devoluciones/cancelaciones.
 
 ### Skills instaladas para este proyecto (`.agents/skills/`, ver `skills-lock.json`)
@@ -114,9 +114,10 @@ Solo `README.md` estaba trackeado en git antes de la migración a monorepo (todo
 
 **Infra destruida a propósito (2026-09-10) para no pagar mientras no hay desarrollo activo.** `terraform destroy` en `infra/envs/dev` corrido — cero recursos vivos en la cuenta AWS (verificado: `terraform state list` vacío, `list-user-pools` vacío). El código en `infra/` sigue intacto, solo hace falta volver a aplicarlo. Para retomar:
 
-1. `cd infra/envs/dev && terraform apply` — recrea el User Pool y los 3 App Clients (`web`, `owner_panel`, `branch_app`) con IDs NUEVOS (no van a coincidir con los que están en el historial de este chat).
-2. Actualizar `.env.local` en `apps/customer-app`, `apps/owner-panel` y `apps/branch-app` con los IDs nuevos (`terraform output`) — los `.env.local` viejos van a tener valores obsoletos.
-3. Recrear los 6 usuarios de prueba reales (`AdminCreateUser` + `AdminSetUserPassword --permanent`, y `AdminAddUserToGroup` para los que tienen rol) — la destrucción del User Pool los borró a todos:
+1. **Antes del apply** — crear las apps OAuth reales y llenar `infra/envs/dev/terraform.tfvars` (copiar de `terraform.tfvars.example`, ese archivo no está en git): OAuth client de Google (console.cloud.google.com) y app de Meta for Developers (developers.facebook.com) con producto "Facebook Login". El redirect URI exacto a registrar en ambos está documentado en `terraform.tfvars.example`. Sin esto, `terraform apply` igual funciona pero sin los IdPs de Google/Facebook (quedan vacíos por default, ver `infra/modules/cognito/variables.tf`).
+2. `cd infra/envs/dev && terraform apply` — recrea el User Pool y los 3 App Clients (`web`, `owner_panel`, `branch_app`) con IDs NUEVOS (no van a coincidir con los que están en el historial de este chat).
+3. Actualizar `.env.local` en `apps/customer-app`, `apps/owner-panel` y `apps/branch-app` con los IDs nuevos (`terraform output`) — los `.env.local` viejos van a tener valores obsoletos. `customer-app` además necesita `COGNITO_DOMAIN` (`terraform output cognito_domain`, nuevo desde el login social).
+4. Recrear los 6 usuarios de prueba reales (`AdminCreateUser` + `AdminSetUserPassword --permanent`, y `AdminAddUserToGroup` para los que tienen rol) — la destrucción del User Pool los borró a todos:
    - `diego@mucholoco.mx` / `valeria@mucholoco.mx` — clientes (customer-app, sin grupo), passwords `Bestia123!`.
    - `rodrigo@mucholoco.mx` — grupo `owner`.
    - `ana@mucholoco.mx` — grupo `manager`. `luis@mucholoco.mx` — grupo `staff`. Ambos ya están en `branch-app/src/lib/staffDirectory.ts` (Roma Sur) — no hace falta tocar ese archivo.

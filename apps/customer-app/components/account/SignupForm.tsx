@@ -6,10 +6,10 @@ interface SignupFormProps {
   t: Translations;
   loading: boolean;
   onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
-  onSocialLogin: () => void;
+  next: string;
 }
 
-export function SignupForm({ t, loading, onSubmit, onSocialLogin }: SignupFormProps) {
+export function SignupForm({ t, loading, onSubmit, next }: SignupFormProps) {
   return (
     <form onSubmit={onSubmit}>
       <div className="field">
@@ -34,7 +34,7 @@ export function SignupForm({ t, loading, onSubmit, onSocialLogin }: SignupFormPr
         {loading ? t.account.signup.submitting : t.account.signup.submit}
       </button>
       <div className="or-divider">{t.account.signup.orDivider}</div>
-      <SocialButtons onClick={onSocialLogin} />
+      <SocialButtons next={next} />
       <p className="terms">{t.account.signup.termsPrefix} <a href="#">{t.account.signup.termsLink}</a> {t.account.signup.termsAnd} <a href="#">{t.account.signup.privacyLink}</a>. {t.account.signup.termsSuffix}</p>
     </form>
   );

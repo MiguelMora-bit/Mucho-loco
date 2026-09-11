@@ -180,7 +180,8 @@
       "wrongCredentials": "Wrong email or password.",
       "codeMismatch": "Wrong code. Check it and try again.",
       "codeExpired": "That code expired. Ask for a new one.",
-      "tooManyAttempts": "Too many attempts. Wait a bit and try again."
+      "tooManyAttempts": "Too many attempts. Wait a bit and try again.",
+      "socialLoginFailed": "We couldn't finish logging you in with that network. Try again or use your email."
     },
     "confirm": {
       "sentPrefix": "We sent a 6-digit code to",

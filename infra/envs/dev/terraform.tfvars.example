@@ -1,0 +1,21 @@
+# Copiar a terraform.tfvars (gitignored por el .gitignore raíz — nunca commitear
+# ese archivo) y llenar con credenciales reales antes de `terraform apply`.
+
+# Google Cloud Console (console.cloud.google.com) → APIs & Services → Credentials
+# → Create OAuth client ID → tipo "Web application".
+# Authorized redirect URI: https://<domain_prefix>.auth.<aws_region>.amazoncognito.com/oauth2/idpresponse
+# (domain_prefix y aws_region son los de variables.tf — con los defaults de este
+# archivo: https://mucho-loco-gym-dev.auth.us-east-1.amazoncognito.com/oauth2/idpresponse)
+google_client_id     = ""
+google_client_secret = ""
+
+# Meta for Developers (developers.facebook.com) → Create App → tipo "Consumer"
+# → agregar producto "Facebook Login" → Settings → Valid OAuth Redirect URIs:
+# la misma URL de arriba. La app tiene que pasar a modo "Live" (no "Development")
+# para que la puedan usar usuarios que no sean admins/testers de la app.
+facebook_app_id     = ""
+facebook_app_secret = ""
+
+# Cambiar solo si "mucho-loco-gym-dev" ya está tomado (el prefijo de dominio
+# de Cognito es único a nivel global en AWS, no solo dentro de esta cuenta).
+# domain_prefix = "mucho-loco-gym-dev"
