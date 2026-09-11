@@ -54,9 +54,9 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 
 ### Fases del proyecto
 
-- **Fase 1 (MVP)** — tienda en línea completa, registro/login (correo + redes), mapa de sucursales con precios/promos, membresía con pago recurrente + periodo de gracia, panel del socio (pedidos, QR, avisos de vencimiento), feed social básico, versión MÍNIMA de sucursal (marcar pedidos de "recoger" como entregados, vender en mostrador descontando stock local, validar QR), y **panel del dueño básico** (estadísticas de ventas, clientes activos por sucursal, inventario global consolidado — solo lectura, sin nómina ni corte de caja todavía).
-- **Fase 2** — app de sucursal completa (corte de caja, roles gerente/mostrador) + panel del dueño completo (transferencias de inventario, gastos).
-- **Fase 3** — nómina completa (asistencia, deducciones, recibos), reportes ejecutivos avanzados.
+- **Fase 1 (MVP) — ✅ completa (2026-09-11)** — tienda en línea completa, registro/login (correo + redes), mapa de sucursales con precios/promos, membresía con pago recurrente + periodo de gracia, panel del socio (pedidos, QR, avisos de vencimiento), feed social básico ("Comunidad" — distinto del feed de marketing del landing), versión mínima de sucursal (marcar pedidos de "recoger" como entregados, vender en mostrador descontando stock local, validar QR), y panel del dueño básico (estadísticas de ventas, clientes activos por sucursal, inventario global consolidado — solo lectura).
+- **Fase 2 — ✅ completa (2026-09-11)** — app de sucursal completa (corte de caja, roles gerente/mostrador, reportes/inventario local de gerente) + panel del dueño completo (transferencias de inventario, gastos).
+- **Fase 3 — ✅ completa para producto (2026-09-11)** — nómina (`owner-panel`, empleados/periodos/deducciones/recibos) + captura real de asistencia (`branch-app`, `/attendance`) + reportes ejecutivos avanzados (`owner-panel`, `/reports`). Pendiente, y depende del backend real: `branch-app` y `owner-panel` todavía corren mocks aislados por app (ver "no comparten código de runtime" arriba) — la asistencia real que captura `branch-app` no llega todavía al cálculo de nómina de `owner-panel`, eso requiere que ambos compartan la misma base de datos.
 
 ### Arquitectura de backend (decidida 2026-08-30)
 
