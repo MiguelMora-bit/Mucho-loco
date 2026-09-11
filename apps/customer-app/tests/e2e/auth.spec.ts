@@ -74,4 +74,43 @@ test.describe('auth', () => {
     });
     expect(ordersResponse.status()).toBe(401);
   });
+
+  test('logging out clears the session — a protected route bounces to /account again', async ({ page }) => {
+    await page.goto('/account');
+    await page.fill('input[name="email"]', E2E_TEST_EMAIL);
+    await page.fill('input[name="password"]', E2E_TEST_PASSWORD);
+    await page.locator('button:has-text("PRENDER LA MECHA")').click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+
+    await page.locator('.logout-btn').click();
+    await expect(page).toHaveURL(/\/$/);
+
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/\/account\?next=%2Fdashboard$/);
+  });
+
+  test('refresh renews ml_session without rotating ml_refresh', async ({ page, context, request }) => {
+    await page.goto('/account');
+    await page.fill('input[name="email"]', E2E_TEST_EMAIL);
+    await page.fill('input[name="password"]', E2E_TEST_PASSWORD);
+    await page.locator('button:has-text("PRENDER LA MECHA")').click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+
+    const cookiesBefore = await context.cookies();
+    const sessionBefore = cookiesBefore.find((c) => c.name === 'ml_session')?.value;
+    const refreshToken = cookiesBefore.find((c) => c.name === 'ml_refresh')?.value;
+    expect(refreshToken).toBeTruthy();
+
+    const res = await request.post('/api/auth/refresh', {
+      headers: { Cookie: `ml_refresh=${refreshToken}` },
+    });
+    expect(res.status()).toBe(200);
+
+    const setCookie = res.headers()['set-cookie'] ?? '';
+    expect(setCookie).toContain('ml_session=');
+    expect(setCookie).not.toContain('ml_refresh='); // REFRESH_TOKEN_AUTH no rota el refresh token
+    const newSessionMatch = setCookie.match(/ml_session=([^;]+)/);
+    expect(newSessionMatch?.[1]).toBeTruthy();
+    expect(newSessionMatch?.[1]).not.toBe(sessionBefore); // Cognito emite un ID token nuevo, no el mismo
+  });
 });
