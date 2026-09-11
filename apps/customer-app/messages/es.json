@@ -227,6 +227,7 @@
       "profile": "MI PERFIL",
       "settings": "CONFIGURACIÓN",
       "performance": "RENDIMIENTO",
+      "community": "COMUNIDAD",
       "logout": "CERRAR SESIÓN"
     },
     "membershipStatus": {
@@ -309,6 +310,16 @@
       "title": "MUESTRA ESTE QR",
       "sub": "En recepción de cualquier sucursal · Válido hoy",
       "close": "CERRAR"
+    },
+    "community": {
+      "title": "COMUNIDAD",
+      "composerPlaceholder": "¿Qué entrenaste hoy?",
+      "post": "PUBLICAR",
+      "posting": "PUBLICANDO...",
+      "postError": "No pudimos publicar tu post. Intenta de nuevo.",
+      "empty": "Todavía no hay publicaciones. ¡Sé el primero!",
+      "commentPlaceholder": "Escribe un comentario...",
+      "sendComment": "ENVIAR"
     }
   },
   "checkout": {

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { setRequestLocale } from 'next-intl/server';
 import { userRepository } from '@/lib/repositories/user.repository';
+import { communityRepository } from '@/lib/repositories/community.repository';
 import DashboardClient from '@/components/DashboardClient';
 import { buildAlternates } from '@/lib/seo';
 import { getCurrentUserEmail } from '@/lib/session';
@@ -33,11 +34,12 @@ export default async function DashboardPage(props: Props) {
     // comprueba que exista, así que esta es la última línea de defensa real.
     return redirect({ href: '/account', locale: params.locale });
   }
-  const [profile, membership, history, orders] = await Promise.all([
+  const [profile, membership, history, orders, feed] = await Promise.all([
     userRepository.getProfile(email),
     userRepository.getMembership(email),
     userRepository.getVisitHistory(email),
     userRepository.getOrders(email),
+    communityRepository.getFeed(email),
   ]);
 
   return (
@@ -46,6 +48,7 @@ export default async function DashboardPage(props: Props) {
       membership={membership}
       history={history}
       orders={orders}
+      feed={feed}
     />
   );
 }

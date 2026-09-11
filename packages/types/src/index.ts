@@ -114,6 +114,29 @@ export interface Visit {
   duration: string;
 }
 
+export interface CommunityComment {
+  id: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+}
+
+/** Feed interno entre socios ("Comunidad" en el CLAUDE.md raíz) — distinto
+ *  del feed de marketing del landing (`FeedPost` más abajo, redes sociales
+ *  externas del gym). Sin rankings ni conexión con el módulo Rendimiento
+ *  por ahora. */
+export interface CommunityPost {
+  id: string;
+  authorName: string;
+  authorBranch: string;
+  body: string;
+  createdAt: string;
+  likeCount: number;
+  /** Relativo a quien pide el feed — por eso getFeed(email) recibe el email del viewer. */
+  likedByMe: boolean;
+  comments: CommunityComment[];
+}
+
 export type OrderStatus = 'ready' | 'done';
 
 /** Online checkout methods (customer-app). Distinct from the in-person
@@ -354,6 +377,7 @@ export interface Translations {
       profile: string;
       settings: string;
       performance: string;
+      community: string;
       logout: string;
     };
     membershipStatus: {
@@ -436,6 +460,16 @@ export interface Translations {
       title: string;
       sub: string;
       close: string;
+    };
+    community: {
+      title: string;
+      composerPlaceholder: string;
+      post: string;
+      posting: string;
+      postError: string;
+      empty: string;
+      commentPlaceholder: string;
+      sendComment: string;
     };
   };
   checkout: {

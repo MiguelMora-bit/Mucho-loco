@@ -227,6 +227,7 @@
       "profile": "MY PROFILE",
       "settings": "SETTINGS",
       "performance": "PERFORMANCE",
+      "community": "COMMUNITY",
       "logout": "LOG OUT"
     },
     "membershipStatus": {
@@ -309,6 +310,16 @@
       "title": "SHOW THIS QR",
       "sub": "At reception of any branch · Valid today",
       "close": "CLOSE"
+    },
+    "community": {
+      "title": "COMMUNITY",
+      "composerPlaceholder": "What did you train today?",
+      "post": "POST",
+      "posting": "POSTING...",
+      "postError": "We couldn't publish your post. Try again.",
+      "empty": "No posts yet. Be the first!",
+      "commentPlaceholder": "Write a comment...",
+      "sendComment": "SEND"
     }
   },
   "checkout": {

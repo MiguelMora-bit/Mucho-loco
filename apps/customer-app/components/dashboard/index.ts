@@ -6,6 +6,7 @@ export { Header } from './Header';
 export { HomePane } from './HomePane';
 export { AccessPane } from './AccessPane';
 export { OrdersPane } from './OrdersPane';
+export { CommunityPane } from './CommunityPane';
 export { ProfilePane } from './ProfilePane';
 export { SettingsPane } from './SettingsPane';
 export * from './types';

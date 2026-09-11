@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { LuHouse, LuQrCode, LuPackage, LuCircleUser, LuSettings, LuTrendingUp, LuLogOut } from 'react-icons/lu';
+import { LuHouse, LuQrCode, LuPackage, LuUsers, LuCircleUser, LuSettings, LuTrendingUp, LuLogOut } from 'react-icons/lu';
 import { Link, usePathname, useRouter } from '@/i18n/routing';
 import { useLogout } from '@/lib/hooks/useLogout';
 import { useDashboardPaneStore } from '@/lib/stores/dashboardPane.store';
@@ -13,6 +13,7 @@ const NAV_ICON: Record<PaneKey, ReactNode> = {
   home: <LuHouse size={20} />,
   access: <LuQrCode size={20} />,
   orders: <LuPackage size={20} />,
+  community: <LuUsers size={20} />,
   profile: <LuCircleUser size={20} />,
   settings: <LuSettings size={20} />,
 };
@@ -21,6 +22,7 @@ const NAV_ANIM: Record<PaneKey, string> = {
   home: 'icon-bounce',
   access: 'icon-glow',
   orders: 'icon-wobble',
+  community: 'icon-breathe',
   profile: 'icon-breathe',
   settings: 'icon-spin',
 };
