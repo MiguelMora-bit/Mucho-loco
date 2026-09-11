@@ -4,6 +4,7 @@
     "counter": "Counter",
     "qr": "QR Access",
     "cashRegister": "Cash Register",
+    "reports": "Reports",
     "branchLabel": "BRANCH",
     "role": {
       "staff": "Counter",
@@ -153,5 +154,22 @@
       "viewDetail": "View detail",
       "hideDetail": "Hide"
     }
+  },
+  "reports": {
+    "title": "Branch reports",
+    "subtitle": "Last {{days}} days",
+    "loadError": "We couldn't load the report",
+    "totalRevenue": "Revenue",
+    "transactionCount": "Transactions",
+    "byDay": "Sales by day",
+    "dateLabel": "Date",
+    "revenueLabel": "Revenue",
+    "noSales": "No activity in this period.",
+    "topProducts": "Top-selling products",
+    "productLabel": "Product",
+    "qtySoldLabel": "Qty sold",
+    "localInventory": "Local inventory",
+    "stockLabel": "Stock",
+    "lowStock": "Low stock"
   }
 }

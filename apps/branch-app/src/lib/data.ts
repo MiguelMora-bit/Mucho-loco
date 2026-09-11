@@ -59,13 +59,34 @@ export const MEMBER_ACCESS_RECORDS: MemberAccessRecord[] = [
   { qrCode: 'ML-QR-CARLOS03', memberName: 'Carlos Mendoza', status: 'expired', expiresAt: '10 MAY 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
 ];
 
-// Log of membership payments (sign-up or renewal) made at the counter.
-export const MEMBERSHIP_PAYMENTS: MembershipPayment[] = [];
+function daysAgo(days: number, hour: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  d.setHours(hour, 0, 0, 0);
+  return d.toISOString();
+}
+
+// Log of membership payments (sign-up or renewal) made at the counter. Seed
+// history (branchId 1, last week) is illustrative only, purely so
+// ReportsPage has something to show on first load — real entries get
+// pushed to this same array by membership.mock.ts.
+export const MEMBERSHIP_PAYMENTS: MembershipPayment[] = [
+  { id: '#MP-SEED-1', branchId: 1, qrCode: 'ML-QR-SEED1', memberName: 'Fernanda Ruiz', phone: '55 1122 3344', tierKey: 'single', periodKey: 'monthly', amount: 890, paymentMethod: 'card', isNewMember: true, createdAt: daysAgo(2, 10) },
+  { id: '#MP-SEED-2', branchId: 1, qrCode: 'ML-QR-ANA02', memberName: 'Ana López', phone: '55 2233 4455', tierKey: 'all', periodKey: 'monthly', amount: 1090, paymentMethod: 'cash', isNewMember: false, createdAt: daysAgo(5, 9) },
+];
 
 // Pushed to by counterSale.mock.ts on each sale — history didn't exist before
 // (createSale only returned the sale and mutated BRANCH_INVENTORY), needed
-// now so cashRegisterShift.mock.ts can sum "what came in" for a shift.
-export const COUNTER_SALES: CounterSale[] = [];
+// now so cashRegisterShift.mock.ts can sum "what came in" for a shift. Seed
+// history (branchId 1, last week) is illustrative only, same reasoning as
+// MEMBERSHIP_PAYMENTS above.
+export const COUNTER_SALES: CounterSale[] = [
+  { id: '#CS-SEED-1', branchId: 1, items: [{ productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', qty: 2, unitPrice: 790 }], total: 1580, paymentMethod: 'card', createdAt: daysAgo(1, 8) },
+  { id: '#CS-SEED-2', branchId: 1, items: [{ productId: 'p18', productName: 'Shaker Loco', qty: 3, unitPrice: 290 }], total: 870, paymentMethod: 'cash', createdAt: daysAgo(1, 18) },
+  { id: '#CS-SEED-3', branchId: 1, items: [{ productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', qty: 4, unitPrice: 45 }], total: 180, paymentMethod: 'cash', createdAt: daysAgo(3, 12) },
+  { id: '#CS-SEED-4', branchId: 1, items: [{ productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', qty: 1, unitPrice: 790 }, { productId: 'p13', productName: 'Goma de Mascar Energética', qty: 2, unitPrice: 95 }], total: 980, paymentMethod: 'transfer', createdAt: daysAgo(4, 17) },
+  { id: '#CS-SEED-5', branchId: 1, items: [{ productId: 'p18', productName: 'Shaker Loco', qty: 1, unitPrice: 290 }], total: 290, paymentMethod: 'card', createdAt: daysAgo(6, 9) },
+];
 
 // Mutated by cashRegisterShift.mock.ts — closeShift() flips status, a fresh
 // 'open' one is only created lazily the next time getOpenShift() is called.

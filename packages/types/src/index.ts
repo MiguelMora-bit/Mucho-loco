@@ -674,6 +674,33 @@ export interface ShiftTransaction {
   createdAt: string;
 }
 
+/** Un día dentro de la ventana de `BranchSalesReport.days` — sin entrada
+ *  propia si no hubo ventas/pagos ese día (no se rellenan ceros). */
+export interface DailySales {
+  date: string;
+  revenue: number;
+}
+
+export interface TopProduct {
+  productId: string;
+  productName: string;
+  qtySold: number;
+  revenue: number;
+}
+
+/** Reporte del gerente de UNA sucursal (ver "reportes/inventario local de
+ *  gerente" en el CLAUDE.md de branch-app) — distinto del corte de caja
+ *  (que es por turno, para cuadrar el cajón) y del panel del dueño (que ve
+ *  las 15 sucursales a la vez, no una). */
+export interface BranchSalesReport {
+  branchId: number;
+  days: number;
+  totalRevenue: number;
+  transactionCount: number;
+  byDay: DailySales[];
+  topProducts: TopProduct[];
+}
+
 // --- owner-panel (Phase 1, read-only) ---
 
 export interface BranchStatsSummary {

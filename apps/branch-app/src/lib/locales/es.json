@@ -4,6 +4,7 @@
     "counter": "Mostrador",
     "qr": "Acceso QR",
     "cashRegister": "Caja",
+    "reports": "Reportes",
     "branchLabel": "SUCURSAL",
     "role": {
       "staff": "Mostrador",
@@ -153,5 +154,22 @@
       "viewDetail": "Ver detalle",
       "hideDetail": "Ocultar"
     }
+  },
+  "reports": {
+    "title": "Reportes de sucursal",
+    "subtitle": "Últimos {{days}} días",
+    "loadError": "No pudimos cargar el reporte",
+    "totalRevenue": "Ingresos",
+    "transactionCount": "Transacciones",
+    "byDay": "Ventas por día",
+    "dateLabel": "Fecha",
+    "revenueLabel": "Ingresos",
+    "noSales": "Sin actividad en este periodo.",
+    "topProducts": "Productos más vendidos",
+    "productLabel": "Producto",
+    "qtySoldLabel": "Cantidad vendida",
+    "localInventory": "Inventario local",
+    "stockLabel": "Stock",
+    "lowStock": "Stock bajo"
   }
 }
