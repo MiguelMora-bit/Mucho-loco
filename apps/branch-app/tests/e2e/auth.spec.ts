@@ -73,6 +73,34 @@ test.describe('auth', () => {
     await expect(page.locator('header')).toContainText('Gerente');
   });
 
+  test('a manager sees the cash register nav item and can open it', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[name="email"]', MANAGER_EMAIL);
+    await page.fill('input[name="password"]', MANAGER_PASSWORD);
+    await page.click('button:has-text("Entrar")');
+    await expect(page).toHaveURL('/');
+
+    await page.click('text=Caja');
+    await expect(page).toHaveURL('/cash-register');
+    await expect(page.getByText('Corte de caja')).toBeVisible();
+  });
+
+  test('staff does not see the cash register nav item, and visiting the URL directly bounces to /', async ({ page }) => {
+    // Roles en sucursal (ver CLAUDE.md raíz): gerente = caja/reportes,
+    // mostrador = pedidos/cobro/QR — el corte de caja es la primera
+    // restricción real por rol en este app (antes el rol solo se mostraba).
+    await page.goto('/login');
+    await page.fill('input[name="email"]', STAFF_EMAIL);
+    await page.fill('input[name="password"]', STAFF_PASSWORD);
+    await page.click('button:has-text("Entrar")');
+    await expect(page).toHaveURL('/');
+
+    await expect(page.locator('header')).not.toContainText('Caja');
+
+    await page.goto('/cash-register');
+    await expect(page).toHaveURL('/');
+  });
+
   test('a forged session in localStorage is rejected, not trusted', async ({ page }) => {
     await page.goto('/login');
     await page.evaluate(() => {

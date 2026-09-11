@@ -3,6 +3,7 @@
     "pickup": "Pedidos",
     "counter": "Mostrador",
     "qr": "Acceso QR",
+    "cashRegister": "Caja",
     "branchLabel": "SUCURSAL",
     "role": {
       "staff": "Mostrador",
@@ -124,5 +125,33 @@
     "start": "📷 Activar cámara",
     "stop": "Detener cámara",
     "cameraError": "No pudimos acceder a la cámara. Revisa los permisos del navegador."
+  },
+  "cashRegister": {
+    "title": "Corte de caja",
+    "loadError": "No pudimos cargar el corte",
+    "openedLabel": "Corte abierto desde",
+    "totals": {
+      "cash": "Efectivo",
+      "card": "Tarjeta",
+      "transfer": "Transferencia",
+      "grandTotal": "Total"
+    },
+    "transactionCount": "Transacciones",
+    "noTransactions": "Todavía no hay ninguna venta ni pago en este corte.",
+    "source": {
+      "sale": "Venta",
+      "membership": "Membresía"
+    },
+    "closeButton": "Cerrar corte",
+    "closeConfirm": "¿Seguro? Confirmar cierre",
+    "closing": "Cerrando…",
+    "history": {
+      "title": "Historial de cortes",
+      "empty": "Todavía no hay cortes cerrados.",
+      "openedAt": "Abierto",
+      "closedAt": "Cerrado",
+      "viewDetail": "Ver detalle",
+      "hideDetail": "Ocultar"
+    }
   }
 }

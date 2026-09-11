@@ -583,6 +583,29 @@ export interface MembershipPayment {
   createdAt: string;
 }
 
+/** Corte de caja: siempre hay a lo mas uno 'open' por sucursal, cubriendo
+ *  [openedAt, closedAt ?? ahora). 'closed' es un estado final — no se reabre,
+ *  el siguiente shift se crea solo cuando se vuelve a pedir el abierto. */
+export interface CashRegisterShift {
+  id: string;
+  branchId: number;
+  openedAt: string;
+  closedAt: string | null;
+  status: 'open' | 'closed';
+}
+
+/** Vista fusionada de CounterSale + MembershipPayment para un shift — así
+ *  el corte de caja muestra un solo timeline de "qué entró" sin que la UI
+ *  tenga que combinar dos formas distintas de transacción. */
+export interface ShiftTransaction {
+  id: string;
+  kind: 'sale' | 'membership';
+  description: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  createdAt: string;
+}
+
 // --- owner-panel (Phase 1, read-only) ---
 
 export interface BranchStatsSummary {

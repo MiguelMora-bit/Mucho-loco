@@ -57,6 +57,17 @@ export function AppShell() {
           >
             {t('nav.qr')}
           </NavLink>
+          {user?.role === 'manager' && (
+            <NavLink
+              to="/cash-register"
+              className={({ isActive }) =>
+                'px-3 py-1.5 rounded text-sm font-medium transition-colors ' +
+                (isActive ? 'bg-ml-red text-ml-cream' : 'text-ml-cream-dim hover:text-ml-cream')
+              }
+            >
+              {t('nav.cashRegister')}
+            </NavLink>
+          )}
           <div className="flex gap-1 ml-2">
             <button
               onClick={() => setLanguage('es')}

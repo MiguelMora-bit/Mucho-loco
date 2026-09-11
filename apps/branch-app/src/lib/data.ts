@@ -1,4 +1,4 @@
-import type { BranchInventoryLevel, MemberAccessRecord, MembershipPayment, PickupOrder } from '@mucho-loco/types';
+import type { BranchInventoryLevel, CashRegisterShift, CounterSale, MemberAccessRecord, MembershipPayment, PickupOrder } from '@mucho-loco/types';
 
 export const PICKUP_ORDERS: PickupOrder[] = [
   {
@@ -61,3 +61,12 @@ export const MEMBER_ACCESS_RECORDS: MemberAccessRecord[] = [
 
 // Log of membership payments (sign-up or renewal) made at the counter.
 export const MEMBERSHIP_PAYMENTS: MembershipPayment[] = [];
+
+// Pushed to by counterSale.mock.ts on each sale — history didn't exist before
+// (createSale only returned the sale and mutated BRANCH_INVENTORY), needed
+// now so cashRegisterShift.mock.ts can sum "what came in" for a shift.
+export const COUNTER_SALES: CounterSale[] = [];
+
+// Mutated by cashRegisterShift.mock.ts — closeShift() flips status, a fresh
+// 'open' one is only created lazily the next time getOpenShift() is called.
+export const CASH_REGISTER_SHIFTS: CashRegisterShift[] = [];

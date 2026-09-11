@@ -1,5 +1,5 @@
 import type { BranchInventoryLevel, CounterSale, CounterSaleItem, PaymentMethod } from '@mucho-loco/types';
-import { BRANCH_INVENTORY } from '../../data';
+import { BRANCH_INVENTORY, COUNTER_SALES } from '../../data';
 import { delay } from './delay';
 import { ProductNotFoundError, InsufficientStockError } from '../../repositories/counterSale.errors';
 
@@ -22,7 +22,7 @@ export class CounterSaleMockDatasource {
       stock.qty -= pick.qty;
       return { productId: stock.productId, productName: stock.productName, qty: pick.qty, unitPrice: stock.unitPrice };
     });
-    return {
+    const sale: CounterSale = {
       id: `#CS-${Date.now()}`,
       branchId,
       items,
@@ -30,5 +30,7 @@ export class CounterSaleMockDatasource {
       paymentMethod,
       createdAt: new Date().toISOString(),
     };
+    COUNTER_SALES.push(sale);
+    return sale;
   }
 }

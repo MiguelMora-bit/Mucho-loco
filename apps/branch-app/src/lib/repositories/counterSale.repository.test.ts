@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { counterSaleRepository } from './counterSale.repository';
-import { BRANCH_INVENTORY } from '../data';
+import { BRANCH_INVENTORY, COUNTER_SALES } from '../data';
 
 describe('counterSaleRepository', () => {
   it('getInventory only returns stock for that branch', async () => {
@@ -31,5 +31,12 @@ describe('counterSaleRepository', () => {
 
   it('createSale rejects an unknown product', async () => {
     await expect(counterSaleRepository.createSale(1, [{ productId: 'nope', qty: 1 }], 'card')).rejects.toThrow();
+  });
+
+  it('createSale persists the sale to history — needed for the cash register shift to sum it up', async () => {
+    const inventory = await counterSaleRepository.getInventory(1);
+    const target = inventory.find((i) => i.qty > 1)!;
+    const sale = await counterSaleRepository.createSale(1, [{ productId: target.productId, qty: 1 }], 'cash');
+    expect(COUNTER_SALES).toContainEqual(sale);
   });
 });
