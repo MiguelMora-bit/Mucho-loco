@@ -410,6 +410,11 @@ body.darker {
 }
 .pin:hover { transform: scale(1.4); }
 .pin:hover .pin-body { background: var(--orange); }
+.pin.promo::after {
+  content: ''; position: absolute; top: -2px; right: -2px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--yellow); border: 1.4px solid var(--black);
+}
 .pin.active .pin-body { background: var(--yellow); border-color: var(--red); }
 .pin.active .pin-glow { background: var(--yellow); }
 @keyframes ping { 0% { width: 10px; height: 10px; opacity: 0.6; } 100% { width: 32px; height: 32px; opacity: 0; } }
@@ -421,6 +426,7 @@ body.darker {
   background: rgba(10,6,6,0.8); padding: 8px 12px; border: 1px solid var(--border);
 }
 .map-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.map-legend .dot-promo { background: var(--yellow); border: 1.4px solid var(--black); }
 
 .branches-list {
   display: flex; flex-direction: column;
@@ -452,6 +458,10 @@ body.darker {
 .branch-row .tier.Premium { color: var(--yellow); border-color: var(--yellow); }
 .branch-row .tier.Core { color: var(--orange); border-color: var(--orange); }
 .branch-row .tier.Lite { color: var(--cream-dim); border-color: var(--border); }
+.promo-tag {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em;
+  padding: 3px 7px; background: var(--red); color: var(--cream); text-transform: uppercase;
+}
 
 .branch-detail {
   margin: 60px 60px 0; max-width: 1600px; margin-left: auto; margin-right: auto;

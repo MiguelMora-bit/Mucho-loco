@@ -13,6 +13,14 @@ export type BranchTier = 'Lite' | 'Core' | 'Premium';
  *  the root CLAUDE.md. */
 export type AccessStatus = 'active' | 'grace' | 'expired';
 
+/** Promoción activa de una sucursal (mapa de sucursales, "precios/promos" en
+ *  Fase 1) — porcentaje sobre `Branch.price`, no un plan/tier aparte. */
+export interface BranchPromo {
+  label: LocalizedString;
+  detail: LocalizedString;
+  discountPercent: number;
+}
+
 export interface Branch {
   id: number;
   name: string;
@@ -26,6 +34,7 @@ export interface Branch {
   price: number;
   tier: BranchTier;
   featured?: boolean;
+  promo?: BranchPromo;
   hours: string;
   img: string;
 }
@@ -200,6 +209,8 @@ export interface Translations {
     loadingMap: string;
     viewPrices: string;
     mapKeyMissing: string;
+    promoBadge: string;
+    promoWasPrefix: string;
   };
   coaches: {
     eyebrow: string;

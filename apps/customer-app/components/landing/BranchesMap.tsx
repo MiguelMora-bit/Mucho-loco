@@ -44,7 +44,7 @@ export function BranchesMap({ t, branches, active, setActive }: BranchesMapProps
               anchorTop="50%"
               onClick={() => setActive(b)}
             >
-              <div className={'pin' + (active.id === b.id ? ' active' : '')}>
+              <div className={'pin' + (active.id === b.id ? ' active' : '') + (b.promo ? ' promo' : '')}>
                 <span className="pin-glow" />
                 <span className="pin-body" />
               </div>
@@ -55,6 +55,7 @@ export function BranchesMap({ t, branches, active, setActive }: BranchesMapProps
       <div className="map-legend">
         <span><span className="dot bg-ml-red"></span>{t.branches.legendBranch}</span>
         <span><span className="dot bg-ml-yellow"></span>{t.branches.legendSelected}</span>
+        <span><span className="dot dot-promo"></span>{t.branches.promoBadge}</span>
       </div>
     </div>
   );

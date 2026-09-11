@@ -88,7 +88,7 @@ export default function MuchoLoco({ branches, products, announcements, membershi
       <Nav t={t} lang={lang} setLang={handleLangChange} cartCount={cartCount} onCartOpen={() => setCartOpen(true)} />
       <Hero t={t} fireRef={fireCanvasRef} />
       <Shop t={t} lang={lang} cat={shopCat} setCat={setShopCat} products={products} />
-      <Branches t={t} branches={branches} active={activeBranch} setActive={setActiveBranch} />
+      <Branches t={t} lang={lang} branches={branches} active={activeBranch} setActive={setActiveBranch} />
       <Memberships t={t} branches={branches} branch={memBranch} setBranchId={setMemBranchId} mult={planMultiplier} label={planLabel} lang={lang} />
       <Contact t={t} lang={lang} />
       <Footer t={t} />

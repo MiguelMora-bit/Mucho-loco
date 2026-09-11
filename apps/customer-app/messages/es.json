@@ -38,7 +38,9 @@
     "legendSelected": "SELECCIONADA",
     "loadingMap": "Cargando mapa…",
     "viewPrices": "VER PRECIOS",
-    "mapKeyMissing": "Falta NEXT_PUBLIC_GOOGLE_MAPS_API_KEY en .env.local. Ver .env.example."
+    "mapKeyMissing": "Falta NEXT_PUBLIC_GOOGLE_MAPS_API_KEY en .env.local. Ver .env.example.",
+    "promoBadge": "PROMO",
+    "promoWasPrefix": "Antes"
   },
   "coaches": {
     "eyebrow": "Los que prenden la mecha",

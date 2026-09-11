@@ -38,7 +38,9 @@
     "legendSelected": "SELECTED",
     "loadingMap": "Loading map…",
     "viewPrices": "VIEW PRICES",
-    "mapKeyMissing": "Missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local. See .env.example."
+    "mapKeyMissing": "Missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local. See .env.example.",
+    "promoBadge": "PROMO",
+    "promoWasPrefix": "Was"
   },
   "coaches": {
     "eyebrow": "The ones who light the fuse",
