@@ -5,6 +5,7 @@
     "qr": "QR Access",
     "cashRegister": "Cash Register",
     "reports": "Reports",
+    "attendance": "Attendance",
     "branchLabel": "BRANCH",
     "role": {
       "staff": "Counter",
@@ -171,5 +172,23 @@
     "localInventory": "Local inventory",
     "stockLabel": "Stock",
     "lowStock": "Low stock"
+  },
+  "attendance": {
+    "title": "Attendance",
+    "clockedInSince": "On shift since",
+    "notClockedIn": "You haven't clocked in today.",
+    "clockIn": "Clock in",
+    "clockOut": "Clock out",
+    "processing": "Saving…",
+    "errorAlreadyIn": "You already have an open entry.",
+    "errorNoOpenEntry": "You don't have an open entry.",
+    "errorGeneric": "We couldn't save your attendance.",
+    "teamToday": "Team attendance today",
+    "teamEmpty": "No one has clocked in yet.",
+    "loadError": "We couldn't load attendance",
+    "staffLabel": "Staff",
+    "clockInLabel": "Clock in",
+    "clockOutLabel": "Clock out",
+    "onShift": "On shift"
   }
 }

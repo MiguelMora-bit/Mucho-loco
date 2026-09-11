@@ -701,6 +701,22 @@ export interface BranchSalesReport {
   topProducts: TopProduct[];
 }
 
+/** Registro de asistencia de UN turno de UN empleado — a lo más uno "abierto"
+ *  (clockOut: null) por staffEmail a la vez, mismo invariante que
+ *  CashRegisterShift pero por persona en vez de por sucursal. Es la captura
+ *  real que faltaba para que la nómina de owner-panel deje de depender de
+ *  AttendanceSummary pre-cargado (ver su CLAUDE.md, "Pendiente Fase 3") —
+ *  hoy vive aislada en el mock de branch-app, como todo lo demás hasta que
+ *  exista backend real y ambos apps compartan la misma base de datos. */
+export interface AttendanceEntry {
+  id: string;
+  branchId: number;
+  staffEmail: string;
+  staffName: string;
+  clockIn: string;
+  clockOut: string | null;
+}
+
 // --- owner-panel (Phase 1, read-only) ---
 
 export interface BranchStatsSummary {

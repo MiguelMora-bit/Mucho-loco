@@ -8,6 +8,7 @@ import { CounterSalePage } from './routes/CounterSalePage';
 import { QrValidationPage } from './routes/QrValidationPage';
 import { CashRegisterPage } from './routes/CashRegisterPage';
 import { ReportsPage } from './routes/ReportsPage';
+import { AttendancePage } from './routes/AttendancePage';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
             <Route index element={<PickupOrdersPage />} />
             <Route path="counter" element={<CounterSalePage />} />
             <Route path="qr" element={<QrValidationPage />} />
+            <Route path="attendance" element={<AttendancePage />} />
             <Route element={<RequireManager />}>
               <Route path="cash-register" element={<CashRegisterPage />} />
               <Route path="reports" element={<ReportsPage />} />

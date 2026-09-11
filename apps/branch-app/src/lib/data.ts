@@ -1,4 +1,4 @@
-import type { BranchInventoryLevel, CashRegisterShift, CounterSale, MemberAccessRecord, MembershipPayment, PickupOrder } from '@mucho-loco/types';
+import type { AttendanceEntry, BranchInventoryLevel, CashRegisterShift, CounterSale, MemberAccessRecord, MembershipPayment, PickupOrder } from '@mucho-loco/types';
 
 export const PICKUP_ORDERS: PickupOrder[] = [
   {
@@ -91,3 +91,12 @@ export const COUNTER_SALES: CounterSale[] = [
 // Mutated by cashRegisterShift.mock.ts — closeShift() flips status, a fresh
 // 'open' one is only created lazily the next time getOpenShift() is called.
 export const CASH_REGISTER_SHIFTS: CashRegisterShift[] = [];
+
+// Mutated by attendance.mock.ts — clockOut() fills clockOut on the entry
+// clockIn() created. Luis already has a closed entry from earlier today so
+// AttendancePage's team view isn't empty on first load; Ana (manager, the
+// staffDirectory/test account) starts with none so clocking in can be
+// demoed cleanly.
+export const ATTENDANCE_ENTRIES: AttendanceEntry[] = [
+  { id: '#ATT-SEED-1', branchId: 1, staffEmail: 'luis@mucholoco.mx', staffName: 'Luis', clockIn: daysAgo(0, 5), clockOut: daysAgo(0, 9) },
+];

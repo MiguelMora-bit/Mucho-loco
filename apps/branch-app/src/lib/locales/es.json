@@ -5,6 +5,7 @@
     "qr": "Acceso QR",
     "cashRegister": "Caja",
     "reports": "Reportes",
+    "attendance": "Asistencia",
     "branchLabel": "SUCURSAL",
     "role": {
       "staff": "Mostrador",
@@ -171,5 +172,23 @@
     "localInventory": "Inventario local",
     "stockLabel": "Stock",
     "lowStock": "Stock bajo"
+  },
+  "attendance": {
+    "title": "Asistencia",
+    "clockedInSince": "En turno desde",
+    "notClockedIn": "Todavía no has registrado entrada hoy.",
+    "clockIn": "Registrar entrada",
+    "clockOut": "Registrar salida",
+    "processing": "Guardando…",
+    "errorAlreadyIn": "Ya tienes una entrada abierta.",
+    "errorNoOpenEntry": "No tienes ninguna entrada abierta.",
+    "errorGeneric": "No pudimos guardar tu asistencia.",
+    "teamToday": "Asistencia del equipo hoy",
+    "teamEmpty": "Nadie ha registrado entrada todavía.",
+    "loadError": "No pudimos cargar la asistencia",
+    "staffLabel": "Empleado",
+    "clockInLabel": "Entrada",
+    "clockOutLabel": "Salida",
+    "onShift": "En turno"
   }
 }
