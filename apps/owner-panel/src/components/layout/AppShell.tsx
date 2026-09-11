@@ -66,6 +66,15 @@ export function AppShell() {
           >
             {t('nav.payroll')}
           </NavLink>
+          <NavLink
+            to="/reports"
+            className={({ isActive }) =>
+              'px-3 py-1.5 rounded text-sm font-medium transition-colors ' +
+              (isActive ? 'bg-ml-red text-ml-cream' : 'text-ml-cream-dim hover:text-ml-cream')
+            }
+          >
+            {t('nav.reports')}
+          </NavLink>
           <div className="flex gap-1 ml-2">
             <button
               onClick={() => setLanguage('es')}

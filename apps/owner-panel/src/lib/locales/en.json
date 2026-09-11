@@ -22,7 +22,8 @@
     "summary": "Summary",
     "expenses": "Expenses",
     "transfers": "Transfers",
-    "payroll": "Payroll"
+    "payroll": "Payroll",
+    "reports": "Reports"
   },
   "expenses": {
     "title": "Expenses",
@@ -119,5 +120,24 @@
     "inventoryError": "We couldn't load the inventory",
     "productLabel": "Product",
     "totalStockLabel": "Total stock"
+  },
+  "executiveReports": {
+    "title": "Executive reports",
+    "subtitle": "Revenue, expenses, and payroll cost crossed by branch.",
+    "loadError": "We couldn't load the report",
+    "totalRevenue": "Revenue",
+    "totalExpenses": "Expenses",
+    "totalPayrollCost": "Payroll cost",
+    "totalNetProfit": "Net profit",
+    "byBranch": "Profit by branch",
+    "branchLabel": "Branch",
+    "revenueLabel": "Revenue",
+    "expensesLabel": "Expenses",
+    "payrollCostLabel": "Payroll",
+    "netProfitLabel": "Net profit",
+    "expensesByCategory": "Expenses by category",
+    "categoryLabel": "Category",
+    "totalLabel": "Total",
+    "corporateExpensesNote": "Includes corporate expenses (not assigned to a branch):"
   }
 }

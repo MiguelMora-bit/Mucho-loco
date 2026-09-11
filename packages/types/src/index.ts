@@ -820,3 +820,33 @@ export interface Payslip {
   netPay: number;
   generatedAt: string;
 }
+
+/** Reporte ejecutivo avanzado (Fase 3, "Pendiente" en el CLAUDE.md de
+ *  owner-panel) — el dashboard básico de Fase 1 solo muestra ingresos y
+ *  clientes activos; esto cruza esos ingresos con gastos (Expense) y costo
+ *  de nómina (Payslip, ya generados vía runPayroll) para dar una P&L real
+ *  por sucursal, algo que antes vivía repartido en 3 pantallas sin cruzarse.
+ *  Puramente calculado — no hay datasource propio, ver lib/executiveReport.ts. */
+export interface BranchPnl {
+  branchId: number;
+  branchName: string;
+  revenue: number;
+  expenses: number;
+  payrollCost: number;
+  netProfit: number;
+}
+
+export interface ExpenseByCategory {
+  category: ExpenseCategory;
+  total: number;
+}
+
+export interface ExecutiveReport {
+  branches: BranchPnl[];
+  totalRevenue: number;
+  totalExpenses: number;
+  totalPayrollCost: number;
+  totalNetProfit: number;
+  corporateExpenses: number;
+  expensesByCategory: ExpenseByCategory[];
+}

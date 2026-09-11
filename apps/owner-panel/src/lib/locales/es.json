@@ -22,7 +22,8 @@
     "summary": "Resumen",
     "expenses": "Gastos",
     "transfers": "Transferencias",
-    "payroll": "Nómina"
+    "payroll": "Nómina",
+    "reports": "Reportes"
   },
   "expenses": {
     "title": "Gastos",
@@ -119,5 +120,24 @@
     "inventoryError": "No pudimos cargar el inventario",
     "productLabel": "Producto",
     "totalStockLabel": "Stock total"
+  },
+  "executiveReports": {
+    "title": "Reportes ejecutivos",
+    "subtitle": "Ingresos, gastos y costo de nómina cruzados por sucursal.",
+    "loadError": "No pudimos cargar el reporte",
+    "totalRevenue": "Ingresos",
+    "totalExpenses": "Gastos",
+    "totalPayrollCost": "Costo de nómina",
+    "totalNetProfit": "Utilidad neta",
+    "byBranch": "Utilidad por sucursal",
+    "branchLabel": "Sucursal",
+    "revenueLabel": "Ingresos",
+    "expensesLabel": "Gastos",
+    "payrollCostLabel": "Nómina",
+    "netProfitLabel": "Utilidad neta",
+    "expensesByCategory": "Gastos por categoría",
+    "categoryLabel": "Categoría",
+    "totalLabel": "Total",
+    "corporateExpensesNote": "Incluye gastos corporativos (no asignados a una sucursal):"
   }
 }
