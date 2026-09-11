@@ -229,6 +229,11 @@
       "performance": "PERFORMANCE",
       "logout": "LOG OUT"
     },
+    "membershipStatus": {
+      "active": "Active",
+      "grace": "Grace period",
+      "expired": "Suspended"
+    },
     "home": {
       "weekdays": ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
       "welcomePrefix": "WELCOME,",
@@ -239,6 +244,14 @@
       "renewNotePrefix": "Renew now to keep your",
       "renewNoteSuffix": "day streak and uninterrupted access.",
       "renew": "RENEW",
+      "paymentFailedTitle": "YOUR LAST PAYMENT FAILED",
+      "paymentFailedBody": "Update your payment method or your access will be suspended.",
+      "graceUntilPrefix": "You have until",
+      "retryPayment": "RETRY PAYMENT",
+      "retryPaymentError": "We couldn't process your payment. Try again.",
+      "suspendedTitle": "ACCESS SUSPENDED",
+      "suspendedBody": "Your membership is suspended for non-payment. Reactivate it to get back into the gym.",
+      "reactivate": "REACTIVATE MEMBERSHIP",
       "statVisits": "VISITS THIS MONTH",
       "statVisitsDelta": "+3 vs last month",
       "statStreak": "STREAK DAYS",
@@ -254,6 +267,7 @@
       "branchLabel": "BRANCH",
       "allGyms": "15 GYMS",
       "showQr": "📲 SHOW ACCESS QR",
+      "suspendedNote": "ACCESS SUSPENDED · FIX YOUR PAYMENT",
       "accessHistory": "ACCESS HISTORY",
       "entryNote": "Entry logged · QR valid"
     },
@@ -277,6 +291,7 @@
       "planLabel": "Plan",
       "branchLabel": "Home branch",
       "expiresLabel": "Expires",
+      "statusLabel": "Status",
       "partnersLabel": "TotalPass / Wellhub",
       "notLinked": "NOT LINKED",
       "renewMembership": "RENEW MEMBERSHIP"

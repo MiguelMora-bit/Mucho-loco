@@ -6,6 +6,13 @@ export type TierKey = 'single' | 'all';
 
 export type BranchTier = 'Lite' | 'Core' | 'Premium';
 
+/** Shared between branch-app (QR check-in) and customer-app (member's own
+ *  dashboard): a failed recurring charge moves a member from 'active' to
+ *  'grace' (access still allowed, avisos shown) and, if unresolved, to
+ *  'expired' (access suspended) — see "Pago recurrente de mensualidad" in
+ *  the root CLAUDE.md. */
+export type AccessStatus = 'active' | 'grace' | 'expired';
+
 export interface Branch {
   id: number;
   name: string;
@@ -95,6 +102,9 @@ export interface MembershipInfo {
   streak: number;
   daysLeft: number;
   accessCode: string;
+  status: AccessStatus;
+  /** Deadline to fix a failed payment before access is suspended. Only set (non-null) while status is 'grace'. */
+  graceEndsAt: string | null;
 }
 
 export interface Visit {
@@ -346,6 +356,11 @@ export interface Translations {
       performance: string;
       logout: string;
     };
+    membershipStatus: {
+      active: string;
+      grace: string;
+      expired: string;
+    };
     home: {
       weekdays: string[];
       welcomePrefix: string;
@@ -356,6 +371,14 @@ export interface Translations {
       renewNotePrefix: string;
       renewNoteSuffix: string;
       renew: string;
+      paymentFailedTitle: string;
+      paymentFailedBody: string;
+      graceUntilPrefix: string;
+      retryPayment: string;
+      retryPaymentError: string;
+      suspendedTitle: string;
+      suspendedBody: string;
+      reactivate: string;
       statVisits: string;
       statVisitsDelta: string;
       statStreak: string;
@@ -371,6 +394,7 @@ export interface Translations {
       branchLabel: string;
       allGyms: string;
       showQr: string;
+      suspendedNote: string;
       accessHistory: string;
       entryNote: string;
     };
@@ -394,6 +418,7 @@ export interface Translations {
       planLabel: string;
       branchLabel: string;
       expiresLabel: string;
+      statusLabel: string;
       partnersLabel: string;
       notLinked: string;
       renewMembership: string;
@@ -552,8 +577,6 @@ export interface BranchInventoryLevel {
   unitPrice: number;
   qty: number;
 }
-
-export type AccessStatus = 'active' | 'grace' | 'expired';
 
 export interface MemberAccessRecord {
   qrCode: string;

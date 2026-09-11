@@ -32,6 +32,7 @@ export function ProfilePane({ t, active, profile, membership, onRenew }: Profile
               [t.dashboard.profile.planLabel, membership.plan],
               [t.dashboard.profile.branchLabel, membership.branch],
               [t.dashboard.profile.expiresLabel, membership.expiresAt],
+              [t.dashboard.profile.statusLabel, t.dashboard.membershipStatus[membership.status]],
               [t.dashboard.profile.partnersLabel, t.dashboard.profile.notLinked],
             ]}
           />

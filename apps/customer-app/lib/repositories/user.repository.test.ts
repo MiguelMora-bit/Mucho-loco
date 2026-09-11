@@ -35,4 +35,20 @@ describe('userRepository', () => {
     const membership = await userRepository.getMembership(ALL_GYMS_TEST_EMAIL);
     expect(membership.tierKey).toBe('all');
   });
+
+  it('seeds the single-gym test user in a failed-payment grace period', async () => {
+    const membership = await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL);
+    expect(membership.status).toBe('grace');
+    expect(membership.graceEndsAt).toBeTruthy();
+  });
+
+  it('retryMembershipPayment clears grace/expired status and extends access', async () => {
+    const updated = await userRepository.retryMembershipPayment(SINGLE_GYM_TEST_EMAIL);
+    expect(updated.status).toBe('active');
+    expect(updated.graceEndsAt).toBeNull();
+    expect(updated.daysLeft).toBe(30);
+
+    const persisted = await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL);
+    expect(persisted.status).toBe('active');
+  });
 });

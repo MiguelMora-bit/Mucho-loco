@@ -27,8 +27,17 @@ export function AccessPane({ t, active, profile, membership, history, onShowQr }
               <div><div className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl mb-1">{t.dashboard.access.expiresLabel}</div><b className="font-display text-lg">{membership.expiresAt}</b></div>
               <div><div className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl mb-1">{t.dashboard.access.branchLabel}</div><b className="font-display text-lg">{membership.tierKey === 'all' ? t.dashboard.access.allGyms : membership.branch}</b></div>
             </div>
-            <button onClick={onShowQr} className="w-full mt-4.5 p-4 bg-ml-red text-ml-cream font-display text-22 tracking-[0.04em] border-none cursor-pointer">
-              {t.dashboard.access.showQr}
+            {membership.status !== 'active' && (
+              <div className="px-3 py-2 mb-3 text-center text-xs font-mono uppercase tracking-wide-xl text-ml-red-bright border border-ml-red/40">
+                {membership.status === 'grace' ? t.dashboard.membershipStatus.grace : t.dashboard.membershipStatus.expired}
+              </div>
+            )}
+            <button
+              onClick={onShowQr}
+              disabled={membership.status === 'expired'}
+              className="w-full mt-4.5 p-4 bg-ml-red text-ml-cream font-display text-22 tracking-[0.04em] border-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {membership.status === 'expired' ? t.dashboard.access.suspendedNote : t.dashboard.access.showQr}
             </button>
           </div>
         </div>

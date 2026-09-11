@@ -15,6 +15,20 @@ interface UserRecord {
 export const ALL_GYMS_TEST_EMAIL = 'diego@mucholoco.mx';
 export const SINGLE_GYM_TEST_EMAIL = 'valeria@mucholoco.mx';
 
+// Mismo formato 'DD MES YYYY' que el resto de MembershipInfo (ver expiresAt
+// más abajo) — duplicado a propósito del helper análogo en
+// branch-app/src/lib/datasources/mock/membership.mock.ts, no compartido en
+// runtime entre apps (ver CLAUDE.md raíz).
+function formatDate(d: Date): string {
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase().replace('.', '');
+}
+
+function addDays(base: Date, days: number): Date {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
 // Next.js compila los Route Handlers (app/api/*) y las páginas Server
 // Component en "capas" de módulos separadas — cada una instanciaría su propia
 // copia de este archivo si RECORDS fuera un simple `const` de módulo, y un
@@ -44,6 +58,8 @@ function seedRecords(): Record<string, UserRecord> {
       streak: 7,
       daysLeft: 12,
       accessCode: 'ML-DIEGO-2026-ALLGYMS',
+      status: 'active',
+      graceEndsAt: null,
     },
     history: [
       { day: '18', month: 'JUN', branch: 'Roma Sur',   duration: '1h 24m' },
@@ -97,6 +113,11 @@ function seedRecords(): Record<string, UserRecord> {
       streak: 3,
       daysLeft: 27,
       accessCode: 'ML-VALERIA-2026-CONDESA',
+      // A propósito en 'grace' (no 'active') — demuestra el aviso de pago
+      // fallido/periodo de gracia en el dashboard sin tocar al usuario 'all
+      // gyms'. Ver AccessStatus en @mucho-loco/types.
+      status: 'grace',
+      graceEndsAt: '22 JUN 2026',
     },
     // Todas las visitas en Condesa a propósito — su membresía no da acceso a
     // otra sucursal (ver CLAUDE.md raíz, "Membresía y alcance de acceso").
@@ -138,6 +159,8 @@ function fallbackRecord(email: string): UserRecord {
       streak: 0,
       daysLeft: 30,
       accessCode: `ML-${displayName}-2026`,
+      status: 'active',
+      graceEndsAt: null,
     },
     history: [],
     orders: [],
@@ -163,6 +186,24 @@ export class UserMockDatasource {
   async getMembership(email: string): Promise<MembershipInfo> {
     await delay(150);
     return getRecord(email).membership;
+  }
+
+  /** Simula la pasarela de pago cobrando de nuevo la tarjeta en archivo —
+   *  siempre tiene éxito (no hay pasarela real todavía). Saca al socio de
+   *  'grace'/'expired' y extiende su vigencia un mes desde hoy, sin importar
+   *  cuánto llevaba vencida (mismo criterio que branch-app al renovar en
+   *  mostrador). */
+  async retryMembershipPayment(email: string): Promise<MembershipInfo> {
+    await delay(400);
+    const record = getRecord(email);
+    record.membership = {
+      ...record.membership,
+      status: 'active',
+      graceEndsAt: null,
+      expiresAt: formatDate(addDays(new Date(), 30)),
+      daysLeft: 30,
+    };
+    return record.membership;
   }
 
   async getVisitHistory(email: string): Promise<Visit[]> {

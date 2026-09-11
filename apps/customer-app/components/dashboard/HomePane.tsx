@@ -8,9 +8,15 @@ interface HomePaneProps {
   profile: UserProfile;
   membership: MembershipInfo;
   onRenew: () => void;
+  onRetryPayment: () => void;
+  retryingPayment: boolean;
+  retryError: string | null;
 }
 
-export function HomePane({ t, active, profile, membership, onRenew }: HomePaneProps) {
+const BANNER_CLASS = 'flex items-center gap-4 px-5.5 py-4 mb-7 [background:linear-gradient(90deg,rgba(225,20,28,0.18),rgba(225,20,28,0.04))] border border-ml-red border-l-[4px] border-l-ml-red-bright';
+const BANNER_BUTTON_CLASS = 'px-5 py-2.5 bg-ml-red text-ml-cream font-bebas tracking-wide text-sm border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+
+export function HomePane({ t, active, profile, membership, onRenew, onRetryPayment, retryingPayment, retryError }: HomePaneProps) {
   const stats = [
     { lbl: t.dashboard.home.statVisits, num: membership.visits, delta: t.dashboard.home.statVisitsDelta, up: true },
     { lbl: t.dashboard.home.statStreak, num: membership.streak, delta: t.dashboard.home.statStreakDelta },
@@ -25,14 +31,44 @@ export function HomePane({ t, active, profile, membership, onRenew }: HomePanePr
       </div>
       <p className="text-ml-cream-dim text-[15px] mb-7">{t.dashboard.home.branchLabel} {membership.branch} · {t.dashboard.home.planLabel} {membership.plan}</p>
 
-      <div className="flex items-center gap-4 px-5.5 py-4 mb-7 [background:linear-gradient(90deg,rgba(225,20,28,0.18),rgba(225,20,28,0.04))] border border-ml-red border-l-[4px] border-l-ml-red-bright">
-        <span className="text-[26px]">⚠️</span>
-        <div className="flex-1">
-          <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.membershipExpiringPrefix} {membership.daysLeft} {t.dashboard.home.membershipExpiringSuffix}</b>
-          <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.renewNotePrefix} {membership.streak} {t.dashboard.home.renewNoteSuffix}</p>
+      {membership.status === 'expired' && (
+        <div className={BANNER_CLASS}>
+          <span className="text-[26px]">🚫</span>
+          <div className="flex-1">
+            <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.suspendedTitle}</b>
+            <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.suspendedBody}</p>
+            {retryError && <p className="text-xs text-ml-red-bright mt-1">{retryError}</p>}
+          </div>
+          <button onClick={onRetryPayment} disabled={retryingPayment} className={BANNER_BUTTON_CLASS}>
+            {retryingPayment ? t.common.updating : t.dashboard.home.reactivate}
+          </button>
         </div>
-        <button onClick={onRenew} className="px-5 py-2.5 bg-ml-red text-ml-cream font-bebas tracking-wide text-sm border-none cursor-pointer">{t.dashboard.home.renew}</button>
-      </div>
+      )}
+
+      {membership.status === 'grace' && (
+        <div className={BANNER_CLASS}>
+          <span className="text-[26px]">💳</span>
+          <div className="flex-1">
+            <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.paymentFailedTitle}</b>
+            <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.paymentFailedBody} {t.dashboard.home.graceUntilPrefix} {membership.graceEndsAt}.</p>
+            {retryError && <p className="text-xs text-ml-red-bright mt-1">{retryError}</p>}
+          </div>
+          <button onClick={onRetryPayment} disabled={retryingPayment} className={BANNER_BUTTON_CLASS}>
+            {retryingPayment ? t.common.updating : t.dashboard.home.retryPayment}
+          </button>
+        </div>
+      )}
+
+      {membership.status === 'active' && membership.daysLeft <= 15 && (
+        <div className={BANNER_CLASS}>
+          <span className="text-[26px]">⚠️</span>
+          <div className="flex-1">
+            <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.membershipExpiringPrefix} {membership.daysLeft} {t.dashboard.home.membershipExpiringSuffix}</b>
+            <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.renewNotePrefix} {membership.streak} {t.dashboard.home.renewNoteSuffix}</p>
+          </div>
+          <button onClick={onRenew} className={BANNER_BUTTON_CLASS}>{t.dashboard.home.renew}</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-4 mb-7">
         {stats.map((s, i) => (

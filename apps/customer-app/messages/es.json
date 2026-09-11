@@ -229,6 +229,11 @@
       "performance": "RENDIMIENTO",
       "logout": "CERRAR SESIÓN"
     },
+    "membershipStatus": {
+      "active": "Activa",
+      "grace": "Periodo de gracia",
+      "expired": "Suspendida"
+    },
     "home": {
       "weekdays": ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"],
       "welcomePrefix": "BIENVENIDO,",
@@ -239,6 +244,14 @@
       "renewNotePrefix": "Renueva ahora para no perder tu streak de",
       "renewNoteSuffix": "días y tu acceso continuo.",
       "renew": "RENOVAR",
+      "paymentFailedTitle": "TU ÚLTIMO PAGO FALLÓ",
+      "paymentFailedBody": "Actualiza tu método de pago o tu acceso será suspendido.",
+      "graceUntilPrefix": "Tienes hasta el",
+      "retryPayment": "REINTENTAR PAGO",
+      "retryPaymentError": "No pudimos procesar tu pago. Intenta de nuevo.",
+      "suspendedTitle": "ACCESO SUSPENDIDO",
+      "suspendedBody": "Tu membresía está suspendida por falta de pago. Reactívala para volver a entrar al gym.",
+      "reactivate": "REACTIVAR MEMBRESÍA",
       "statVisits": "VISITAS ESTE MES",
       "statVisitsDelta": "+3 vs mes anterior",
       "statStreak": "DÍAS DE STREAK",
@@ -254,6 +267,7 @@
       "branchLabel": "SUCURSAL",
       "allGyms": "15 SUCURSALES",
       "showQr": "📲 MOSTRAR QR DE ACCESO",
+      "suspendedNote": "ACCESO SUSPENDIDO · REACTIVA TU PAGO",
       "accessHistory": "HISTORIAL DE ACCESOS",
       "entryNote": "Entrada registrada · QR válido"
     },
@@ -277,6 +291,7 @@
       "planLabel": "Plan",
       "branchLabel": "Sucursal principal",
       "expiresLabel": "Vencimiento",
+      "statusLabel": "Estado",
       "partnersLabel": "TotalPass / Wellhub",
       "notLinked": "NO VINCULADO",
       "renewMembership": "RENOVAR MEMBRESÍA"
