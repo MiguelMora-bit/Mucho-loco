@@ -112,6 +112,19 @@ export function QrValidationPage() {
             </>
           )}
 
+          {result.outcome === 'expired' && (
+            <>
+              <div className="text-4xl mb-2">✕</div>
+              <div className="inline-block px-2 py-1 rounded border font-mono text-xs uppercase mb-3 bg-ml-red/10 border-ml-red text-ml-red">
+                {t('qr.statusExpired')}
+              </div>
+              <div className="font-medium text-lg">{result.record.memberName}</div>
+              <p className="text-ml-cream-dim text-sm mt-1">
+                {t('qr.expiredOn')} {result.record.expiresAt}
+              </p>
+            </>
+          )}
+
           {result.outcome === 'valid' && (
             <>
               <div className="text-4xl mb-2">{result.record.status === 'active' ? '✓' : result.record.status === 'grace' ? '⚠' : '✕'}</div>

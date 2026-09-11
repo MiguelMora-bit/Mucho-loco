@@ -32,4 +32,15 @@ describe('qrAccessRepository', () => {
     const result = await qrAccessRepository.validate('NOPE', ROMA_SUR);
     expect(result.outcome).toBe('not_found');
   });
+
+  it('validate denies an expired member (fixed 2026-09-11 — used to come back as "valid")', async () => {
+    const result = await qrAccessRepository.validate('ML-QR-CARLOS03', ROMA_SUR);
+    expect(result.outcome).toBe('expired');
+    if (result.outcome === 'expired') expect(result.record.memberName).toBe('Carlos Mendoza');
+  });
+
+  it('validate denies an expired member even at their own home branch (expired beats wrong_branch)', async () => {
+    const result = await qrAccessRepository.validate('ML-QR-CARLOS03', 1); // Carlos' own homeBranchId
+    expect(result.outcome).toBe('expired');
+  });
 });

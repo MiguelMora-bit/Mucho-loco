@@ -8,6 +8,11 @@ export class QrAccessMockDatasource {
     const record = MEMBER_ACCESS_RECORDS.find((r) => r.qrCode === qrCode.trim());
     if (!record) return { outcome: 'not_found' };
 
+    // Vencida deniega en cualquier sucursal, antes que el chequeo de tier/sucursal
+    // (una membresía inválida lo es en todos lados, no solo "en la sucursal equivocada").
+    if (record.status === 'expired') {
+      return { outcome: 'expired', record };
+    }
     if (record.tierKey === 'single' && record.homeBranchId !== branchId) {
       return { outcome: 'wrong_branch', record };
     }

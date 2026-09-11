@@ -4,10 +4,11 @@ import { QrAccessMockDatasource } from '../datasources/mock/qrAccess.mock';
 export type QrValidationResult =
   | { outcome: 'not_found' }
   | { outcome: 'wrong_branch'; record: MemberAccessRecord }
+  | { outcome: 'expired'; record: MemberAccessRecord }
   | { outcome: 'valid'; record: MemberAccessRecord };
 
 export interface IQrAccessRepository {
-  /** branchId = sucursal donde se está escaneando (ver getCurrentBranchId) — decide 'wrong_branch' para tier 'single'. */
+  /** branchId = sucursal donde se está escaneando (ver getCurrentBranchId) — decide 'wrong_branch' para tier 'single'. 'expired' deniega el acceso sin importar sucursal/tier. */
   validate(qrCode: string, branchId: number): Promise<QrValidationResult>;
 }
 
