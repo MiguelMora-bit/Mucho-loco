@@ -1,5 +1,7 @@
 import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import { MembershipMockDatasource } from '../datasources/mock/membership.mock';
+import { MembershipHttpDatasource } from '../datasources/http/membership.http';
+import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
 export interface SignUpInput {
   memberName: string;
@@ -26,5 +28,7 @@ export interface IMembershipRepository {
   signUpNewMember(branchId: number, branchName: string, input: SignUpInput): Promise<MembershipPayment>;
 }
 
-// Swap this line to plug in a real API datasource
-export const membershipRepository: IMembershipRepository = new MembershipMockDatasource();
+// Mock o backend NestJS real, según VITE_DATA_SOURCE — ver datasources/http/config.ts.
+export const membershipRepository: IMembershipRepository = isHttpDatasourceEnabled()
+  ? new MembershipHttpDatasource()
+  : new MembershipMockDatasource();

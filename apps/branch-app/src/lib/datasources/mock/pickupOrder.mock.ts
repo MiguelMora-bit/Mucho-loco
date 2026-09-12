@@ -1,8 +1,9 @@
 import type { PickupOrder } from '@mucho-loco/types';
 import { PICKUP_ORDERS } from '../../data';
 import { delay } from './delay';
+import type { IPickupOrderRepository } from '../../repositories/pickupOrder.repository';
 
-export class PickupOrderMockDatasource {
+export class PickupOrderMockDatasource implements IPickupOrderRepository {
   async getByBranch(branchId: number): Promise<PickupOrder[]> {
     await delay(160);
     return PICKUP_ORDERS.filter((o) => o.branchId === branchId);

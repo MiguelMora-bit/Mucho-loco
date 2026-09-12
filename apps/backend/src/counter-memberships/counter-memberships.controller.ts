@@ -36,17 +36,6 @@ export class CounterMembershipsController {
     return this.memberships.checkAccess(branchId, { qrCode, fingerprintId, name });
   }
 
-  /** Búsqueda cruda (sin evaluar acceso) — la usa mostrador para renovar, donde
-   *  encontrar al socio no implica dejarlo pasar. */
-  @Roles('staff')
-  @Get('members')
-  async findMember(
-    @Param('branchId', ParseIntPipe) _branchId: number,
-    @Query('qrCode') qrCode: string,
-  ): Promise<MemberAccessRecord | null> {
-    return this.memberships.findByQrCode(qrCode ?? '');
-  }
-
   @Roles('staff')
   @Post('memberships/renew')
   renew(
@@ -63,5 +52,25 @@ export class CounterMembershipsController {
     @Body() dto: SignUpMemberDto,
   ): Promise<MembershipPayment> {
     return this.memberships.signUp(branchId, dto);
+  }
+}
+
+
+/**
+ * Búsqueda cruda de un socio, SIN evaluar acceso — la usa mostrador para
+ * renovar, donde encontrar al socio no implica dejarlo pasar.
+ *
+ * Fuera de `branches/:branchId` a propósito: un `accessCode` es único en toda
+ * la cadena, así que la sucursal no participa en la búsqueda. Tenerla en la
+ * ruta obligaría a inventar un valor cuando no viene al caso.
+ */
+@Controller('members')
+export class MembersController {
+  constructor(private memberships: CounterMembershipsService) {}
+
+  @Roles('staff')
+  @Get()
+  findMember(@Query('qrCode') qrCode?: string): Promise<MemberAccessRecord | null> {
+    return this.memberships.findByQrCode(qrCode ?? '');
   }
 }

@@ -4,6 +4,7 @@ import { CURRENT_BRANCH_PRICE, PERIOD_DAYS, PERIOD_MULTIPLIERS, TIER_FACTORS } f
 import { calculateMembershipPrice } from '../../pricing';
 import { delay } from './delay';
 import type { SignUpInput } from '../../repositories/membership.repository';
+import type { IMembershipRepository } from '../../repositories/membership.repository';
 
 /**
  * Antes era un contador secuencial (ML-QR-0100, 0101, ...) — solo 9900
@@ -19,8 +20,16 @@ function generateQrCode(): string {
   return `ML-QR-${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
 }
 
-function formatDate(d: Date): string {
-  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase().replace('.', '');
+/**
+ * ISO, no texto ya formateado en español.
+ *
+ * El backend manda `expiresAt` en ISO; si el mock siguiera mandando
+ * `'20 JUL 2026'`, prender VITE_DATA_SOURCE=http rompería la pantalla del
+ * validador de QR. Es exactamente el bug que apareció en customer-app al
+ * hacer su swap. Quien la pinta la formatea con `lib/dates.ts`.
+ */
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
 function addDays(base: Date, days: number): Date {
@@ -29,7 +38,7 @@ function addDays(base: Date, days: number): Date {
   return d;
 }
 
-export class MembershipMockDatasource {
+export class MembershipMockDatasource implements IMembershipRepository {
   async findMember(qrCode: string): Promise<MemberAccessRecord | null> {
     await delay(150);
     return MEMBER_ACCESS_RECORDS.find((r) => r.qrCode === qrCode.trim()) ?? null;
@@ -48,7 +57,7 @@ export class MembershipMockDatasource {
     if (!member) throw new Error(`Member QR code not found: ${qrCode}`);
 
     member.status = 'active';
-    member.expiresAt = formatDate(addDays(new Date(), PERIOD_DAYS[periodKey]));
+    member.expiresAt = isoDate(addDays(new Date(), PERIOD_DAYS[periodKey]));
     // Una renovación puede cambiar de tier/sucursal de inscripción — el
     // alcance de acceso (ver lib/access/evaluateAccess.ts) debe reflejar el plan nuevo.
     member.tierKey = tierKey;
@@ -83,7 +92,7 @@ export class MembershipMockDatasource {
       fingerprintId: input.fingerprintId,
       memberName: input.memberName,
       status: 'active',
-      expiresAt: formatDate(addDays(new Date(), PERIOD_DAYS[input.periodKey])),
+      expiresAt: isoDate(addDays(new Date(), PERIOD_DAYS[input.periodKey])),
       tierKey: input.tierKey,
       homeBranchId: branchId,
       homeBranchName: branchName,

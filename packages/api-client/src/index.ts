@@ -143,8 +143,13 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       throw new ApiRequestError(res.status, path, `${method} ${path} respondió ${res.status}`, body);
     }
-    if (res.status === 204) return undefined as T;
-    return (await res.json()) as T;
+    // Cuerpo vacío = `undefined`, no una excepción. Pasa de verdad: un handler
+    // de Nest que devuelve `null` (por ejemplo "este empleado no tiene turno
+    // abierto") responde 200 sin cuerpo, y `res.json()` sobre eso tira un
+    // SyntaxError que no tiene nada que ver con lo que salió mal.
+    const text = await res.text();
+    if (!text) return undefined as T;
+    return JSON.parse(text) as T;
   }
 
   return {

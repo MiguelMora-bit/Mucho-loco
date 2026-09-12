@@ -1,5 +1,7 @@
 import type { AttendanceEntry } from '@mucho-loco/types';
 import { AttendanceMockDatasource } from '../datasources/mock/attendance.mock';
+import { AttendanceHttpDatasource } from '../datasources/http/attendance.http';
+import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
 export { AlreadyClockedInError, NoOpenEntryError } from './attendance.errors';
 
@@ -12,5 +14,7 @@ export interface IAttendanceRepository {
   getTeamToday(branchId: number): Promise<AttendanceEntry[]>;
 }
 
-// Swap this line to plug in a real API datasource
-export const attendanceRepository: IAttendanceRepository = new AttendanceMockDatasource();
+// Mock o backend NestJS real, según VITE_DATA_SOURCE — ver datasources/http/config.ts.
+export const attendanceRepository: IAttendanceRepository = isHttpDatasourceEnabled()
+  ? new AttendanceHttpDatasource()
+  : new AttendanceMockDatasource();

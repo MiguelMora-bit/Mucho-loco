@@ -80,17 +80,16 @@ VITE_DATA_SOURCE=http          # cualquier otro valor / ausente = mock
 VITE_API_URL=http://localhost:3001
 ```
 
-**Migrado hasta ahora: `counterSale`** (inventario de la sucursal + venta de mostrador). Los otros 5 repositorios (`pickupOrder`, `cashRegisterShift`, `attendance`, `reports`, `membership`) siguen en mock — el backend YA los cubre, solo falta el datasource de este lado.
+**Los 6 repositorios están migrados** (2026-09-12): `counterSale`, `pickupOrder`, `cashRegisterShift`, `attendance`, `reports` y `membership`.
 
-### Diferencias con el cliente HTTP de customer-app
+### El cliente
 
-`src/lib/datasources/http/client.ts` es gemelo del de `customer-app`, con dos cambios que vienen de ser una SPA:
+`src/lib/datasources/http/client.ts` ya no implementa nada: crea uno de `@mucho-loco/api-client` (paquete compartido con `owner-panel`) inyectándole la política de este app:
 
-- **El token sale del store de auth** (`useAuthStore`, persistido en localStorage), no de una cookie httpOnly — este app no tiene servidor propio donde leerla.
-- **No hay caché de framework** que configurar (`revalidate` es de Next).
-- **`?lang=`** se agrega solo en los endpoints donde el backend aplana un `LocalizedString` a texto (nombre de producto). El idioma sale de i18next, no de una prop.
+- **El token sale del store de auth** (`useAuthStore`, localStorage), no de una cookie httpOnly — este app no tiene servidor propio donde leerla.
+- **`?lang=` en TODA request.** El backend aplana `LocalizedString` a texto en inventario y tickets; los endpoints que no lo usan lo ignoran, y es más simple que recordar en cuáles sí.
 
-Cuando `owner-panel` haga este mismo swap serán tres copias de este cliente y valdrá la pena extraerlo a un paquete compartido. No antes: con tres consumidores a la vista la abstracción correcta se ve, adivinarla con uno solo no.
+`customer-app` sigue con el suyo: lee `next/headers` en el servidor y pasa opciones de caché de Next, así que migrarlo es un cambio aparte.
 
 ### Errores tipados: por qué el backend ahora manda códigos
 
@@ -101,17 +100,23 @@ Cuando `owner-panel` haga este mismo swap serán tres copias de este cliente y v
 | `INSUFFICIENT_STOCK` | `InsufficientStockError` (con `productName`, que la UI muestra) |
 | `PRODUCT_NOT_FOUND` | `ProductNotFoundError` |
 | `BRANCH_DOES_NOT_STOCK_PRODUCT` | `ProductNotFoundError` — para quien cobra es lo mismo: no se puede vender aquí |
+| `SHIFT_NOT_FOUND` / `SHIFT_ALREADY_CLOSED` | `ShiftNotFoundError` / `ShiftAlreadyClosedError` |
+| `ALREADY_CLOCKED_IN` / `NO_OPEN_ENTRY` | `AlreadyClockedInError` / `NoOpenEntryError` |
 
 Cualquier otro fallo (500, red caída) se deja pasar tal cual: un backend muerto no es un error de negocio y disfrazarlo de "sin stock" sería mentirle a mostrador.
 
-### Un cambio en el mock, para que el swap no se note
+### Fechas: ISO en el contrato, formato al pintar
+
+`MemberAccessRecord.expiresAt` venía del mock como `'20 JUL 2026'` y el backend lo manda en ISO. Prender el flag habría puesto un timestamp crudo en el validador de QR y en la pestaña de membresías — el mismo bug que apareció en `customer-app`. Ahora el mock también manda ISO y las tres pantallas formatean con `lib/dates.ts` (`formatDate` + `langOf`), con `timeZone: 'UTC'` fijado: una fecha sin hora se parsea como medianoche UTC y en México imprimiría el día anterior.
+
+### Otro cambio en el mock, para que el swap no se note
 
 `BRANCH_INVENTORY` escribía `productName` a mano y a veces se saltaba el sabor (`'Shaker Loco'` vs `'Whey Protein 5LBS · Strawberry'`). El backend lo arma siempre igual (`nombre · sabor`), así que prender el flag cambiaba el texto en pantalla. El mock ya está alineado — el swap no debería verse.
 
 ### Testing
 
-- **Unit** (`pnpm test`, sin red): `counterSale.http.test.ts` — cada método a su ruta, el token en la cabecera, `?lang=` según idioma, y las tres traducciones de error (más la que NO se traduce).
-- **Integración** (`pnpm test:integration`, contra el backend real en `:3001`, fuera de CI): verifica que **la ruta existe y el guard la protege**. Un error de dedo en la URL pasa todos los unitarios —afirman contra la misma URL equivocada— y solo se cae en producción; aquí se cae como un 404. La respuesta autenticada campo por campo la cubre `test/branch-ops.e2e-spec.ts` del backend, que sí puede sobreescribir el verifier.
+- **Unit** (`pnpm test`, sin red): `counterSale.http.test.ts` y `branchOps.http.test.ts` — cada método a su ruta, el token, `?lang=`, las traducciones de error (y las que NO se traducen), el cuerpo vacío que significa `null`, y que el nombre de sucursal nunca viaje en una renovación.
+- **Integración** (`pnpm test:integration`, contra el backend real en `:3001`, fuera de CI): las **14 llamadas** verifican que la ruta existe y que el guard la protege. Un error de dedo en la URL pasa todos los unitarios —afirman contra la misma URL equivocada— y solo se cae en producción; aquí se cae como un 404. La respuesta autenticada campo por campo la cubre `test/branch-ops.e2e-spec.ts` del backend, que sí puede sobreescribir el verifier.
 
 ### Verificado en navegador real (2026-09-12) ✅
 

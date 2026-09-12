@@ -57,8 +57,8 @@ export const BRANCH_INVENTORY: BranchInventoryLevel[] = [
 // Condesa) debe ser RECHAZADA si se escanea en otra sucursal (Roma Sur, donde
 // están dados de alta el staff de prueba) — ver CLAUDE.md raíz.
 export const MEMBER_ACCESS_RECORDS: MemberAccessRecord[] = [
-  { qrCode: 'ML-DIEGO-2026-ALLGYMS', memberName: 'Diego Ramírez', status: 'active', expiresAt: '20 JUL 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
-  { qrCode: 'ML-VALERIA-2026-CONDESA', memberName: 'Valeria Torres', status: 'active', expiresAt: '05 AGO 2026', tierKey: 'single', homeBranchId: 3, homeBranchName: 'Condesa' },
+  { qrCode: 'ML-DIEGO-2026-ALLGYMS', memberName: 'Diego Ramírez', status: 'active', expiresAt: '2026-07-20', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
+  { qrCode: 'ML-VALERIA-2026-CONDESA', memberName: 'Valeria Torres', status: 'active', expiresAt: '2026-08-05', tierKey: 'single', homeBranchId: 3, homeBranchName: 'Condesa' },
   { qrCode: 'ML-QR-ANA02', memberName: 'Ana López', status: 'grace', expiresAt: '05 JUN 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
   { qrCode: 'ML-QR-CARLOS03', memberName: 'Carlos Mendoza', status: 'expired', expiresAt: '10 MAY 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
   // Dados de alta con huella en vez de QR (sin la app) — mismo qrCode interno

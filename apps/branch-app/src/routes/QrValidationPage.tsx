@@ -5,6 +5,7 @@ import type { AccessCheckResult, AccessMethod } from '../lib/access/AccessMethod
 import { getCurrentBranchId } from '../lib/currentBranch';
 import { QrCameraScanner } from '../components/QrCameraScanner';
 import type { MemberAccessRecord } from '@mucho-loco/types';
+import { formatDate, langOf } from '../lib/dates';
 
 // Demo codes — los dos primeros son los QR reales de customer-app (ver
 // lib/data.ts): Diego (all gyms) siempre pasa, Valeria (single, Condesa) debe
@@ -22,7 +23,7 @@ const DEMO_FINGERPRINTS = ['FP-DEMO-ROSA', 'FP-DEMO-LUIS'];
 const DEMO_NAMES = ['Diego', 'Carlos'];
 
 export function QrValidationPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [code, setCode] = useState('');
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<AccessCheckResult | null>(null);
@@ -257,7 +258,7 @@ export function QrValidationPage() {
               </div>
               <div className="font-medium text-lg">{result.record.memberName}</div>
               <p className="text-ml-cream-dim text-sm mt-1">
-                {t('qr.expiredOn')} {result.record.expiresAt}
+                {t('qr.expiredOn')} {formatDate(result.record.expiresAt, langOf(i18n.language))}
               </p>
             </>
           )}
@@ -270,7 +271,8 @@ export function QrValidationPage() {
               </div>
               <div className="font-medium text-lg">{result.record.memberName}</div>
               <p className="text-ml-cream-dim text-sm mt-1">
-                {result.record.status === 'expired' ? t('qr.expiredOn') : t('qr.expiresOn')} {result.record.expiresAt}
+                {result.record.status === 'expired' ? t('qr.expiredOn') : t('qr.expiresOn')}{' '}
+                {formatDate(result.record.expiresAt, langOf(i18n.language))}
               </p>
             </>
           )}

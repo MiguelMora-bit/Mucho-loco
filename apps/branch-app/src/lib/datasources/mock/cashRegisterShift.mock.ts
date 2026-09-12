@@ -2,13 +2,14 @@ import type { CashRegisterShift, ShiftTransaction } from '@mucho-loco/types';
 import { CASH_REGISTER_SHIFTS, COUNTER_SALES, MEMBERSHIP_PAYMENTS } from '../../data';
 import { delay } from './delay';
 import { ShiftNotFoundError, ShiftAlreadyClosedError } from '../../repositories/cashRegisterShift.errors';
+import type { ICashRegisterShiftRepository } from '../../repositories/cashRegisterShift.repository';
 
 function withinWindow(createdAt: string, shift: CashRegisterShift): boolean {
   const end = shift.closedAt ?? new Date().toISOString();
   return createdAt >= shift.openedAt && createdAt <= end;
 }
 
-export class CashRegisterShiftMockDatasource {
+export class CashRegisterShiftMockDatasource implements ICashRegisterShiftRepository {
   async getOpenShift(branchId: number): Promise<CashRegisterShift> {
     await delay(150);
     const existing = CASH_REGISTER_SHIFTS.find((s) => s.branchId === branchId && s.status === 'open');

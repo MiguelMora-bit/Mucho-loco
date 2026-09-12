@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { CounterSaleHttpDatasource } from './counterSale.http';
+import { PickupOrderHttpDatasource } from './pickupOrder.http';
+import { CashRegisterShiftHttpDatasource } from './cashRegisterShift.http';
+import { AttendanceHttpDatasource } from './attendance.http';
+import { ReportsHttpDatasource } from './reports.http';
+import { MembershipHttpDatasource } from './membership.http';
 import { ApiRequestError } from './client';
 import { apiBaseUrl } from './config';
 import { useAuthStore } from '../../stores/auth.store';
@@ -83,5 +88,43 @@ describe('counter sale endpoints are really there and really guarded', () => {
     useAuthStore.getState().clear();
 
     await expect(ds.getInventory(1)).rejects.toThrow(/sin sesión/i);
+  });
+});
+
+describe('every other branch endpoint is there and guarded too', () => {
+  const pickup = new PickupOrderHttpDatasource();
+  const shifts = new CashRegisterShiftHttpDatasource();
+  const attendance = new AttendanceHttpDatasource();
+  const reports = new ReportsHttpDatasource();
+  const memberships = new MembershipHttpDatasource();
+
+  // Una tabla y no un test por método: lo que se afirma es idéntico —la ruta
+  // existe (no 404) y el guard la protege (401)— y listarlas juntas hace
+  // obvio si falta alguna.
+  const calls: Array<[string, () => Promise<unknown>]> = [
+    ['pickupOrder.getByBranch', () => pickup.getByBranch(1)],
+    ['pickupOrder.markDelivered', () => pickup.markDelivered('order-1')],
+    ['cashRegister.getOpenShift', () => shifts.getOpenShift(1)],
+    ['cashRegister.getTransactions', () => shifts.getTransactions('shift-1')],
+    ['cashRegister.getHistory', () => shifts.getHistory(1)],
+    ['cashRegister.closeShift', () => shifts.closeShift('shift-1')],
+    ['attendance.getOpenEntry', () => attendance.getOpenEntry('luis@mucholoco.mx')],
+    ['attendance.clockIn', () => attendance.clockIn(1, 'luis@mucholoco.mx', 'Luis')],
+    ['attendance.clockOut', () => attendance.clockOut('luis@mucholoco.mx')],
+    ['attendance.getTeamToday', () => attendance.getTeamToday(1)],
+    ['reports.getSalesReport', () => reports.getSalesReport(1, 7)],
+    ['membership.findMember', () => memberships.findMember('ML-DIEGO-2026-ALLGYMS')],
+    ['membership.renewMembership', () =>
+      memberships.renewMembership(1, 'Roma Sur', 'ML-DIEGO-2026-ALLGYMS', 'all', 'monthly', 'card')],
+    ['membership.signUpNewMember', () =>
+      memberships.signUpNewMember(1, 'Roma Sur', {
+        memberName: 'X', phone: '55', tierKey: 'all', periodKey: 'monthly', paymentMethod: 'cash',
+      })],
+  ];
+
+  it.each(calls)('%s hits a real route and is rejected with 401', async (_name, call) => {
+    const status = await statusOf(call);
+    expect(status).toBe(401);
+    expect(status).not.toBe(404);
   });
 });
