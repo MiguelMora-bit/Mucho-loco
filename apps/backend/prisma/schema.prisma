@@ -44,6 +44,40 @@ enum AccessStatus {
   expired
 }
 
+/// Mostrador: efectivo, tarjeta o transferencia. NO es OnlinePaymentMethod
+/// (que incluye Stripe/PayPal/MercadoPago) — en una sucursal física no hay
+/// pasarela en línea, y en la tienda en línea no hay caja registradora.
+enum PaymentMethod {
+  cash
+  card
+  transfer
+}
+
+enum ShiftStatus {
+  open
+  closed
+}
+
+enum ExpenseCategory {
+  rent
+  utilities
+  maintenance
+  supplies
+  marketing
+  other
+}
+
+enum EmployeeRole {
+  manager
+  counter
+  coach
+}
+
+enum PayrollPeriodStatus {
+  open
+  closed
+}
+
 enum ProductCat {
   proteinas
   pre
@@ -111,6 +145,16 @@ model Branch {
   visits      Visit[]
   orders      Order[]
 
+  inventory          BranchInventory[]
+  counterSales       CounterSale[]
+  shifts             CashRegisterShift[]
+  membershipPayments MembershipPayment[]
+  attendance         AttendanceEntry[]
+  transfersOut       InventoryTransfer[] @relation("transfersFrom")
+  transfersIn        InventoryTransfer[] @relation("transfersTo")
+  expenses           Expense[]
+  employees          Employee[]
+
   @@map("branches")
 }
 
@@ -124,6 +168,9 @@ model Product {
   price Int
   img   String
   tag   String?
+
+  inventory BranchInventory[]
+  transfers InventoryTransfer[]
 
   @@map("products")
 }
@@ -147,9 +194,15 @@ model MembershipTier {
 
 /// La identidad vive en Cognito (auth); esta tabla es el perfil/negocio.
 /// cognitoSub es el `sub` del JWT — email puede cambiar en Cognito, sub no.
+/// cognitoSub es NULLABLE a propósito desde 2026-09-12: branch-app da de alta
+/// socios en mostrador (con huella o solo con su nombre) que NO tienen cuenta
+/// en la app, y por lo tanto no tienen usuario en Cognito. Un socio existe
+/// como persona con membresía; tener login es opcional. Postgres permite
+/// varios NULL en una columna UNIQUE, así que el índice sigue sirviendo para
+/// los que sí tienen cuenta.
 model User {
   id         String  @id @default(uuid())
-  cognitoSub String  @unique
+  cognitoSub String? @unique
   email      String  @unique
   name       String
   phone      String  @default("")
@@ -188,8 +241,14 @@ model Membership {
   visits      Int          @default(0)
   streak      Int          @default(0)
   accessCode  String       @unique
+  /// Alta por huella en mostrador (ver "Métodos de acceso" en CLAUDE.md raíz).
+  /// El registro SIEMPRE conserva accessCode — la huella es un credencial
+  /// adicional para validar acceso, no un reemplazo de la identidad.
+  fingerprintId String?    @unique
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  payments MembershipPayment[]
 
   @@map("memberships")
 }
@@ -410,4 +469,222 @@ model HeatmapCell {
 
   @@id([week, day])
   @@map("heatmap_cells")
+}
+
+// ---------------------------------------------------------------------------
+// Operación de sucursal y HQ (2026-09-12) — contrato derivado de los
+// repositorios mock de apps/branch-app y apps/owner-panel, igual que el resto
+// de este esquema salió de los de customer-app. Ver root CLAUDE.md,
+// "Metodología: contract-first".
+//
+// Lo que estos modelos desbloquean y los mocks aislados por app NO podían:
+// una venta de mostrador y un pedido de la tienda descuentan del MISMO stock,
+// y la asistencia que captura branch-app es la que la nómina de owner-panel
+// cuenta (era el hueco explícito de la Fase 3).
+// ---------------------------------------------------------------------------
+
+/// Stock FÍSICO por sucursal. Los envíos a domicilio NO salen de aquí (salen
+/// de la bodega central, ver CLAUDE.md raíz) — esta tabla solo la mueven la
+/// venta de mostrador y las transferencias entre sucursales.
+/// productName/unitPrice del contrato BranchInventoryLevel no se guardan: son
+/// del Product y se resuelven al leer, para que un cambio de precio en el
+/// catálogo no deje precios viejos regados por 15 sucursales.
+model BranchInventory {
+  branchId  Int
+  branch    Branch  @relation(fields: [branchId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  qty       Int     @default(0)
+
+  @@id([branchId, productId])
+  @@map("branch_inventory")
+}
+
+/// Venta de mostrador — descuenta stock LOCAL de la sucursal. Efectivo aquí
+/// sí es normal (a diferencia de la tienda en línea, donde solo aplica con
+/// "recoger en gym").
+model CounterSale {
+  id            String        @id @default(uuid())
+  branchId      Int
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  total         Int
+  paymentMethod PaymentMethod
+  createdAt     DateTime      @default(now())
+
+  items CounterSaleItem[]
+
+  @@index([branchId, createdAt])
+  @@map("counter_sales")
+}
+
+/// productName/unitPrice congelados al momento de la venta, igual que
+/// OrderItem.name — un ticket es un recibo, no se recalcula si el catálogo
+/// cambia después. productId SÍ se guarda (a diferencia de OrderItem) porque
+/// el reporte de "productos más vendidos" agrupa por producto.
+model CounterSaleItem {
+  id          String      @id @default(uuid())
+  saleId      String
+  sale        CounterSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId   String
+  productName String
+  qty         Int
+  unitPrice   Int
+
+  @@map("counter_sale_items")
+}
+
+/// Corte de caja por turno. Invariante "a lo más uno abierto por sucursal" se
+/// impone con un índice único PARCIAL (WHERE status = 'open'), creado a mano
+/// en la migración — Prisma no sabe declararlos, y sin él dos cajeros que
+/// abran turno a la vez crearían dos turnos abiertos.
+model CashRegisterShift {
+  id       String      @id @default(uuid())
+  branchId Int
+  branch   Branch      @relation(fields: [branchId], references: [id])
+  openedAt DateTime    @default(now())
+  closedAt DateTime?
+  status   ShiftStatus @default(open)
+
+  @@index([branchId, openedAt])
+  @@map("cash_register_shifts")
+}
+
+/// Membresía vendida o renovada en mostrador. Entra al corte de caja junto
+/// con las ventas (ShiftTransaction fusiona ambas al leer).
+model MembershipPayment {
+  id            String        @id @default(uuid())
+  branchId      Int
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  membershipId  String
+  membership    Membership    @relation(fields: [membershipId], references: [id])
+  /// Congelados al momento del cobro: el accessCode y el nombre pueden
+  /// cambiar después, y un recibo de caja no debe cambiar con ellos.
+  qrCode        String
+  memberName    String
+  phone         String
+  tierKey       TierKey
+  periodKey     PlanKey
+  amount        Int
+  paymentMethod PaymentMethod
+  isNewMember   Boolean
+  createdAt     DateTime      @default(now())
+
+  @@index([branchId, createdAt])
+  @@map("membership_payments")
+}
+
+/// Empleado de sucursal. `email` NO está en el tipo original de owner-panel —
+/// se agrega porque es la llave que conecta la asistencia que captura
+/// branch-app (AttendanceEntry.staffEmail) con la nómina que calcula
+/// owner-panel. Sin ella los dos módulos siguen siendo islas, que es
+/// exactamente el pendiente de Fase 3 que este modelo cierra.
+model Employee {
+  id        String       @id @default(uuid())
+  branchId  Int
+  branch    Branch       @relation(fields: [branchId], references: [id])
+  name      String
+  email     String       @unique
+  role      EmployeeRole
+  dailyRate Int
+  hireDate  DateTime
+  active    Boolean      @default(true)
+
+  attendance AttendanceEntry[]
+  payslips   Payslip[]
+
+  @@map("employees")
+}
+
+/// Un turno trabajado. Invariante "a lo más uno abierto por empleado" también
+/// va con índice único parcial (WHERE clockOut IS NULL), mismo motivo que
+/// CashRegisterShift.
+/// employeeId es nullable porque mostrador puede fichar a alguien que todavía
+/// no está dado de alta como Employee — la asistencia se registra igual y la
+/// nómina simplemente no la cuenta hasta que exista el empleado.
+model AttendanceEntry {
+  id         String    @id @default(uuid())
+  branchId   Int
+  branch     Branch    @relation(fields: [branchId], references: [id])
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  staffEmail String
+  staffName  String
+  clockIn    DateTime  @default(now())
+  clockOut   DateTime?
+
+  @@index([branchId, clockIn])
+  @@index([staffEmail, clockIn])
+  @@map("attendance_entries")
+}
+
+/// Movimiento de stock entre sucursales, ya aplicado — crear una transferencia
+/// y mover el inventario ocurren en la misma transacción de base de datos.
+model InventoryTransfer {
+  id           String   @id @default(uuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  fromBranchId Int
+  fromBranch   Branch   @relation("transfersFrom", fields: [fromBranchId], references: [id])
+  toBranchId   Int
+  toBranch     Branch   @relation("transfersTo", fields: [toBranchId], references: [id])
+  qty          Int
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("inventory_transfers")
+}
+
+/// branchId nullable = gasto corporativo (marketing nacional, nómina de HQ)
+/// que no pertenece a una sucursal — mismo criterio que ya documentó el tipo
+/// Expense de @mucho-loco/types.
+model Expense {
+  id          String          @id @default(uuid())
+  branchId    Int?
+  branch      Branch?         @relation(fields: [branchId], references: [id])
+  category    ExpenseCategory
+  description String
+  amount      Int
+  date        DateTime
+
+  @@index([date])
+  @@map("expenses")
+}
+
+/// Quincena. 'closed' es final: correr la nómina de un periodo lo cierra y sus
+/// recibos ya no se recalculan.
+model PayrollPeriod {
+  id        String              @id @default(uuid())
+  startDate DateTime
+  endDate   DateTime
+  totalDays Int
+  status    PayrollPeriodStatus @default(open)
+
+  payslips Payslip[]
+
+  @@map("payroll_periods")
+}
+
+/// employeeName/branchId/role/dailyRate están denormalizados a propósito: un
+/// recibo es un documento histórico, tiene que seguir diciendo lo mismo aunque
+/// el empleado cambie de sucursal, de puesto o de sueldo después.
+model Payslip {
+  id            String        @id @default(uuid())
+  periodId      String
+  period        PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      Employee      @relation(fields: [employeeId], references: [id])
+  employeeName  String
+  branchId      Int
+  role          EmployeeRole
+  daysWorked    Int
+  totalDays     Int
+  dailyRate     Int
+  grossPay      Int
+  isrDeduction  Int
+  imssDeduction Int
+  netPay        Int
+  generatedAt   DateTime      @default(now())
+
+  @@unique([periodId, employeeId])
+  @@map("payslips")
 }

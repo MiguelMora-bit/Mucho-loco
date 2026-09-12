@@ -12,6 +12,9 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 import { SocialModule } from './social/social.module';
 import { PerformanceModule } from './performance/performance.module';
 import { CommunityModule } from './community/community.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { CounterSalesModule } from './counter-sales/counter-sales.module';
+import { RolesGuard } from './auth/roles.guard';
 
 @Module({
   imports: [
@@ -25,11 +28,16 @@ import { CommunityModule } from './community/community.module';
     SocialModule,
     PerformanceModule,
     CommunityModule,
+    InventoryModule,
+    CounterSalesModule,
   ],
   controllers: [AppController],
   providers: [
     // Global: toda ruta pide un ID token válido salvo @Public() — ver auth/public.decorator.ts.
     { provide: APP_GUARD, useClass: CognitoAuthGuard },
+    // Después del anterior (el orden de APP_GUARD es el de ejecución): decide
+    // si el rol del token alcanza para la ruta — ver auth/roles.decorator.ts.
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}
