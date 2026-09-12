@@ -818,6 +818,10 @@ export interface Employee {
   id: string;
   branchId: number;
   name: string;
+  /** Llave que cruza al empleado con la asistencia que captura branch-app
+   *  (AttendanceEntry.staffEmail). Sin ella, nómina y asistencia siguen
+   *  siendo dos islas — era el pendiente explícito de la Fase 3. */
+  email: string;
   role: EmployeeRole;
   dailyRate: number;
   hireDate: string;

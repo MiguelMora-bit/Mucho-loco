@@ -18,6 +18,58 @@ API REST que reemplaza, dominio por dominio, los repositorios mock de `customer-
 
 `branch-app`/`owner-panel` no conectan aquí todavía (Fase 7 de la metodología) — sus mocks (inventario, corte de caja, nómina, asistencia, reportes) siguen siendo islas aisladas por app, a propósito, hasta que este backend cubra esos dominios también.
 
+## Operación de sucursal y HQ (2026-09-12) — 10 dominios nuevos
+
+Segunda gran tanda: los dominios que `branch-app` y `owner-panel` tenían como mocks aislados por app. Antes de esto, "el stock" existía tres veces (uno por app) y la asistencia que capturaba sucursal nunca llegaba a la nómina. Ahora hay una sola base, y eso desbloquea dos cruces que ningún mock podía montar:
+
+- **Un pedido "recoger en gym" de la tienda aparece en la fila de mostrador**, se marca entregado ahí, y el socio lo ve entregado en su propio panel. Es el MISMO `Order`, no un modelo aparte.
+- **La asistencia que ficha `branch-app` es la que paga la nómina de `owner-panel`.** `AttendanceSummary.daysWorked` dejó de ser un dato semilla: se cuenta de `AttendanceEntry` reales. Ese era el pendiente explícito de la Fase 3 en el CLAUDE.md raíz.
+
+### Módulos
+
+| Módulo | Rutas | Rol | Reemplaza |
+|---|---|---|---|
+| `inventory` | `branches/:id/inventory`, `inventory`, `inventory/global`, `inventory/transfers` | staff / owner | `counterSale.getInventory`, `stats.getGlobalInventory`, `inventoryTransfer.*` |
+| `counter-sales` | `POST branches/:id/counter-sales` | staff | `counterSale.createSale` |
+| `counter-memberships` | `branches/:id/member-access`, `members`, `memberships/renew`, `memberships/signup` | staff | `membership.*` de branch-app |
+| `cash-register` | `branches/:id/cash-register/open-shift`, `history`, `cash-register/shifts/:id/{transactions,close}` | staff / manager | `cashRegisterShift.*` |
+| `pickup-orders` | `branches/:id/pickup-orders`, `pickup-orders/:id/deliver` | staff | `pickupOrder.*` |
+| `reports` | `branches/:id/reports/sales`, `stats/branches` | manager / owner | `reports.getSalesReport`, `stats.getBranchStats` |
+| `attendance` | `attendance/open`, `branches/:id/attendance/{clock-in,today}`, `attendance/clock-out` | staff / manager | `attendance.*` |
+| `payroll` | `payroll/{employees,periods,attendance,payslips}`, `payroll/periods/:id/run` | owner | `payroll.*` |
+| `expenses` | `expenses` | owner | `expenses.*` |
+
+### Roles (`auth/roles.decorator.ts` + `roles.guard.ts`)
+
+`@Roles('staff'|'manager'|'owner')` sobre un handler o un controller. El guard es global y corre DESPUÉS de `CognitoAuthGuard`, así que solo decide, nunca autentica. Los roles son **jerárquicos** (staff < manager < owner): el dueño puede hacer lo de un gerente y lo de mostrador, así que no hay que listar los tres grupos en cada ruta de sucursal. Un socio autenticado sin grupo recibe 403 (no 401) en cualquier ruta interna.
+
+### Decisiones que NO son fieles al mock, a propósito
+
+1. **El precio de una membresía lo pone la sucursal que cobra.** El mock de branch-app tenía `CURRENT_BRANCH_PRICE = 1090` fijo, así que Coyoacán ($890) y Santa Fe ($1390) cobraban precio de Roma Sur.
+2. **`User.cognitoSub` y `User.email` son nullables.** Un socio dado de alta en mostrador (con huella o solo su nombre) no tiene cuenta en la app ni necesariamente correo. Ser socio y tener login son cosas distintas.
+3. **`Employee.email`** se agregó al tipo compartido: es la llave que cruza asistencia con nómina. Sin ella los dos módulos siguen siendo islas.
+4. **`BranchInventoryLevel.productName`/`unitPrice` no se guardan**, se resuelven del catálogo al leer — un cambio de precio no puede dejar copias viejas en 15 sucursales. El nombre se arma siempre igual (`name · flav`); los mocks lo escribían a mano, a veces con sabor y a veces sin.
+5. **`ShiftTransaction` gana `kind: 'pickup'`.** El efectivo de un pedido recogido entra al cajón de esa sucursal, así que el corte tiene que verlo — contado por `deliveredAt`, no por cuándo se hizo el pedido. Uno pagado con tarjeta en línea no entra: nunca tocó esa caja.
+6. **`BranchStatsSummary` se deriva.** El mock devolvía cuatro filas escritas a mano (`revenue: 186400`); aquí sale de transacciones reales, así que los números arrancan chicos. Socios en periodo de gracia cuentan como activos: siguen entrando al gimnasio.
+7. **Fechas en ISO**, nunca texto pre-formateado en español (`MemberAccessRecord.expiresAt`, `Employee.hireDate`, `Expense.date`). Mismo criterio que ya seguía `MembershipInfo`.
+
+### Invariantes que NO viven solo en el código
+
+Dos índices únicos **parciales**, escritos a mano en `20260912090000_branch_ops_and_hq/migration.sql` porque Prisma no sabe declararlos:
+
+- `cash_register_shifts_one_open_per_branch` — `WHERE status = 'open'`.
+- `attendance_entries_one_open_per_staff` — `WHERE "clockOut" IS NULL`.
+
+Sin ellos, dos requests simultáneos abrirían dos turnos. `getOpenShift` incluso maneja la carrera: si su insert pierde, relee y devuelve el turno que ganó.
+
+### Zona horaria
+
+Hay lógica que depende de qué día es "hoy" en la sucursal (asistencia del equipo, agrupación por día de los reportes). El `Dockerfile` fija `TZ=America/Mexico_City`; correr el contenedor en UTC haría que a partir de las 18:00 locales el gerente viera el día siguiente. Los límites de un PERIODO de nómina, en cambio, se calculan en UTC — `startDate`/`endDate` se guardan como fecha sola y mezclarlas con horas locales recortaba seis horas del último día.
+
+### Cálculo de nómina
+
+`payroll/payroll.math.ts` es gemelo de `owner-panel/src/lib/payroll.ts` (tablas de ISR/IMSS **ilustrativas, no las reales del SAT/IMSS**). La diferencia importa: aquí el recibo se emite y se **guarda**, con nombre, sucursal, puesto y sueldo congelados — un recibo es un documento histórico, no algo que se recalcule cada vez que alguien abre la pantalla. Cuando `owner-panel` conecte a este backend, su copia se borra. `daysWorked` cuenta **días distintos con turno cerrado**, no turnos: entrar y salir dos veces el mismo día es un día trabajado.
+
 ## Decisión importante: Prisma 6, no Prisma 7 (2026-09-11)
 
 Se empezó con Prisma 7 (generator `prisma-client` + driver adapter `@prisma/adapter-pg` + `prisma.config.ts`) siguiendo la skill `prisma-database-setup` instalada en este proyecto, que documenta ese como el flujo "actual". **Se revirtió a Prisma 6 clásico** (`prisma-client-js`, sin driver adapter, `url = env("DATABASE_URL")` directo en `schema.prisma`) tras dar con dos problemas de fondo, no triviales de resolver:
@@ -96,4 +148,5 @@ Multi-stage (`deps` → `build` → `runtime`), probado de punta a punta: build 
 1. Optimizar tamaño de imagen (`pnpm deploy`/`prune --prod`) si hace falta — ver nota arriba.
 2. Terraform (`infra/`, ya existe de antes — VPC, RDS, Cognito, y ahora también necesitaría un repositorio ECR) — código intacto, **sin aplicar**: aplicar significa gastar en la cuenta de AWS del usuario y necesita que él cree las apps OAuth de Google/Facebook primero (ver "Nota operativa" en el CLAUDE.md raíz) — pendiente de confirmación explícita antes de correr `terraform apply`.
 3. ~~Swap de datasource en `customer-app`~~ — ✅ hecho (2026-09-12), ver "Swap de datasource" en `apps/customer-app/CLAUDE.md`. Tres cosas que salieron de ahí y afectan a ESTE app: (a) el contrato `createOrder` del frontend ahora manda `{productId, qty}` + `lang`, igual que `CreateOrderDto` — ya no hay desajuste; (b) `NewOrderLine` vive en `@mucho-loco/types` y es el tipo que `CreateOrderItemDto` refleja; (c) `AnnouncementsService` ordena por fecha y el mock no — diferencia cosmética documentada, si el orden del tablero importa hace falta una columna de prioridad aquí.
-4. CI/CD, y después branch-app/owner-panel reusando este backend (Fase 7 de la metodología).
+4. CI/CD.
+5. Swap de datasource en `branch-app` y `owner-panel` (Fase 7): el backend ya cubre sus 10 dominios, falta que ellos dejen sus mocks. Al hacerlo, ojo con lo mismo que ya mordió a customer-app: **fechas**. Sus mocks todavía traen `expiresAt: '20 JUL 2026'` y este backend manda ISO — hay que formatear al pintar, no antes. Y `owner-panel/src/lib/payroll.ts` se borra: el recibo lo emite el servidor.

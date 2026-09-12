@@ -11,7 +11,13 @@ import type {
   BranchStatsSummary,
   InventoryTransfer,
   MembershipPayment,
+  AttendanceEntry,
+  AttendanceSummary,
+  Employee,
+  Expense,
   Order,
+  PayrollPeriod,
+  Payslip,
   PickupOrder,
   ShiftTransaction,
 } from '@mucho-loco/types';
@@ -104,6 +110,12 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
     await prisma.order.deleteMany({ where: { user: { email: { startsWith: 'pickup-e2e' } } } });
     await prisma.membership.deleteMany({ where: { user: { email: { startsWith: 'pickup-e2e' } } } });
     await prisma.user.deleteMany({ where: { email: { startsWith: 'pickup-e2e' } } });
+    await prisma.payslip.deleteMany();
+    await prisma.attendanceEntry.deleteMany();
+    await prisma.payrollPeriod.updateMany({ where: { id: 'period-2' }, data: { status: 'open' } });
+    // Las quincenas creadas por los tests (las del seed tienen id fijo).
+    await prisma.payrollPeriod.deleteMany({ where: { id: { notIn: ['period-1', 'period-2'] } } });
+    await prisma.expense.deleteMany({ where: { description: { startsWith: 'E2E' } } });
 
     await prisma.branchInventory.deleteMany();
     await prisma.branchInventory.createMany({ data: SEEDED_INVENTORY });
@@ -735,6 +747,215 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
     it('owner stats are not visible to a branch manager', async () => {
       await request(app.getHttpServer())
         .get('/stats/branches')
+        .set(...auth('manager'))
+        .expect(403);
+    });
+  });
+
+  // El otro cruce que los mocks aislados no podían hacer, y el pendiente
+  // explícito de la Fase 3: la asistencia la ficha branch-app y la nómina la
+  // paga owner-panel, sobre la misma base.
+  describe('attendance → payroll (sucursal → HQ)', () => {
+    const ANA = 'ana@mucholoco.mx';   // emp-1, gerente Roma Sur, $850/día
+    const LUIS = 'luis@mucholoco.mx'; // emp-2, mostrador Roma Sur, $500/día
+    let currentPeriodId: string;
+
+    // Las quincenas del seed son de agosto 2026; los turnos que fichan estos
+    // tests son de hoy. Se crea la quincena que SÍ los contiene — si no, la
+    // nómina no tendría dónde contarlos y el test mediría otra cosa.
+    beforeAll(async () => {
+      const today = new Date();
+      const period = await prisma.payrollPeriod.create({
+        data: {
+          startDate: new Date(today.getFullYear(), today.getMonth(), 1),
+          endDate: new Date(today.getFullYear(), today.getMonth() + 1, 0),
+          totalDays: 15,
+          status: 'open',
+        },
+      });
+      currentPeriodId = period.id;
+    });
+
+    it('clocking in opens a shift, and a second clock-in is refused', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/branches/1/attendance/clock-in')
+        .set(...auth('staff'))
+        .send({ staffEmail: LUIS, staffName: 'Luis Ángel Ortega' })
+        .expect(201);
+      expect(body<AttendanceEntry>(res).clockOut).toBeNull();
+
+      await request(app.getHttpServer())
+        .post('/branches/1/attendance/clock-in')
+        .set(...auth('staff'))
+        .send({ staffEmail: LUIS, staffName: 'Luis Ángel Ortega' })
+        .expect(400);
+    });
+
+    it('the open shift is readable and disappears on clock-out', async () => {
+      const open = await request(app.getHttpServer())
+        .get(`/attendance/open?staffEmail=${encodeURIComponent(LUIS)}`)
+        .set(...auth('staff'))
+        .expect(200);
+      expect(body<AttendanceEntry>(open).staffEmail).toBe(LUIS);
+
+      const closed = await request(app.getHttpServer())
+        .post('/attendance/clock-out')
+        .set(...auth('staff'))
+        .send({ staffEmail: LUIS })
+        .expect(201);
+      expect(body<AttendanceEntry>(closed).clockOut).not.toBeNull();
+
+      const after = await request(app.getHttpServer())
+        .get(`/attendance/open?staffEmail=${encodeURIComponent(LUIS)}`)
+        .set(...auth('staff'))
+        .expect(200);
+      expect(after.body).toEqual({});
+    });
+
+    it('a manager sees who clocked in at their branch today', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/branches/1/attendance/today')
+        .set(...auth('manager'))
+        .expect(200);
+
+      expect(body<AttendanceEntry[]>(res).some((e) => e.staffEmail === LUIS)).toBe(true);
+    });
+
+    it('the team view is not open to counter staff', async () => {
+      await request(app.getHttpServer())
+        .get('/branches/1/attendance/today')
+        .set(...auth('staff'))
+        .expect(403);
+    });
+
+    // ESTE es el test que justifica la base compartida: nadie cargó un
+    // AttendanceSummary — el día trabajado salió de fichar entrada y salida.
+    it('payroll counts the shift that branch-app actually clocked', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/payroll/attendance')
+        .set(...auth('owner'))
+        .expect(200);
+      const summaries = body<AttendanceSummary[]>(res);
+
+      const luis = summaries.find((s) => s.periodId === currentPeriodId && s.daysWorked === 1);
+      expect(luis).toBeDefined();
+    });
+
+    it('running payroll pays for those days and closes the period', async () => {
+      // Un segundo empleado con dos turnos el MISMO día: debe contar un día.
+      await request(app.getHttpServer())
+        .post('/branches/1/attendance/clock-in')
+        .set(...auth('staff'))
+        .send({ staffEmail: ANA, staffName: 'Ana Sofía Martínez' })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post('/attendance/clock-out')
+        .set(...auth('staff'))
+        .send({ staffEmail: ANA })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post('/branches/1/attendance/clock-in')
+        .set(...auth('staff'))
+        .send({ staffEmail: ANA, staffName: 'Ana Sofía Martínez' })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post('/attendance/clock-out')
+        .set(...auth('staff'))
+        .send({ staffEmail: ANA })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .post(`/payroll/periods/${currentPeriodId}/run`)
+        .set(...auth('owner'))
+        .expect(201);
+      const payslips = body<Payslip[]>(res);
+
+      const ana = payslips.find((p) => p.employeeName === 'Ana Sofía Martínez');
+      expect(ana).toBeDefined();
+      // Dos turnos el mismo día = un día trabajado, a $850.
+      expect(ana).toMatchObject({ daysWorked: 1, dailyRate: 850, grossPay: 850, branchId: 1, role: 'manager' });
+      expect(ana?.netPay).toBe(850 - ana!.isrDeduction - ana!.imssDeduction);
+
+      const periods = await request(app.getHttpServer())
+        .get('/payroll/periods')
+        .set(...auth('owner'))
+        .expect(200);
+      expect(body<PayrollPeriod[]>(periods).find((p) => p.id === currentPeriodId)?.status).toBe('closed');
+
+      // Cerrado es final: correrla otra vez no puede recalcular recibos pagados.
+      await request(app.getHttpServer())
+        .post(`/payroll/periods/${currentPeriodId}/run`)
+        .set(...auth('owner'))
+        .expect(400);
+    });
+
+    it('payslips persist and are listed after the run', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/payroll/payslips')
+        .set(...auth('owner'))
+        .expect(200);
+
+      expect(body<Payslip[]>(res).length).toBeGreaterThan(0);
+    });
+
+    it('employees carry the email that links them to attendance', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/payroll/employees')
+        .set(...auth('owner'))
+        .expect(200);
+      const employees = body<Employee[]>(res);
+
+      expect(employees.find((e) => e.email === ANA)?.role).toBe('manager');
+    });
+
+    it('payroll is closed to a branch manager', async () => {
+      await request(app.getHttpServer())
+        .get('/payroll/payslips')
+        .set(...auth('manager'))
+        .expect(403);
+    });
+  });
+
+  describe('expenses', () => {
+    it('logs a branch expense and lists it', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/expenses')
+        .set(...auth('owner'))
+        .send({ branchId: 1, category: 'utilities', description: 'E2E luz', amount: 1200 })
+        .expect(201);
+      const created = body<Expense>(res);
+
+      expect(created).toMatchObject({ branchId: 1, category: 'utilities', amount: 1200 });
+      expect(created.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+      const list = await request(app.getHttpServer())
+        .get('/expenses')
+        .set(...auth('owner'))
+        .expect(200);
+      expect(body<Expense[]>(list).some((e) => e.id === created.id)).toBe(true);
+    });
+
+    it('accepts a corporate expense with no branch', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/expenses')
+        .set(...auth('owner'))
+        .send({ branchId: null, category: 'marketing', description: 'E2E campaña', amount: 22000 })
+        .expect(201);
+
+      expect(body<Expense>(res).branchId).toBeNull();
+    });
+
+    it('rejects an expense with an unknown category', async () => {
+      await request(app.getHttpServer())
+        .post('/expenses')
+        .set(...auth('owner'))
+        .send({ branchId: 1, category: 'fiesta', description: 'E2E', amount: 100 })
+        .expect(400);
+    });
+
+    it('is not open to a branch manager', async () => {
+      await request(app.getHttpServer())
+        .get('/expenses')
         .set(...auth('manager'))
         .expect(403);
     });

@@ -18,6 +18,9 @@ import { CounterMembershipsModule } from './counter-memberships/counter-membersh
 import { CashRegisterModule } from './cash-register/cash-register.module';
 import { PickupOrdersModule } from './pickup-orders/pickup-orders.module';
 import { ReportsModule } from './reports/reports.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { PayrollModule } from './payroll/payroll.module';
+import { ExpensesModule } from './expenses/expenses.module';
 import { RolesGuard } from './auth/roles.guard';
 
 @Module({
@@ -38,6 +41,9 @@ import { RolesGuard } from './auth/roles.guard';
     CashRegisterModule,
     PickupOrdersModule,
     ReportsModule,
+    AttendanceModule,
+    PayrollModule,
+    ExpensesModule,
   ],
   controllers: [AppController],
   providers: [
