@@ -113,16 +113,11 @@ No hay skill confiable instalable para Mercado Pago, inventario/POS multi-sucurs
 
 Solo `README.md` estaba trackeado en git antes de la migración a monorepo (todo el resto de `apps/customer-app` nunca se hizo `git add`). Revisar `git status` antes del próximo commit para confirmar qué se está agregando.
 
-**Estado de la infra (2026-09-12): parcialmente aplicada, en la parte que NO cobra.**
+**Infra destruida (2026-09-12).** `terraform destroy` corrido en `infra/envs/dev` — cero recursos vivos en la cuenta AWS (verificado: `terraform state list` vacío, `list-user-pools` vacío, `describe-repositories` vacío, cero VPCs no-default). El código en `infra/` está completo y con `plan` limpio (50 recursos), solo hace falta aplicarlo.
 
-Se aplicaron con `-target` los 28 recursos gratuitos: Cognito (User Pool `us-east-1_Zlzk2XUqr` + 3 app clients + grupos), ECR (repositorio vacío) y la red (VPC, subredes, IGW, security groups — lo único que cobraría ahí sería un NAT, y no hay). **Sin aplicar, a propósito: RDS, ALB, ECS y Secrets Manager** — son los que cuestan.
+Ese mismo día se había aplicado el subconjunto gratuito (Cognito + ECR + red) para probar el flujo real de login y de pago con Stripe — sirvió, quedó documentado en `apps/backend/CLAUDE.md`, y se tiró después. Los `.env.local` de los 3 apps quedaron con IDs de un pool que ya no existe; el paso 3 de abajo los corrige.
 
-Los 5 usuarios de prueba ya están creados en el pool nuevo y los `.env.local` de los 3 apps ya apuntan ahí. `pnpm dev` en cualquiera de los 3 hace login real.
-
-- Completar el entorno: `cd infra/envs/dev && terraform apply` (los 22 restantes; ~$30-40 USD/mes si se queda arriba).
-- Tirar lo que hay: `cd infra/envs/dev && terraform destroy`. Eso borra el pool y con él los usuarios de prueba — recrearlos con los pasos de abajo.
-
-Para levantar todo desde cero:
+Para retomar:
 
 1. **Antes del apply** — crear las apps OAuth reales y llenar `infra/envs/dev/terraform.tfvars` (copiar de `terraform.tfvars.example`, ese archivo no está en git): OAuth client de Google (console.cloud.google.com) y app de Meta for Developers (developers.facebook.com) con producto "Facebook Login". El redirect URI exacto a registrar en ambos está documentado en `terraform.tfvars.example`. Sin esto, `terraform apply` igual funciona pero sin los IdPs de Google/Facebook (quedan vacíos por default, ver `infra/modules/cognito/variables.tf`).
 2. `cd infra/envs/dev && terraform apply` — recrea el User Pool y los 3 App Clients (`web`, `owner_panel`, `branch_app`) con IDs NUEVOS (no van a coincidir con los que están en el historial de este chat).
