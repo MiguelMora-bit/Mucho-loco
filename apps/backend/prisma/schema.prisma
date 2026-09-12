@@ -73,6 +73,18 @@ enum EmployeeRole {
   coach
 }
 
+enum NotificationKind {
+  membership_expiring
+  membership_grace
+  order_ready
+  payment_confirmed
+}
+
+enum NotificationStatus {
+  sent
+  failed
+}
+
 enum PaymentProvider {
   stripe
 }
@@ -229,6 +241,7 @@ model User {
   visits     Visit[]
   orders     Order[]
 
+  notifications     Notification[]
   communityPosts    CommunityPost[]
   communityLikes    CommunityLike[]
   communityComments CommunityComment[]
@@ -731,4 +744,42 @@ model Payment {
 
   @@index([orderId])
   @@map("payments")
+}
+
+
+/// Aviso enviado por WhatsApp.
+///
+/// Existe sobre todo por IDEMPOTENCIA: `@@unique([userId, kind, dedupeKey])`
+/// es lo que impide mandarle al socio el mismo "tu membresía vence en 3 días"
+/// cada vez que corre el cron. Sin esta tabla, el aviso diario sería un aviso
+/// por minuto en cuanto alguien cambie el intervalo.
+///
+/// También es el registro de qué se le dijo a quién: si un socio reclama que
+/// nunca le avisaron, aquí está la respuesta.
+model Notification {
+  id     String           @id @default(uuid())
+  userId String
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind   NotificationKind
+  status NotificationStatus @default(sent)
+
+  /// Qué hecho concreto se está avisando: la fecha de vencimiento, el id del
+  /// pedido. Dos avisos del mismo tipo con distinta llave sí se mandan los dos
+  /// — vencer en julio y vencer en agosto son avisos distintos.
+  dedupeKey String
+
+  /// Teléfono al que se mandó, congelado: el socio puede cambiarlo después y
+  /// el registro tiene que seguir diciendo a dónde fue.
+  phone String
+  /// Plantilla aprobada de Meta que se usó.
+  template String
+  /// Id que devolvió Meta, para rastrear la entrega. Null si el envío falló.
+  providerMessageId String?
+  error             String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind, dedupeKey])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }

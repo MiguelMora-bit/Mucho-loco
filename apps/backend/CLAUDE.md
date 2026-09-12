@@ -112,6 +112,37 @@ Sin esas dos variables el resto del backend funciona igual; solo `/payments/*` f
 - **Membresía recurrente.** El CLAUDE.md raíz pide cobro recurrente con periodo de gracia. Eso son subscripciones (Billing API), no Checkout de pago único — otro conjunto de webhooks (`invoice.payment_failed`, `customer.subscription.updated`) y el que de verdad cierra la regla de negocio de la membresía.
 - **Reembolsos.** `providerPaymentIntentId` se guarda justo para eso, pero no hay endpoint todavía (y la política de devoluciones sigue sin decidirse — ver "Pendiente de decidir" en el CLAUDE.md raíz).
 
+## Notificaciones por WhatsApp (2026-09-12)
+
+Avisos por WhatsApp Business Platform (Cloud API de Meta) — se eligió sobre email porque es el canal dominante en México (ver CLAUDE.md raíz). Módulo `notifications`.
+
+### Qué se avisa y qué lo dispara
+
+| Aviso | Disparador |
+|---|---|
+| `payment_confirmed` | El webhook de Stripe, al confirmar el cobro. |
+| `order_ready` | El mismo, pero solo si la entrega es "recoger en gym". |
+| `membership_expiring` | Cron diario, a 7 / 3 / 1 días del vencimiento. |
+| `membership_grace` | Cron diario, mientras el socio esté en periodo de gracia. |
+
+### Decisiones
+
+- **Plantillas aprobadas, no texto libre.** Fuera de la ventana de 24h desde el último mensaje del socio, Meta solo deja enviar plantillas registradas. Por eso cada aviso nombra una plantilla y manda parámetros posicionales; los nombres (`membresia_por_vencer`, etc.) tienen que existir en Meta Business.
+- **Idempotencia en la base, no en el código.** `Notification` con `@@unique([userId, kind, dedupeKey])`. Sin eso, el barrido diario le manda al socio el mismo "vence en 3 días" cada vez que corre. La llave es la **fecha de vencimiento**, no los días restantes: así los tres avisos (7/3/1) comparten llave y el socio recibe UNO por ciclo. Si renueva, la fecha cambia y el siguiente ciclo vuelve a avisar.
+- **Un aviso que falla no tumba lo que lo disparó.** `notifyOnce` nunca tira: registra `status: 'failed'` y sigue. El envío ocurre DESPUÉS de escribir el pedido y fuera de la transacción — un WhatsApp caído no puede revertir un cobro que sí ocurrió. El fallo se guarda también para que el cron no reintente en bucle contra un número roto.
+- **Un cron y no un evento** para las membresías: "vencer" no es algo que alguien haga: nadie hace clic el día que a un socio le quedan 3 días. Corre a las 9am de CDMX (`TZ` del contenedor) — mandar avisos de cobro a las 3am sería hostil.
+- **`@nestjs/schedule` fijado en v4.** La v12 es ESM-only y rompe Jest con el mismo error que ya obligó a quedarse en Prisma 6 (ver esa decisión abajo). La v4 es CommonJS y no necesita configuración especial.
+- **Teléfonos normalizados a E.164 sin `+`.** El seed los tiene como `"+52 55 1234 5678"` y Meta responde 400 sin explicar por qué; `normalizePhone` los limpia y le antepone 52 a un número mexicano de 10 dígitos.
+- **El webhook responde 200 incluso a una firma inválida.** Meta desactiva un webhook que responde errores de forma sostenida, así que alguien mandando basura no debe poder tirarnos el canal. El evento simplemente se descarta. (Distinto de Stripe, que sí quiere un 400: ahí un 5xx provoca reintentos.)
+
+### Limitación conocida: el cron corre en cada instancia
+
+Es un cron **en proceso**. Con `desired_count = 1` en ECS (lo que hay hoy) está bien; con dos tareas, el barrido corre dos veces. El índice único evita el aviso duplicado, así que el daño está acotado, pero la solución correcta al escalar es sacarlo del proceso: EventBridge Scheduler pegándole a un endpoint, o una tarea programada de ECS.
+
+### Probarlo de verdad
+
+Como con Stripe, el código está completo y testeado (17 unit + 8 e2e) pero **nunca se ha ejercido contra Meta**. Hace falta: una app en Meta for Developers con el producto WhatsApp, un número de prueba, las plantillas dadas de alta y aprobadas, y las cuatro variables de `.env.example`. El webhook necesita una URL pública — en local, un túnel (`ngrok`, `cloudflared`).
+
 ## Decisión importante: Prisma 6, no Prisma 7 (2026-09-11)
 
 Se empezó con Prisma 7 (generator `prisma-client` + driver adapter `@prisma/adapter-pg` + `prisma.config.ts`) siguiendo la skill `prisma-database-setup` instalada en este proyecto, que documenta ese como el flujo "actual". **Se revirtió a Prisma 6 clásico** (`prisma-client-js`, sin driver adapter, `url = env("DATABASE_URL")` directo en `schema.prisma`) tras dar con dos problemas de fondo, no triviales de resolver:

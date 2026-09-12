@@ -3,6 +3,7 @@ import type { Lang, LocalizedString } from '@mucho-loco/types';
 import type Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from './stripe.provider';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 
 /** Mismo cargo que aplica UsersService.createOrder — el envío no deja de cobrarse por pagar con tarjeta. */
@@ -35,6 +36,7 @@ export class PaymentsService {
   constructor(
     private prisma: PrismaService,
     private stripe: StripeService,
+    private notifications: NotificationsService,
   ) {}
 
   /**
@@ -228,6 +230,11 @@ export class PaymentsService {
       }),
     ]);
     this.logger.log(`Pedido ${payment.orderId} pagado (sesión ${session.id})`);
+
+    // Después de escribir, nunca dentro de la transacción: un aviso que falla
+    // no puede revertir un cobro que sí ocurrió. notifyPaymentConfirmed no
+    // tira — registra el fallo y sigue.
+    await this.notifications.notifyPaymentConfirmed(payment.orderId);
   }
 
   private async markFailed(sessionId: string): Promise<void> {

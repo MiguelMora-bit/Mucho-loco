@@ -89,7 +89,7 @@ resource "aws_iam_role_policy_attachment" "execution_managed" {
 data "aws_iam_policy_document" "read_secrets" {
   statement {
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = [var.database_url_secret_arn]
+    resources = concat([var.database_url_secret_arn], values(var.extra_secret_arns))
   }
 }
 
@@ -188,9 +188,10 @@ resource "aws_ecs_task_definition" "app" {
 
       # `secrets`, no `environment`: así la contraseña de la base no aparece en
       # la task definition ni en la consola de AWS.
-      secrets = [
-        { name = "DATABASE_URL", valueFrom = var.database_url_secret_arn },
-      ]
+      secrets = concat(
+        [{ name = "DATABASE_URL", valueFrom = var.database_url_secret_arn }],
+        [for name, arn in var.extra_secret_arns : { name = name, valueFrom = arn }],
+      )
 
       logConfiguration = {
         logDriver = "awslogs"

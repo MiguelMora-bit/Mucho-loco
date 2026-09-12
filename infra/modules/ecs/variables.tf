@@ -62,6 +62,20 @@ variable "database_url_secret_arn" {
   type        = string
 }
 
+variable "extra_secret_arns" {
+  description = <<-EOT
+    Secretos adicionales que la tarea recibe como variables de entorno:
+    { NOMBRE_DE_LA_VARIABLE = arn_del_secreto }. Aquí van STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET, WHATSAPP_TOKEN y WHATSAPP_APP_SECRET cuando existan.
+
+    Un mapa y no variables sueltas porque cada credencial nueva no debería
+    obligar a tocar este módulo — y porque `secrets` (a diferencia de
+    `environment`) mantiene los valores fuera de la task definition.
+  EOT
+  type        = map(string)
+  default     = {}
+}
+
 variable "cognito_region" {
   type = string
 }

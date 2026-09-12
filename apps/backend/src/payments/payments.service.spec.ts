@@ -4,6 +4,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type Stripe from 'stripe';
 import { PaymentsService } from './payments.service';
 import { StripeService } from './stripe.provider';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 const whey = {
@@ -42,9 +43,11 @@ describe('PaymentsService', () => {
     $transaction: jest.Mock;
   };
   let sessionsCreate: jest.Mock;
+  let notifyPaymentConfirmed: jest.Mock;
 
   beforeEach(async () => {
     sessionsCreate = jest.fn().mockResolvedValue({ id: 'cs_test_1', url: 'https://checkout.stripe.com/x' });
+    notifyPaymentConfirmed = jest.fn().mockResolvedValue(undefined);
     prisma = {
       product: { findMany: jest.fn().mockResolvedValue([whey]) },
       membership: { findUnique: jest.fn().mockResolvedValue({ branchId: 1 }) },
@@ -60,6 +63,7 @@ describe('PaymentsService', () => {
           provide: StripeService,
           useValue: { stripe: { checkout: { sessions: { create: sessionsCreate } } } },
         },
+        { provide: NotificationsService, useValue: { notifyPaymentConfirmed } },
       ],
     }).compile();
     service = module.get(PaymentsService);
@@ -180,6 +184,27 @@ describe('PaymentsService', () => {
         where: { id: 'pay-1' },
         data: { status: 'paid', providerPaymentIntentId: 'pi_1' },
       });
+    });
+
+    // El aviso va DESPUÉS de escribir y fuera de la transacción: un WhatsApp
+    // que falla no puede revertir un cobro que sí ocurrió.
+    it('notifies the member after the order is written, not inside the transaction', async () => {
+      prisma.payment.findUnique.mockResolvedValue(pendingPayment);
+
+      await service.handleEvent(sessionEvent('checkout.session.completed'));
+
+      expect(notifyPaymentConfirmed).toHaveBeenCalledWith('order-1');
+      expect(prisma.$transaction.mock.invocationCallOrder[0]).toBeLessThan(
+        notifyPaymentConfirmed.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('does not notify again when a redelivered event changes nothing', async () => {
+      prisma.payment.findUnique.mockResolvedValue({ ...pendingPayment, status: 'paid' });
+
+      await service.handleEvent(sessionEvent('checkout.session.completed'));
+
+      expect(notifyPaymentConfirmed).not.toHaveBeenCalled();
     });
 
     // Con métodos de notificación diferida (OXXO, transferencia) el evento
