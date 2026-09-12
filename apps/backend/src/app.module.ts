@@ -21,6 +21,7 @@ import { ReportsModule } from './reports/reports.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { PayrollModule } from './payroll/payroll.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { PaymentsModule } from './payments/payments.module';
 import { RolesGuard } from './auth/roles.guard';
 
 @Module({
@@ -44,6 +45,7 @@ import { RolesGuard } from './auth/roles.guard';
     AttendanceModule,
     PayrollModule,
     ExpensesModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [

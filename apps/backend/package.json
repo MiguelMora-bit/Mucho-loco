@@ -28,12 +28,13 @@
     "class-validator": "^0.15.1",
     "jose": "^6.2.12",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "stripe": "^22.6.2"
   },
   "devDependencies": {
-    "@mucho-loco/types": "workspace:*",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
+    "@mucho-loco/types": "workspace:*",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",

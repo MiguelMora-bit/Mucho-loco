@@ -5,6 +5,7 @@ import { PerformanceHttpDatasource } from './performance.http';
 import { AnnouncementHttpDatasource } from './announcement.http';
 import { SocialHttpDatasource } from './social.http';
 import { MembershipHttpDatasource } from './membership.http';
+import { PaymentHttpDatasource } from './payment.http';
 
 function stubFetch(body: unknown = {}) {
   const spy = vi.fn(
@@ -159,5 +160,41 @@ describe('PerformanceHttpDatasource', () => {
     expect(call(spy, 2).url).toBe('http://api.test/performance/workouts');
     expect(call(spy, 3).url).toBe('http://api.test/performance/heatmap');
     expect(call(spy, 3).auth).toBe('Bearer id-token');
+  });
+});
+
+describe('PaymentHttpDatasource', () => {
+  it('posts productId+qty and the return urls, with the session token', async () => {
+    const spy = stubFetch({});
+    await new PaymentHttpDatasource(token).createCheckoutSession(
+      'diego@mucholoco.mx',
+      [{ productId: 'p1', qty: 2 }],
+      'home',
+      'es',
+      'http://localhost:3000/es/checkout?paid=1',
+      'http://localhost:3000/es/checkout',
+    );
+
+    const { url, init, auth } = call(spy);
+    expect(url).toBe('http://api.test/payments/checkout-sessions');
+    expect(auth).toBe('Bearer id-token');
+    expect(JSON.parse(String(init.body))).toEqual({
+      items: [{ productId: 'p1', qty: 2 }],
+      delivery: 'home',
+      lang: 'es',
+      successUrl: 'http://localhost:3000/es/checkout?paid=1',
+      cancelUrl: 'http://localhost:3000/es/checkout',
+    });
+  });
+
+  // El importe lo pone el servidor: si el body llevara un total, un cliente
+  // podría comprar a $1.
+  it('never sends an amount', async () => {
+    const spy = stubFetch({});
+    await new PaymentHttpDatasource(token).createCheckoutSession(
+      'diego@mucholoco.mx', [{ productId: 'p1', qty: 1 }], 'pickup', 'es', 'http://x', 'http://y',
+    );
+
+    expect(String(call(spy).init.body)).not.toMatch(/total|amount|price/);
   });
 });

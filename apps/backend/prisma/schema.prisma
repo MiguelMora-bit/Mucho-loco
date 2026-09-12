@@ -73,6 +73,16 @@ enum EmployeeRole {
   coach
 }
 
+enum PaymentProvider {
+  stripe
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+}
+
 enum PayrollPeriodStatus {
   open
   closed
@@ -287,7 +297,8 @@ model Order {
   deliveredAt   DateTime?
   createdAt     DateTime            @default(now())
 
-  items OrderItem[]
+  items    OrderItem[]
+  payments Payment[]
 
   @@map("orders")
 }
@@ -690,4 +701,34 @@ model Payslip {
 
   @@unique([periodId, employeeId])
   @@map("payslips")
+}
+
+
+/// Intento de cobro en línea de un pedido.
+///
+/// Tabla aparte y no columnas en Order porque son ciclos de vida distintos:
+/// un pedido puede acumular varios intentos (el socio abandona el checkout y
+/// vuelve a intentar) y cada uno tiene su propio estado en la pasarela. Además
+/// deja lugar para PayPal y Mercado Pago sin volver a tocar Order.
+model Payment {
+  id       String          @id @default(uuid())
+  orderId  String
+  order    Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider PaymentProvider
+  status   PaymentStatus   @default(pending)
+  amount   Int
+  currency String          @default("mxn")
+
+  /// Id de la sesión de Checkout. Único: el webhook llega por sesión y este
+  /// índice es lo que hace que reprocesar el mismo evento no cobre dos veces.
+  providerSessionId String  @unique
+  /// Se llena cuando la sesión se completa — es el id con el que se hace un
+  /// reembolso o se busca el cobro en el dashboard de Stripe.
+  providerPaymentIntentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@map("payments")
 }

@@ -70,6 +70,48 @@ Hay lógica que depende de qué día es "hoy" en la sucursal (asistencia del equ
 
 `payroll/payroll.math.ts` es gemelo de `owner-panel/src/lib/payroll.ts` (tablas de ISR/IMSS **ilustrativas, no las reales del SAT/IMSS**). La diferencia importa: aquí el recibo se emite y se **guarda**, con nombre, sucursal, puesto y sueldo congelados — un recibo es un documento histórico, no algo que se recalcule cada vez que alguien abre la pantalla. Cuando `owner-panel` conecte a este backend, su copia se borra. `daysWorked` cuenta **días distintos con turno cerrado**, no turnos: entrar y salir dos veces el mismo día es un día trabajado.
 
+## Pagos con Stripe (2026-09-12)
+
+Cobro con pasarela para los pedidos de la tienda. Módulo `payments`, dos endpoints:
+
+| Ruta | Quién la llama |
+|---|---|
+| `POST /payments/checkout-sessions` | El socio (autenticado). Crea el pedido en `pending_payment` y devuelve la URL de Stripe. |
+| `POST /payments/stripe/webhook` | Stripe. `@Public()` por necesidad; lo protege la FIRMA, no un token. |
+
+### Decisiones (siguen la skill `stripe-best-practices` instalada)
+
+- **Checkout Sessions, no PaymentIntents.** Es lo recomendado para un pago único on-session: maneja descuentos, envío y métodos de pago dinámicos sin código extra.
+- **Nunca se pasa `payment_method_types`.** Omitirlo activa los métodos de pago dinámicos: Stripe decide qué ofrecerle a cada socio según país, monto y dispositivo. Fijarlo a `['card']` apagaría eso y bajaría la conversión — y en México importa (OXXO, SPEI).
+- **El pedido se guarda ANTES de mandar al socio a pagar.** Si se creara al volver, alguien que paga y cierra la pestaña habría pagado sin pedido.
+- **La entrega la dispara el WEBHOOK, nunca la página de éxito.** Un socio puede pagar y perder la conexión antes de que cargue; ese pedido se quedaría sin surtir para siempre.
+- **`checkout.session.completed` no basta.** Con métodos de notificación diferida (OXXO, transferencia) ese evento llega con la sesión todavía `unpaid`. Se exige `payment_status !== 'unpaid'` y se escucha también `async_payment_succeeded` / `async_payment_failed`.
+- **Idempotencia.** Stripe reentrega el mismo evento ante cualquier duda. `providerSessionId` es `@unique` y `markPaid` no hace nada si el pago ya estaba en `paid`.
+- **Cuerpo crudo.** `NestFactory.create(AppModule, { rawBody: true })`: la firma se calcula sobre los bytes exactos, y volver a serializar el JSON parseado la rompe siempre.
+- **Centavos.** El catálogo guarda pesos enteros y Stripe cobra en la unidad mínima — $1290 son 129000. Sin la conversión se cobraría $12.90.
+- **Modelo `Payment` aparte de `Order`.** Son ciclos de vida distintos: un pedido puede acumular varios intentos (el socio abandona el checkout y vuelve), y deja lugar para PayPal y Mercado Pago sin volver a tocar `Order`.
+
+### Probarlo de verdad
+
+El código está completo y testeado (13 unit + 11 e2e con `StripeService` sobreescrito), pero **nunca se ha ejercido contra Stripe real** — hace falta una cuenta:
+
+```bash
+npm i -g @stripe/cli
+stripe sandbox create           # llaves de prueba, sin registrarse
+# poner STRIPE_SECRET_KEY en apps/backend/.env
+stripe listen --forward-to localhost:3001/payments/stripe/webhook
+# el comando imprime STRIPE_WEBHOOK_SECRET — ponerla también en .env
+stripe trigger checkout.session.completed
+```
+
+Sin esas dos variables el resto del backend funciona igual; solo `/payments/*` falla al usarse.
+
+### Pendiente
+
+- **PayPal y Mercado Pago.** El modelo `Payment` ya tiene `provider`, así que agregarlos es un módulo más, no un rediseño. Hay skill oficial de PayPal instalada; para Mercado Pago no hay y se diseña directo con el usuario.
+- **Membresía recurrente.** El CLAUDE.md raíz pide cobro recurrente con periodo de gracia. Eso son subscripciones (Billing API), no Checkout de pago único — otro conjunto de webhooks (`invoice.payment_failed`, `customer.subscription.updated`) y el que de verdad cierra la regla de negocio de la membresía.
+- **Reembolsos.** `providerPaymentIntentId` se guarda justo para eso, pero no hay endpoint todavía (y la política de devoluciones sigue sin decidirse — ver "Pendiente de decidir" en el CLAUDE.md raíz).
+
 ## Decisión importante: Prisma 6, no Prisma 7 (2026-09-11)
 
 Se empezó con Prisma 7 (generator `prisma-client` + driver adapter `@prisma/adapter-pg` + `prisma.config.ts`) siguiendo la skill `prisma-database-setup` instalada en este proyecto, que documenta ese como el flujo "actual". **Se revirtió a Prisma 6 clásico** (`prisma-client-js`, sin driver adapter, `url = env("DATABASE_URL")` directo en `schema.prisma`) tras dar con dos problemas de fondo, no triviales de resolver:

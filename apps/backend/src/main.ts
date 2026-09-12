@@ -4,7 +4,11 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: conserva los bytes exactos del request. Los necesita la
+  // verificación de firma del webhook de Stripe — recalcularla sobre el JSON
+  // ya parseado y vuelto a serializar falla siempre (cambian espacios y orden
+  // de llaves). Ver payments.controller.ts.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // whitelist+forbidNonWhitelisted: un DTO (ver CreateOrderDto) es la única
   // forma de mandar campos a este API — cualquier campo extra se rechaza en
