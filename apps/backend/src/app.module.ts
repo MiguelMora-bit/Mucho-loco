@@ -8,6 +8,10 @@ import { MembershipsModule } from './memberships/memberships.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { CognitoAuthGuard } from './auth/cognito-auth.guard';
+import { AnnouncementsModule } from './announcements/announcements.module';
+import { SocialModule } from './social/social.module';
+import { PerformanceModule } from './performance/performance.module';
+import { CommunityModule } from './community/community.module';
 
 @Module({
   imports: [
@@ -17,6 +21,10 @@ import { CognitoAuthGuard } from './auth/cognito-auth.guard';
     ProductsModule,
     MembershipsModule,
     UsersModule,
+    AnnouncementsModule,
+    SocialModule,
+    PerformanceModule,
+    CommunityModule,
   ],
   controllers: [AppController],
   providers: [

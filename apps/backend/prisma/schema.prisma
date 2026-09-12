@@ -72,6 +72,22 @@ enum OrderStatus {
   done
 }
 
+enum SocialNetwork {
+  instagram
+  tiktok
+  youtube
+  facebook
+}
+
+/// '' del mock (sin actividad esa semana) se mapea a `none` — Prisma no
+/// permite un variant de enum vacío.
+enum HeatmapLevel {
+  none
+  l1
+  l2
+  l3
+}
+
 model Branch {
   id       Int        @id
   name     String
@@ -145,6 +161,10 @@ model User {
   membership Membership?
   visits     Visit[]
   orders     Order[]
+
+  communityPosts    CommunityPost[]
+  communityLikes    CommunityLike[]
+  communityComments CommunityComment[]
 
   @@map("users")
 }
@@ -222,4 +242,171 @@ model OrderItem {
   qty     Int
 
   @@map("order_items")
+}
+
+/// Avisos del landing (fiestas, lanzamientos, retos) — contenido editorial,
+/// no ligado a un usuario. Mismo tratamiento que Branch/Product/MembershipTier:
+/// tabla semillada, sin dueño ("admin panel" para editarla queda fuera de
+/// alcance, igual que hoy no existe para el resto del catálogo).
+model Announcement {
+  id    String   @id
+  type  String
+  /// LocalizedString
+  badge Json
+  date  DateTime
+  /// LocalizedString — texto independiente de `date`, no derivado (ej. "1 JUL — 31 JUL" para un rango).
+  dateLabel Json
+  /// LocalizedString
+  title    Json
+  /// LocalizedString
+  subtitle Json
+  /// LocalizedString
+  body Json
+  /// LocalizedString
+  cta  Json
+  link String?
+  /// LocalizedString
+  location Json
+  emoji    String
+  accent   String
+
+  @@map("announcements")
+}
+
+/// Handles de redes del gym (Instagram/TikTok/etc.) — contenido editorial fijo,
+/// igual que Announcement.
+model SocialLink {
+  key       SocialNetwork @id
+  name      String
+  handle    String
+  followers String
+  url       String
+
+  @@map("social_links")
+}
+
+/// Feed de marketing (redes externas), distinto de CommunityPost (feed
+/// interno entre socios, ver abajo) — ver comentario de CommunityPost en
+/// @mucho-loco/types.
+model SocialFeedPost {
+  id    String        @id @default(uuid())
+  net   SocialNetwork
+  img   String
+  /// LocalizedString
+  cap   Json
+  likes String
+  ago   String
+  url   String
+  /// Orden de aparición en el feed — el mock era un array ya ordenado, un
+  /// SELECT sin ORDER BY no garantiza ese orden.
+  sortOrder Int @default(0)
+
+  @@map("social_feed_posts")
+}
+
+/// Feed interno entre socios ("Comunidad"). A diferencia del mock
+/// (createPost recibía authorName/authorBranch como parámetros confiando en
+/// el cliente), aquí el autor sale del usuario autenticado — mismo criterio
+/// de seguridad que ya aplica UsersService (ver CLAUDE.md, "3 decisiones que
+/// NO son fieles al mock"). authorName/authorBranch SÍ se guardan como
+/// snapshot en el momento del post (igual que OrderItem.name/.flav): si el
+/// socio cambia de sucursal después, sus posts viejos no deben reescribirse.
+model CommunityPost {
+  id           String   @id @default(uuid())
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id])
+  authorName   String
+  authorBranch String
+  body         String
+  createdAt    DateTime @default(now())
+
+  likes    CommunityLike[]
+  comments CommunityComment[]
+
+  @@map("community_posts")
+}
+
+/// Like es una fila, no un contador — @@unique hace que togglear sea
+/// idempotente (un segundo POST del mismo usuario quita el like en vez de
+/// duplicarlo) y likeCount/likedByMe se derivan en el service, nunca se
+/// guardan sueltos (mismo criterio que MembershipInfo.daysLeft).
+model CommunityLike {
+  id     String        @id @default(uuid())
+  postId String
+  post   CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId String
+  user   User          @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId])
+  @@map("community_likes")
+}
+
+model CommunityComment {
+  id         String        @id @default(uuid())
+  postId     String
+  post       CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User          @relation(fields: [authorId], references: [id])
+  authorName String
+  body       String
+  createdAt  DateTime      @default(now())
+
+  @@map("community_comments")
+}
+
+/// Rendimiento (workouts/PRs/stats/heatmap) — hoy 100% contenido fijo
+/// semillado, IGUAL para cualquier usuario que llame el endpoint (ni el mock
+/// ni este backend personalizan por socio todavía: no existe ningún flujo
+/// real que capture un entrenamiento). Queda detrás de auth (no @Public())
+/// porque conceptualmente es contenido de la cuenta, pero no filtra por
+/// userId — el día que exista captura real de entrenamientos, ESE es el
+/// momento de agregarle userId a estos 4 modelos, no antes.
+model PerformanceStat {
+  id    String @id @default(uuid())
+  /// LocalizedString
+  lbl   Json
+  num   String
+  /// LocalizedString
+  sub   Json
+  color String
+  sortOrder Int @default(0)
+
+  @@map("performance_stats")
+}
+
+model PersonalRecord {
+  id       String   @id @default(uuid())
+  /// LocalizedString
+  exercise Json
+  weight   String
+  date     DateTime
+  delta    String
+  sortOrder Int @default(0)
+
+  @@map("personal_records")
+}
+
+model Workout {
+  id       String   @id @default(uuid())
+  date     DateTime
+  /// LocalizedString
+  name     Json
+  sets     Int
+  vol      String
+  /// LocalizedString, null cuando el workout no tuvo PR.
+  pr       Json?
+  duration String
+
+  @@map("workouts")
+}
+
+/// Grid fijo de 52 semanas x 7 días — reemplaza el generateHeatmap() random
+/// del mock por datos deterministas (mismo request, misma respuesta).
+model HeatmapCell {
+  week  Int
+  day   Int
+  level HeatmapLevel @default(none)
+
+  @@id([week, day])
+  @@map("heatmap_cells")
 }

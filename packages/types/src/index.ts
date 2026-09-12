@@ -850,3 +850,51 @@ export interface ExecutiveReport {
   corporateExpenses: number;
   expensesByCategory: ExpenseByCategory[];
 }
+
+/** Movidos aquí desde apps/customer-app/lib/types/{social,performance}.ts
+ *  (2026-09-12, migración de esos 2 dominios a apps/backend) — ambos apps
+ *  necesitan el mismo contrato ahora. Los archivos locales de customer-app
+ *  quedan como re-export para no tocar sus ~13 importadores existentes. */
+export type SocialNetwork = 'instagram' | 'tiktok' | 'youtube' | 'facebook';
+
+export interface SocialLink {
+  key: SocialNetwork;
+  name: string;
+  handle: string;
+  followers: string;
+  url: string;
+}
+
+export interface FeedPost {
+  net: SocialNetwork;
+  img: string;
+  cap: LocalizedString;
+  likes: string;
+  ago: string;
+  url: string;
+}
+
+export interface Workout {
+  date: string;
+  name: LocalizedString;
+  sets: number;
+  vol: string;
+  pr: LocalizedString | null;
+  duration: string;
+}
+
+export interface PerformanceStat {
+  lbl: LocalizedString;
+  num: string;
+  sub: LocalizedString;
+  color: string;
+}
+
+export interface PersonalRecord {
+  exercise: LocalizedString;
+  weight: string;
+  date: string;
+  delta: string;
+}
+
+export type HeatmapLevel = '' | 'l1' | 'l2' | 'l3';

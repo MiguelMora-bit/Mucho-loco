@@ -72,6 +72,115 @@ const membershipTiers = [
   },
 ];
 
+// Mismo contenido que apps/customer-app/lib/data.ts (ANNOUNCEMENTS, SOCIAL_LINKS, SOCIAL_FEED)
+// — editorial fijo, no ligado a un usuario.
+const announcements = [
+  {
+    id: 'aniv-8',
+    type: 'fiesta',
+    badge: { es: 'FIESTA', en: 'PARTY' },
+    date: new Date('2026-06-21'),
+    dateLabel: { es: '21 JUN · 21:00', en: 'JUN 21 · 9:00 PM' },
+    title: { es: '8 AÑOS DE PURO FUEGO', en: '8 YEARS OF PURE FIRE' },
+    subtitle: { es: 'Fiesta de aniversario Mucho Loco', en: 'Mucho Loco anniversary party' },
+    body: {
+      es: 'Cumplimos 8 años incendiando la ciudad y lo vamos a celebrar a lo grande. Música en vivo, food trucks, retas de fuerza, rifas de membresías anuales y mucha proteína. Entrada gratis para socios + 1 invitado.',
+      en: 'We turn 8 years setting the city on fire, and we will celebrate big. Live music, food trucks, strength challenges, annual membership raffles and lots of protein. Free entry for members + 1 guest.',
+    },
+    cta: { es: 'CONFIRMAR ASISTENCIA', en: 'RSVP NOW' },
+    link: null,
+    location: { es: 'Sucursal Roma Sur · Terraza', en: 'Roma Sur · Rooftop' },
+    emoji: '🎉',
+    accent: '#e1141c',
+  },
+  {
+    id: 'pre-mango',
+    type: 'producto',
+    badge: { es: 'NUEVO PRODUCTO', en: 'NEW DROP' },
+    date: new Date('2026-06-10'),
+    dateLabel: { es: 'YA DISPONIBLE', en: 'OUT NOW' },
+    title: { es: 'PRE-ENTRENO BESTIA · MANGO CHAMOY', en: 'BEAST PRE-WORKOUT · MANGO CHAMOY' },
+    subtitle: { es: 'El sabor más loco de la tienda', en: 'The wildest flavor in the store' },
+    body: {
+      es: 'Llegó el nuevo Pre-Entreno Bestia sabor Mango Chamoy. 300mg de cafeína, beta-alanina y un golpe de chile que despierta a cualquiera. Lánzate a la tienda y pruébalo con 15% de descuento de lanzamiento.',
+      en: 'The new Beast Pre-Workout in Mango Chamoy is here. 300mg caffeine, beta-alanine and a chili kick that wakes anyone up. Hit the store and try it with 15% launch discount.',
+    },
+    cta: { es: 'VER EN LA TIENDA', en: 'SHOP NOW' },
+    link: '/product/p7',
+    location: { es: 'Tienda Mucho Loco', en: 'Mucho Loco Store' },
+    emoji: '🔥',
+    accent: '#ff6b1a',
+  },
+  {
+    id: 'reto-verano',
+    type: 'reunion',
+    badge: { es: 'RETO ESPECIAL', en: 'CHALLENGE' },
+    date: new Date('2026-07-01'),
+    dateLabel: { es: '1 JUL — 31 JUL', en: 'JUL 1 — JUL 31' },
+    title: { es: 'RETO VERANO: 20 DÍAS', en: 'SUMMER CHALLENGE: 20 DAYS' },
+    subtitle: { es: 'Entrena 20 días en julio y gana premios', en: 'Train 20 days in July and win prizes' },
+    body: {
+      es: 'Asiste 20 días durante julio y participa por un año de membresía gratis, kits de suplementos y merch exclusivo. Registra tu asistencia con tu QR y sigue tu avance en el tablón del gym.',
+      en: 'Show up 20 days during July and enter to win a free year membership, supplement kits and exclusive merch. Track attendance with your QR and follow your progress on the gym board.',
+    },
+    cta: { es: 'INSCRIBIRME AL RETO', en: 'JOIN THE CHALLENGE' },
+    link: null,
+    location: { es: 'Todas las sucursales', en: 'All locations' },
+    emoji: '🏆',
+    accent: '#ffb627',
+  },
+];
+
+const socialLinks = [
+  { key: 'instagram' as const, name: 'Instagram', handle: '@mucholoco.fit', followers: '128K', url: '#' },
+  { key: 'tiktok' as const, name: 'TikTok', handle: '@mucholoco', followers: '342K', url: '#' },
+  { key: 'youtube' as const, name: 'YouTube', handle: 'Mucho Loco Gym', followers: '56K', url: '#' },
+  { key: 'facebook' as const, name: 'Facebook', handle: '/mucholocogym', followers: '89K', url: '#' },
+];
+
+const socialFeedPosts = [
+  { net: 'instagram' as const, img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Leg day no perdona 🔥 Roma Sur a tope', en: 'Leg day shows no mercy 🔥 Roma Sur going hard' }, likes: '2.4K', ago: '3h', url: '#' },
+  { net: 'instagram' as const, img: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Nueva clase de HIIT en Condesa 💥', en: 'New HIIT class at Condesa 💥' }, likes: '1.8K', ago: '9h', url: '#' },
+  { net: 'facebook' as const, img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Reto de 30 días: ¿te atreves, bestia?', en: '30-day challenge: you in, beast?' }, likes: '973', ago: '1d', url: '#' },
+  { net: 'instagram' as const, img: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1000&q=70', cap: { es: 'PR de peso muerto en Santa Fe 🏋️', en: 'Deadlift PR at Santa Fe 🏋️' }, likes: '3.1K', ago: '1d', url: '#' },
+  { net: 'facebook' as const, img: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Coaches nuevos en Interlomas. Bienvenidos 🐂', en: 'New coaches at Interlomas. Welcome 🐂' }, likes: '654', ago: '2d', url: '#' },
+  { net: 'instagram' as const, img: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Domingo de cardio al aire libre ☀️', en: 'Sunday outdoor cardio ☀️' }, likes: '2.0K', ago: '3d', url: '#' },
+];
+
+// Performance: mismo contenido que performance.mock.ts, salvo el heatmap —
+// el mock lo generaba random en cada llamada (Math.random), aquí se
+// reemplaza por un patrón fijo (mismo request, misma respuesta). Sin
+// personalizar por usuario (ver comentario en schema.prisma sobre este dominio).
+const performanceStats = [
+  { lbl: { es: 'ENTRENAMIENTOS ESTE MES', en: 'WORKOUTS THIS MONTH' }, num: '18', sub: { es: '+3 vs mes anterior', en: '+3 vs last month' }, color: 'var(--orange)' },
+  { lbl: { es: 'VOLUMEN TOTAL (KG)', en: 'TOTAL VOLUME (KG)' }, num: '94K', sub: { es: '↑ 12% vs mes anterior', en: '↑ 12% vs last month' }, color: 'var(--red)' },
+  { lbl: { es: 'RACHA ACTUAL', en: 'CURRENT STREAK' }, num: '7d', sub: { es: 'Mejor: 14 días', en: 'Best: 14 days' }, color: '#ffe066' },
+  { lbl: { es: 'PRs ESTE MES', en: 'PRs THIS MONTH' }, num: '3', sub: { es: 'Press · Peso muerto · Hip thrust', en: 'Bench press · Deadlift · Hip thrust' }, color: '#6dd56d' },
+];
+
+const personalRecords = [
+  { exercise: { es: 'PRESS DE BANCA', en: 'BENCH PRESS' }, weight: '110 KG', date: new Date('2026-06-18'), delta: '+5kg' },
+  { exercise: { es: 'PESO MUERTO', en: 'DEADLIFT' }, weight: '155 KG', date: new Date('2026-06-14'), delta: '+10kg' },
+  { exercise: { es: 'HIP THRUST', en: 'HIP THRUST' }, weight: '170 KG', date: new Date('2026-06-07'), delta: '+5kg' },
+];
+
+const workouts = [
+  { date: new Date('2026-06-18'), name: { es: 'Push Day · Pecho & Hombros', en: 'Push Day · Chest & Shoulders' }, sets: 18, vol: '12,400 kg', pr: { es: 'Press plano: 110kg', en: 'Flat bench: 110kg' }, duration: '1h 24m' },
+  { date: new Date('2026-06-16'), name: { es: 'Leg Day · Cuadriceps', en: 'Leg Day · Quads' }, sets: 22, vol: '18,900 kg', pr: null, duration: '58m' },
+  { date: new Date('2026-06-14'), name: { es: 'Pull Day · Espalda & Bíceps', en: 'Pull Day · Back & Biceps' }, sets: 20, vol: '14,200 kg', pr: { es: 'Peso muerto: 155kg', en: 'Deadlift: 155kg' }, duration: '2h 02m' },
+  { date: new Date('2026-06-12'), name: { es: 'Push Day · Tríceps', en: 'Push Day · Triceps' }, sets: 16, vol: '9,800 kg', pr: null, duration: '1h 11m' },
+  { date: new Date('2026-06-10'), name: { es: 'Full Body HIIT', en: 'Full Body HIIT' }, sets: 24, vol: '6,500 kg', pr: null, duration: '1h 45m' },
+  { date: new Date('2026-06-07'), name: { es: 'Leg Day · Isquiotibiales', en: 'Leg Day · Hamstrings' }, sets: 20, vol: '16,200 kg', pr: { es: 'Hip thrust: 170kg', en: 'Hip thrust: 170kg' }, duration: '1h 33m' },
+];
+
+function heatmapLevel(week: number, day: number): 'none' | 'l1' | 'l2' | 'l3' {
+  const n = (week * 7 + day) % 5;
+  if (n === 0) return 'none';
+  if (n <= 2) return 'l1';
+  if (n === 3) return 'l2';
+  return 'l3';
+}
+
 async function main() {
   for (const branch of branches) {
     // Prisma exige el sentinel Prisma.JsonNull para "esta columna JSON es
@@ -85,7 +194,50 @@ async function main() {
   for (const tier of membershipTiers) {
     await prisma.membershipTier.upsert({ where: { key: tier.key }, create: tier, update: tier });
   }
-  console.log(`Seeded ${branches.length} branches, ${products.length} products, ${membershipTiers.length} membership tiers.`);
+  for (const announcement of announcements) {
+    await prisma.announcement.upsert({ where: { id: announcement.id }, create: announcement, update: announcement });
+  }
+  for (const link of socialLinks) {
+    await prisma.socialLink.upsert({ where: { key: link.key }, create: link, update: link });
+  }
+
+  // SocialFeedPost/PerformanceStat/PersonalRecord/Workout no tienen una key
+  // natural en el mock (nunca fueron editables ahí) — a diferencia de
+  // branches/products/tiers/announcements/socialLinks, se re-siembran por
+  // completo (delete + create) en vez de upsert por id generado.
+  await prisma.socialFeedPost.deleteMany();
+  await prisma.socialFeedPost.createMany({
+    data: socialFeedPosts.map((post, i) => ({ ...post, sortOrder: i })),
+  });
+  await prisma.performanceStat.deleteMany();
+  await prisma.performanceStat.createMany({
+    data: performanceStats.map((stat, i) => ({ ...stat, sortOrder: i })),
+  });
+  await prisma.personalRecord.deleteMany();
+  await prisma.personalRecord.createMany({
+    data: personalRecords.map((record, i) => ({ ...record, sortOrder: i })),
+  });
+  await prisma.workout.deleteMany();
+  await prisma.workout.createMany({
+    data: workouts.map((w) => ({ ...w, pr: w.pr ?? Prisma.JsonNull })),
+  });
+
+  for (let week = 0; week < 52; week++) {
+    for (let day = 0; day < 7; day++) {
+      const level = heatmapLevel(week, day);
+      await prisma.heatmapCell.upsert({
+        where: { week_day: { week, day } },
+        create: { week, day, level },
+        update: { level },
+      });
+    }
+  }
+
+  console.log(
+    `Seeded ${branches.length} branches, ${products.length} products, ${membershipTiers.length} membership tiers, ` +
+      `${announcements.length} announcements, ${socialLinks.length} social links, ${socialFeedPosts.length} social feed posts, ` +
+      `${performanceStats.length} performance stats, ${personalRecords.length} personal records, ${workouts.length} workouts, 364 heatmap cells.`,
+  );
 }
 
 main()
