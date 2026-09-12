@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- jest.fn() sin generics: los mocks de Prisma son deliberadamente `any`, no vale la pena tipar Prisma.OrderCreateArgs solo para reconstruir el valor de retorno del mock. */
 import { Test } from '@nestjs/testing';
+import { ConflictException } from '@nestjs/common';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,7 +10,7 @@ import type { CreateOrderDto } from './dto/create-order.dto';
 describe('UsersService', () => {
   let service: UsersService;
   let prisma: {
-    user: { findUnique: jest.Mock; create: jest.Mock };
+    user: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
     membership: { findUniqueOrThrow: jest.Mock };
     visit: { findMany: jest.Mock };
     order: { findMany: jest.Mock; create: jest.Mock };
@@ -19,7 +20,7 @@ describe('UsersService', () => {
 
   beforeEach(async () => {
     prisma = {
-      user: { findUnique: jest.fn(), create: jest.fn() },
+      user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
       membership: { findUniqueOrThrow: jest.fn() },
       visit: { findMany: jest.fn() },
       order: { findMany: jest.fn(), create: jest.fn() },
@@ -74,6 +75,58 @@ describe('UsersService', () => {
         }),
       );
       expect(memberships.createDefaultForUser).toHaveBeenCalledWith('new-1');
+    });
+
+    // Un socio dado de alta en mostrador (sin cuenta de acceso) que después se
+    // instala la app: se le liga la cuenta y CONSERVA su membresía, sus
+    // visitas y sus pedidos. Crear una fila nueva le borraría su historia.
+    it('links the account to a counter-created member who now installed the app', async () => {
+      prisma.user.findUnique
+        .mockResolvedValueOnce(null) // por cognitoSub
+        .mockResolvedValueOnce({ id: 'counter-1', email: 'socio@mucholoco.mx', cognitoSub: null, name: 'SOCIO DE MOSTRADOR' });
+      prisma.user.update.mockResolvedValue({ id: 'counter-1' });
+
+      const user = await service.findOrCreateByCognito('sub-3', 'socio@mucholoco.mx', 'Socio');
+
+      expect(user.id).toBe('counter-1');
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'counter-1' },
+        data: { cognitoSub: 'sub-3', name: 'SOCIO DE MOSTRADOR' },
+      });
+      // Ya tenía membresía: darle otra sería duplicarla.
+      expect(memberships.createDefaultForUser).not.toHaveBeenCalled();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    // Tomar la cuenta en silencio dejaría fuera al dueño original. Pasa al
+    // recrear el User Pool: los socios viejos quedan con un sub que ya no
+    // existe (ver "Nota operativa" en el CLAUDE.md raíz).
+    it('refuses to take over an email that already belongs to another login', async () => {
+      prisma.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'u1', email: 'diego@mucholoco.mx', cognitoSub: 'sub-viejo' });
+
+      await expect(
+        service.findOrCreateByCognito('sub-nuevo', 'diego@mucholoco.mx', 'Diego'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    // Un socio de mostrador puede no tener correo; buscar por `email: ''`
+    // encontraría a cualquier otro sin correo y los mezclaría.
+    it('does not look up by an empty email', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null);
+      prisma.user.create.mockResolvedValue({ id: 'new-2' });
+
+      await service.findOrCreateByCognito('sub-4', '', 'Alguien');
+
+      expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
+      // "Sin correo" se guarda como null: la columna es UNIQUE y la cadena
+      // vacía solo cabe una vez.
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ email: null }) }),
+      );
     });
   });
 

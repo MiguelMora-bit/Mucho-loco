@@ -22,6 +22,25 @@ export function formatDate(iso: string, lang: Lang): string {
   }).format(new Date(iso));
 }
 
+/**
+ * Un INSTANTE (fecha + hora) en la zona horaria local — a diferencia de
+ * `formatDate`, que fija UTC.
+ *
+ * La diferencia no es un descuido: `formatDate` recibe fechas SIN hora
+ * (`'2026-08-01'`), que se parsean como medianoche UTC y hay que anclar o
+ * imprimen el día anterior. Esto recibe momentos reales (cuándo se abrió la
+ * caja, cuándo entró un pedido), y ahí lo que quiere ver mostrador es la hora
+ * de la sucursal, no la de Greenwich.
+ */
+export function formatDateTime(iso: string, lang: Lang): string {
+  return new Intl.DateTimeFormat(lang === 'es' ? 'es-MX' : 'en-US', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
+
 /** El idioma activo de i18next, tipado como `Lang`. */
 export function langOf(language: string | undefined): Lang {
   return language?.startsWith('en') ? 'en' : 'es';

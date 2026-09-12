@@ -25,7 +25,8 @@ export type ApiErrorCode =
   | 'PERIOD_ALREADY_CLOSED'
   | 'ORDER_ALREADY_DELIVERED'
   | 'NOT_A_PICKUP_ORDER'
-  | 'CASH_REQUIRES_PICKUP';
+  | 'CASH_REQUIRES_PICKUP'
+  | 'EMAIL_ALREADY_LINKED';
 
 export interface ApiErrorBody {
   code: ApiErrorCode;
@@ -123,4 +124,10 @@ export const notAPickupOrder = (orderId: string): ApiErrorBody => ({
 export const cashRequiresPickup = (): ApiErrorBody => ({
   code: 'CASH_REQUIRES_PICKUP',
   message: 'cash payment method requires pickup delivery',
+});
+
+export const emailAlreadyLinked = (email: string): ApiErrorBody => ({
+  code: 'EMAIL_ALREADY_LINKED',
+  message: `Ya existe un socio con el correo ${email} ligado a otra cuenta de acceso`,
+  email,
 });

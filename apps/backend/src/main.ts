@@ -22,11 +22,15 @@ async function bootstrap() {
     }),
   );
 
-  // customer-app (Vercel + localhost:3000), branch-app/owner-panel (Vite,
-  // localhost:5173) — las 3 SPAs/Next app que van a llamar este API.
+  // customer-app (Vercel + localhost:3000) y las dos SPA de Vite. Se incluyen
+  // 5173 Y 5174 porque los dos apps de Vite piden el mismo puerto por default:
+  // con branch-app y owner-panel abiertos a la vez —el caso normal cuando se
+  // trabaja en los dos— el segundo cae en 5174 y sin esto el navegador le
+  // bloquea todas las llamadas por CORS.
   app.enableCors({
     origin: (
-      process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:5173'
+      process.env.CORS_ORIGINS ??
+      'http://localhost:3000,http://localhost:5173,http://localhost:5174'
     ).split(','),
   });
 

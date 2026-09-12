@@ -4,13 +4,10 @@ import { useCashRegisterShiftStore } from '../lib/stores/cashRegisterShift.store
 import { cashRegisterShiftRepository } from '../lib/repositories/cashRegisterShift.repository';
 import { calculateShiftTotals } from '../lib/cashRegister';
 import type { CashRegisterShift, PaymentMethod, ShiftTransaction } from '@mucho-loco/types';
+import { formatDateTime, langOf } from '../lib/dates';
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-MX')}`;
-}
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'card', 'transfer'];
@@ -39,7 +36,8 @@ function TotalsGrid({ totals, transactionCount }: { totals: Record<PaymentMethod
 }
 
 function TransactionList({ transactions }: { transactions: ShiftTransaction[] }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = langOf(i18n.language);
   if (transactions.length === 0) return <p className="text-ml-muted text-sm">{t('cashRegister.noTransactions')}</p>;
 
   return (
@@ -51,7 +49,7 @@ function TransactionList({ transactions }: { transactions: ShiftTransaction[] })
               {t(`cashRegister.source.${tx.kind}`)}
             </span>
             <span>{tx.description}</span>
-            <span className="text-ml-cream-dim ml-2 text-xs">{formatDateTime(tx.createdAt)}</span>
+            <span className="text-ml-cream-dim ml-2 text-xs">{formatDateTime(tx.createdAt, lang)}</span>
           </div>
           <span className="font-medium">{formatPrice(tx.amount)}</span>
         </li>
@@ -61,7 +59,8 @@ function TransactionList({ transactions }: { transactions: ShiftTransaction[] })
 }
 
 function ShiftHistoryRow({ shift }: { shift: CashRegisterShift }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = langOf(i18n.language);
   const [expanded, setExpanded] = useState(false);
   const [transactions, setTransactions] = useState<ShiftTransaction[] | null>(null);
 
@@ -82,9 +81,9 @@ function ShiftHistoryRow({ shift }: { shift: CashRegisterShift }) {
     <div className="bg-ml-card border border-ml-border rounded p-3">
       <div className="flex items-center justify-between">
         <div className="text-sm">
-          <span className="text-ml-cream-dim">{t('cashRegister.history.openedAt')}:</span> {formatDateTime(shift.openedAt)}
+          <span className="text-ml-cream-dim">{t('cashRegister.history.openedAt')}:</span> {formatDateTime(shift.openedAt, lang)}
           {' · '}
-          <span className="text-ml-cream-dim">{t('cashRegister.history.closedAt')}:</span> {shift.closedAt ? formatDateTime(shift.closedAt) : '—'}
+          <span className="text-ml-cream-dim">{t('cashRegister.history.closedAt')}:</span> {shift.closedAt ? formatDateTime(shift.closedAt, lang) : '—'}
         </div>
         <button onClick={toggle} className="text-xs text-ml-cream-dim hover:text-ml-cream underline">
           {expanded ? t('cashRegister.history.hideDetail') : t('cashRegister.history.viewDetail')}
@@ -101,7 +100,8 @@ function ShiftHistoryRow({ shift }: { shift: CashRegisterShift }) {
 }
 
 export function CashRegisterPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = langOf(i18n.language);
   const { data, loading, error, fetch } = useCashRegisterShiftStore();
   const [confirming, setConfirming] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -149,7 +149,7 @@ export function CashRegisterPage() {
           <section className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-mono uppercase tracking-wide text-ml-cream-dim">
-                {t('cashRegister.openedLabel')} {formatDateTime(data.shift.openedAt)}
+                {t('cashRegister.openedLabel')} {formatDateTime(data.shift.openedAt, lang)}
               </h2>
               <button
                 onClick={handleClose}

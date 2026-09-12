@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,7 +15,7 @@ import type {
   User,
   Visit as VisitRow,
 } from '@prisma/client';
-import { cashRequiresPickup, productNotFound } from '../common/error-codes';
+import { cashRequiresPickup, emailAlreadyLinked, productNotFound } from '../common/error-codes';
 
 // Mismo cargo fijo que hoy vive hardcodeado en CheckoutClient.tsx del
 // frontend — duplicado a propósito (sin runtime compartido entre back/front
@@ -61,6 +62,24 @@ export class UsersService {
    *  default (tier 'all', Roma Sur, activa 30 días) — mismo comportamiento
    *  que fallbackRecord() en user.mock.ts para una cuenta real sin dato
    *  curado. Cognito ya garantiza que el sub es válido (pasó CognitoAuthGuard). */
+  /**
+   * El socio detrás de un ID token, creándolo la primera vez que se le ve.
+   *
+   * La identidad es `cognitoSub`, no el correo: un correo puede cambiar en
+   * Cognito, el `sub` no. Pero `email` es `@unique` en la base, así que hay un
+   * caso intermedio que hay que resolver a mano — un `sub` nuevo con un correo
+   * que ya existe:
+   *
+   * - **El socio ya existía SIN cuenta de acceso** (`cognitoSub` null): lo dio
+   *   de alta mostrador y ahora se instaló la app. Se le liga la cuenta y
+   *   conserva su membresía, sus visitas y sus pedidos. Es un flujo real y
+   *   deseable, y no hay riesgo: esa fila nunca tuvo login.
+   * - **El correo ya pertenece a OTRA cuenta de acceso**: se rechaza con 409.
+   *   Tomar la cuenta en silencio dejaría a alguien fuera de la suya. Pasa,
+   *   por ejemplo, si se destruye y recrea el User Pool (ver "Nota operativa"
+   *   en el CLAUDE.md raíz) — los socios viejos quedan con un `sub` que ya no
+   *   existe y hay que limpiarlos o volver a ligarlos a mano.
+   */
   async findOrCreateByCognito(
     sub: string,
     email: string,
@@ -71,12 +90,26 @@ export class UsersService {
     });
     if (existing) return existing;
 
+    const displayName = name || email.split('@')[0].toUpperCase();
+
+    const sameEmail = email
+      ? await this.prisma.user.findUnique({ where: { email } })
+      : null;
+    if (sameEmail) {
+      if (sameEmail.cognitoSub !== null) {
+        throw new ConflictException(emailAlreadyLinked(email));
+      }
+      return this.prisma.user.update({
+        where: { id: sameEmail.id },
+        data: { cognitoSub: sub, name: sameEmail.name || displayName },
+      });
+    }
+
     const user = await this.prisma.user.create({
-      data: {
-        cognitoSub: sub,
-        email,
-        name: name || email.split('@')[0].toUpperCase(),
-      },
+      // `email || null` y no `email`: un token sin correo guardaría la cadena
+      // vacía, y como la columna es UNIQUE el segundo caso así reventaría.
+      // "Sin correo" es null, que Postgres sí permite repetir.
+      data: { cognitoSub: sub, email: email || null, name: displayName },
     });
     await this.memberships.createDefaultForUser(user.id);
     return user;

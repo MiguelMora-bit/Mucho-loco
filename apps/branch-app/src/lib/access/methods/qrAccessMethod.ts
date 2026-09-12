@@ -13,5 +13,3 @@ export class QrAccessMethod implements AccessMethod {
   }
 }
 
-// Swap this line to plug in a real API datasource
-export const qrAccessMethod: AccessMethod = new QrAccessMethod();

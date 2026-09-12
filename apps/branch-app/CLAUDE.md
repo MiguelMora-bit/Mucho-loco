@@ -80,7 +80,7 @@ VITE_DATA_SOURCE=http          # cualquier otro valor / ausente = mock
 VITE_API_URL=http://localhost:3001
 ```
 
-**Los 6 repositorios están migrados** (2026-09-12): `counterSale`, `pickupOrder`, `cashRegisterShift`, `attendance`, `reports` y `membership`.
+**Los 6 repositorios están migrados** (2026-09-12): `counterSale`, `pickupOrder`, `cashRegisterShift`, `attendance`, `reports` y `membership` — **y también los 3 métodos de acceso** (`lib/access/methods/`), que NO eran repositorios: leían `MEMBER_ACCESS_RECORDS` directo del mock. Se les pasó por alto en la primera pasada y el QR de un socio real devolvía "NO ENCONTRADO"; `httpAccessMethod.ts` los conecta a `GET /branches/:id/member-access`, donde el servidor evalúa la regla.
 
 ### El cliente
 
@@ -107,7 +107,12 @@ Cualquier otro fallo (500, red caída) se deja pasar tal cual: un backend muerto
 
 ### Fechas: ISO en el contrato, formato al pintar
 
-`MemberAccessRecord.expiresAt` venía del mock como `'20 JUL 2026'` y el backend lo manda en ISO. Prender el flag habría puesto un timestamp crudo en el validador de QR y en la pestaña de membresías — el mismo bug que apareció en `customer-app`. Ahora el mock también manda ISO y las tres pantallas formatean con `lib/dates.ts` (`formatDate` + `langOf`), con `timeZone: 'UTC'` fijado: una fecha sin hora se parsea como medianoche UTC y en México imprimiría el día anterior.
+`MemberAccessRecord.expiresAt` **y `PickupOrder.placedAt`** venían del mock como texto (`'20 JUL 2026'`, `'19 JUN 2026'`) y el backend los manda en ISO. Prender el flag habría puesto un timestamp crudo en el validador de QR y en la pestaña de membresías — el mismo bug que apareció en `customer-app`. Ahora el mock también manda ISO y las pantallas formatean con `lib/dates.ts`. Dos helpers, no uno, y la diferencia importa:
+
+- `formatDate(iso, lang)` — fechas SIN hora (`'2026-08-01'`), con `timeZone: 'UTC'` fijado, porque se parsean como medianoche UTC y en México imprimirían el día anterior.
+- `formatDateTime(iso, lang)` — instantes reales (cuándo entró un pedido, cuándo se abrió la caja), en hora LOCAL: ahí lo que quiere ver mostrador es la hora de la sucursal.
+
+De paso, `CashRegisterPage` tenía su propio formateador clavado a `es-MX`, así que el corte de caja ignoraba el toggle de idioma. Ahora usa el compartido.
 
 ### Otro cambio en el mock, para que el swap no se note
 
@@ -149,3 +154,18 @@ pnpm --filter branch-app test:e2e   # Playwright (agregado 2026-09-10) — login
 - ✅ Fase 2, corte de caja + primer permiso real por rol (2026-09-11): `/cash-register`, solo `manager` (nav item oculto para `staff` en `AppShell`, y la ruta va detrás de `RequireManager.tsx` — autorización, no autenticación, `ProtectedRoute` se queda role-agnostic a propósito). `cashRegisterShiftRepository` sigue el mismo patrón open/closed que `owner-panel/payroll.repository.ts`: siempre hay a lo más un `CashRegisterShift` `'open'` por sucursal (`getOpenShift` lo crea si no hay uno), `closeShift` es una transición final (no reabre — el siguiente shift se crea solo la próxima vez que se pide el abierto). Junta `COUNTER_SALES` + `MEMBERSHIP_PAYMENTS` de esa sucursal en la ventana del shift como `ShiftTransaction[]`; los totales por método de pago (`cash`/`card`/`transfer`) son una función pura (`lib/cashRegister.ts`, `calculateShiftTotals`) con su propio test, no lógica en el componente. **Prerequisito que se descubrió al construir esto:** `counterSale.mock.ts` nunca persistía las ventas (`createSale()` solo devolvía el objeto y descontaba stock) — ahora también hace `COUNTER_SALES.push(sale)`, si no no había nada que sumar para ningún corte.
 - ✅ Fase 2 completa, reportes/inventario local de gerente: `/reports`, solo `manager` (mismo `RequireManager.tsx`). Reporte de ventas de 7 días (ingresos, transacciones, desglose por día, top 5 productos) vía `calculateSalesReport()` (`lib/reports.ts`, función pura con su propio test, mismo patrón que `cashRegister.ts`) sobre `COUNTER_SALES`/`MEMBERSHIP_PAYMENTS` — distinto del corte de caja (que es por turno, para cuadrar el cajón; esto es tendencia, sin importar turnos). Reutiliza `useBranchInventoryStore` ya existente para el inventario local, con bandera de "stock bajo" (`isLowStock()`, umbral `LOW_STOCK_THRESHOLD`). Se sembró una semana de `COUNTER_SALES`/`MEMBERSHIP_PAYMENTS` ilustrativos (branchId 1) para que el reporte no se vea vacío en el primer load.
 - ✅ Captura real de asistencia (2026-09-11), precondición de nómina real: `/attendance`, abierta a ambos roles — cualquier staff registra su propia entrada/salida (`AttendanceEntry`, a lo más una "abierta" por `staffEmail` a la vez, mismo invariante que `CashRegisterShift` pero por persona en vez de por sucursal); `manager` además ve la asistencia del equipo de hoy. Vive aislada en el mock de este app, como todo lo demás hasta que exista backend real — el payroll de `owner-panel` sigue leyendo su propio `AttendanceSummary` sembrado hasta que ambos apps compartan una base de datos real.
+
+## Verificado en navegador real (2026-09-12) ✅
+
+Con el User Pool levantado un momento y los 3 usuarios de prueba, manejando Chromium con Playwright y el backend contra Postgres:
+
+| Pantalla | Qué se comprobó |
+|---|---|
+| `/counter` | Vendió 2 Energy → stock de Roma Sur 200 → 198, `counter_sales` escrita, **las otras 3 sucursales intactas**. |
+| `/` (pedidos) | Un pedido creado por el socio en la tienda apareció en la cola, se marcó entregado, y el socio lo vio entregado. |
+| `/attendance` | Fichó entrada y salida — `AttendanceEntry` real. |
+| `/qr` | Código real → `ACCESO PERMITIDO · DIEGO RAMÍREZ · Vence el 12 oct 2026`; código inexistente → `NO ENCONTRADO`; búsqueda por nombre → resolvió al socio único. |
+| `/cash-register` | El efectivo del pedido entregado apareció como `PEDIDO EN EFECTIVO · $2,080`, con el `kind: 'pickup'` nuevo. |
+| `/reports` | Cargó (en $0, porque la ventana estaba limpia). |
+
+Roles: Luis (`staff`) no ve las pestañas de Caja ni Reportes; Ana (`manager`) sí. Cero errores de consola en todo el recorrido.

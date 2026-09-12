@@ -73,7 +73,18 @@ Este app ya estaba bien: todas las fechas viajaban en ISO y se formatean al pint
 - **Unit** (`pnpm test`, sin red): `hq.http.test.ts` — cada método a su ruta, el token, `?lang=`, `branchId: null` viajando explícito en un gasto corporativo, y cada traducción de error (más las que no se traducen).
 - **Integración** (`pnpm test:integration`, contra el backend real en `:3001`, fuera de CI): las 12 llamadas verifican que la ruta existe y que el guard la protege. La respuesta autenticada campo por campo la cubre `test/branch-ops.e2e-spec.ts` del backend.
 
-**Sin verificar en navegador**: las rutas de HQ piden un token con grupo `owner` y no hay User Pool vivo (infra destruida, ver CLAUDE.md raíz).
+### Verificado en navegador real (2026-09-12) ✅
+
+Con el User Pool levantado un momento, Rodrigo (`owner`) y Playwright:
+
+- **Resumen**: `INGRESOS TOTALES $2,080` y `CLIENTES ACTIVOS 1`, derivados de transacciones reales — el pedido que mostrador entregó ese mismo día. Las 15 sucursales listadas, no cuatro.
+- **Nómina**: y aquí está el cruce completo. Luis fichó entrada y salida en `branch-app`; el panel mostró `Luis Ángel Ortega · ROMA SUR · Mostrador · 1/15`, y al correr la quincena emitió **$500 bruto, $0 ISR, $13 IMSS, $487 neto**, guardado en `payslips`. Dos apps distintas, dos usuarios distintos, una base.
+- **Transferencias**: movió 5 Shaker de Roma Sur a Roma Norte → 120→115 y 80→85 en Postgres, con el movimiento en el historial y las otras sucursales sin tocar.
+- **Gastos** y **Reportes ejecutivos**: cargaron con el dato sembrado.
+
+Cero errores de consola.
+
+**Un bug de CORS salió de aquí**: el backend solo permitía `localhost:5173`, y los dos apps de Vite piden ese mismo puerto, así que el segundo cae en `5174` y el navegador le bloqueaba TODO. El default del backend ahora incluye ambos.
 
 ## Comandos
 
