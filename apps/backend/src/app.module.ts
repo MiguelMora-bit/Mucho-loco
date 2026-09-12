@@ -14,6 +14,8 @@ import { PerformanceModule } from './performance/performance.module';
 import { CommunityModule } from './community/community.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { CounterSalesModule } from './counter-sales/counter-sales.module';
+import { CounterMembershipsModule } from './counter-memberships/counter-memberships.module';
+import { CashRegisterModule } from './cash-register/cash-register.module';
 import { RolesGuard } from './auth/roles.guard';
 
 @Module({
@@ -30,6 +32,8 @@ import { RolesGuard } from './auth/roles.guard';
     CommunityModule,
     InventoryModule,
     CounterSalesModule,
+    CounterMembershipsModule,
+    CashRegisterModule,
   ],
   controllers: [AppController],
   providers: [

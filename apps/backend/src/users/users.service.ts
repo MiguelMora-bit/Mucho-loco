@@ -117,7 +117,7 @@ export class UsersService {
       include: { branch: true },
     });
     return {
-      email: user.email,
+      email: user.email ?? '',
       name: user.name,
       phone: user.phone,
       birthdate: user.birthdate,

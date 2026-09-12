@@ -1,15 +1,10 @@
-import type { MemberAccessRecord } from '@mucho-loco/types';
+import type { AccessCheckResult, MemberAccessRecord } from '@mucho-loco/types';
 
-export type AccessMethodId = 'qr' | 'fingerprint' | 'name';
-
-export type AccessCheckResult =
-  | { outcome: 'not_found' }
-  /** Único outcome que QR/huella nunca producen — solo la búsqueda por
-   *  nombre puede matchear a más de un socio a la vez. */
-  | { outcome: 'ambiguous'; candidates: MemberAccessRecord[] }
-  | { outcome: 'wrong_branch'; record: MemberAccessRecord }
-  | { outcome: 'expired'; record: MemberAccessRecord }
-  | { outcome: 'valid'; record: MemberAccessRecord };
+// AccessMethodId y AccessCheckResult se movieron a @mucho-loco/types (2026-09-12):
+// el backend aplica la misma regla al resolver /member-access, así que el
+// contrato dejó de ser exclusivo de este app. Se re-exportan desde aquí para
+// no tocar a sus importadores.
+export type { AccessMethodId, AccessCheckResult } from '@mucho-loco/types';
 
 /** true solo cuando el outcome realmente deja pasar al socio (ver CLAUDE.md
  *  raíz, "Membresía y alcance de acceso" — 'grace' cuenta como acceso

@@ -203,7 +203,10 @@ model MembershipTier {
 model User {
   id         String  @id @default(uuid())
   cognitoSub String? @unique
-  email      String  @unique
+  /// También nullable, y por la misma razón que cognitoSub: un socio dado de
+  /// alta en mostrador da su nombre y su teléfono, no necesariamente un
+  /// correo. Un socio con app SIEMPRE tiene los dos.
+  email      String? @unique
   name       String
   phone      String  @default("")
   /// String de display tal cual el mock ("14 MAR 1994") — el propio

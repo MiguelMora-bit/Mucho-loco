@@ -658,6 +658,23 @@ export interface MemberAccessRecord {
   fingerprintId?: string;
 }
 
+/** Cómo llegó mostrador al socio: escaneó su QR, leyó su huella, o lo buscó
+ *  por nombre (último recurso, ver "Métodos de acceso" en el CLAUDE.md raíz). */
+export type AccessMethodId = 'qr' | 'fingerprint' | 'name';
+
+/** Resultado de evaluar el acceso de un socio en una sucursal. Vive aquí y no
+ *  en branch-app porque el backend aplica la MISMA regla al resolver
+ *  /member-access — la decisión de dejar pasar no puede depender de que el
+ *  cliente la calcule bien. */
+export type AccessCheckResult =
+  | { outcome: 'not_found' }
+  /** Único outcome que QR/huella nunca producen — solo la búsqueda por
+   *  nombre puede matchear a más de un socio a la vez. */
+  | { outcome: 'ambiguous'; candidates: MemberAccessRecord[] }
+  | { outcome: 'wrong_branch'; record: MemberAccessRecord }
+  | { outcome: 'expired'; record: MemberAccessRecord }
+  | { outcome: 'valid'; record: MemberAccessRecord };
+
 /** A membership sold or renewed in person at the counter — covers both
  *  signing up a new member (isNewMember: true, mints a new MemberAccessRecord)
  *  and renewing an existing member's plan (isNewMember: false, extends theirs). */
