@@ -113,7 +113,17 @@ Cualquier otro fallo (500, red caída) se deja pasar tal cual: un backend muerto
 - **Unit** (`pnpm test`, sin red): `counterSale.http.test.ts` — cada método a su ruta, el token en la cabecera, `?lang=` según idioma, y las tres traducciones de error (más la que NO se traduce).
 - **Integración** (`pnpm test:integration`, contra el backend real en `:3001`, fuera de CI): verifica que **la ruta existe y el guard la protege**. Un error de dedo en la URL pasa todos los unitarios —afirman contra la misma URL equivocada— y solo se cae en producción; aquí se cae como un 404. La respuesta autenticada campo por campo la cubre `test/branch-ops.e2e-spec.ts` del backend, que sí puede sobreescribir el verifier.
 
-**Sin verificar en navegador todavía**: los endpoints de sucursal exigen un ID token con grupo `staff` y no hay User Pool vivo (infra destruida, ver CLAUDE.md raíz).
+### Verificado en navegador real (2026-09-12) ✅
+
+Se levantó el User Pool un momento (`terraform apply -target=module.cognito`, gratis), se dio de alta a Luis con grupo `staff`, y se manejó Chromium con Playwright:
+
+1. Login real contra Cognito → `/counter`.
+2. El inventario que pintó la pantalla salió de Postgres: `Stock: 200` para el Energy, `AGOTADO` con el `+` deshabilitado para el BCAA (que está en 0 en la base), y los nombres armados por el backend (`Shaker Loco · 700ml`, no `Shaker Loco`).
+3. Se vendieron 2 → **"✓ Venta confirmada por $90"** (45 × 2, precio puesto por el servidor).
+4. En Postgres: `branch_inventory` de Roma Sur bajó 200 → 198, se creó la fila en `counter_sales` con su ítem, y **las otras 3 sucursales quedaron intactas** — el stock es local, como manda la regla de negocio.
+5. Cero errores de consola.
+
+Después se restauró el seed y se destruyó el pool. Para repetirlo hace falta volver a levantar Cognito.
 
 ## Comandos
 
