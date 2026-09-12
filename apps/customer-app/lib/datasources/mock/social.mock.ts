@@ -1,8 +1,9 @@
 import type { SocialLink, FeedPost } from '../../types/social';
 import { SOCIAL_LINKS, SOCIAL_FEED } from '../../data';
 import { delay } from './delay';
+import type { ISocialRepository } from '../../repositories/social.repository';
 
-export class SocialMockDatasource {
+export class SocialMockDatasource implements ISocialRepository {
   async getLinks(): Promise<SocialLink[]> {
     await delay(120);
     return SOCIAL_LINKS;

@@ -1,9 +1,12 @@
 import type { MembershipTier } from '@mucho-loco/types';
 import { MembershipMockDatasource } from '../datasources/mock/membership.mock';
+import { MembershipHttpDatasource } from '../datasources/http/membership.http';
+import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
 export interface IMembershipRepository {
   getTiers(): Promise<MembershipTier[]>;
 }
 
-// Swap this line to plug in a real API datasource
-export const membershipRepository: IMembershipRepository = new MembershipMockDatasource();
+export const membershipRepository: IMembershipRepository = isHttpDatasourceEnabled()
+  ? new MembershipHttpDatasource()
+  : new MembershipMockDatasource();

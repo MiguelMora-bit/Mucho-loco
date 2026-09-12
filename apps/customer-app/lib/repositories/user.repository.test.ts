@@ -1,16 +1,30 @@
 import { describe, it, expect } from 'vitest';
 import { userRepository } from './user.repository';
-import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL } from '../datasources/mock/user.mock';
+import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL, OrderValidationError } from '../datasources/mock/user.mock';
+import { PRODUCTS } from '../data';
+import { HOME_SHIPPING_FEE } from '../pricing';
+
+const WHEY = PRODUCTS.find((p) => p.id === 'p1')!;   // 'Whey Protein 5LBS'
+const PRE = PRODUCTS.find((p) => p.id === 'p7')!;    // nombre distinto en es/en
 
 describe('userRepository', () => {
   it('createOrder adds an order that then shows up in getOrders', async () => {
     const before = await userRepository.getOrders(ALL_GYMS_TEST_EMAIL);
-    const items = [{ name: 'Test Product', flav: 'Test Flavor', img: '/assets/test.jpg', qty: 2 }];
 
-    const created = await userRepository.createOrder(ALL_GYMS_TEST_EMAIL, items, 123, 'card', 'pickup');
+    const created = await userRepository.createOrder(
+      ALL_GYMS_TEST_EMAIL,
+      [{ productId: WHEY.id, qty: 2 }],
+      'card',
+      'pickup',
+      'es',
+    );
 
-    expect(created.items).toEqual(items);
-    expect(created.total).toBe(123);
+    // El total sale del catálogo, no de lo que mandó el cliente — misma regla
+    // que UsersService.createOrder() del backend (ver apps/backend/CLAUDE.md).
+    expect(created.items).toEqual([
+      { name: WHEY.name.es, flav: WHEY.flav.es, img: WHEY.img, qty: 2 },
+    ]);
+    expect(created.total).toBe(WHEY.price * 2);
     expect(created.status).toBe('ready');
     expect(created.id).toMatch(/^#ML-/);
     expect(created.paymentMethod).toBe('card');
@@ -26,15 +40,54 @@ describe('userRepository', () => {
   // "Pagos en línea") — el pedido queda pendiente de pago hasta que se cobra
   // en mostrador, no "listo para retiro" como si ya estuviera pagado.
   it('creates cash orders as pending payment instead of ready', async () => {
-    const items = [{ name: 'Test Product', flav: 'Test Flavor', img: '/assets/test.jpg', qty: 1 }];
-    const created = await userRepository.createOrder(ALL_GYMS_TEST_EMAIL, items, 290, 'cash', 'pickup');
+    const created = await userRepository.createOrder(
+      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'cash', 'pickup', 'es');
     expect(created.status).toBe('pending_payment');
   });
 
   it('creates non-cash orders as ready immediately', async () => {
-    const items = [{ name: 'Test Product', flav: 'Test Flavor', img: '/assets/test.jpg', qty: 1 }];
-    const created = await userRepository.createOrder(ALL_GYMS_TEST_EMAIL, items, 290, 'transfer', 'pickup');
+    const created = await userRepository.createOrder(
+      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'transfer', 'pickup', 'es');
     expect(created.status).toBe('ready');
+  });
+
+  it('adds the shipping fee only when the order is delivered home', async () => {
+    const home = await userRepository.createOrder(
+      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'card', 'home', 'es');
+    expect(home.total).toBe(WHEY.price + HOME_SHIPPING_FEE);
+    expect(home.branch).toBeUndefined();
+
+    const pickup = await userRepository.createOrder(
+      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'card', 'pickup', 'es');
+    expect(pickup.total).toBe(WHEY.price);
+  });
+
+  // Efectivo es exclusivo de "recoger en gym" — a domicilio no hay quien cobre
+  // (ver CLAUDE.md raíz, "Pagos en línea"). El backend responde 400; el mock
+  // tiene que rechazarlo igual o el swap de datasource cambiaría el checkout.
+  it('rejects cash payment for a home delivery', async () => {
+    await expect(
+      userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'cash', 'home', 'es'),
+    ).rejects.toBeInstanceOf(OrderValidationError);
+  });
+
+  it('rejects an order that references a product outside the catalog', async () => {
+    await expect(
+      userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [{ productId: 'no-existe', qty: 1 }], 'card', 'pickup', 'es'),
+    ).rejects.toBeInstanceOf(OrderValidationError);
+  });
+
+  // Un pedido es un recibo congelado en el idioma de compra, no se retraduce
+  // (ver CLAUDE.md de este app) — por eso lang es parte del contrato.
+  it('freezes the receipt text in the language the order was placed in', async () => {
+    const es = await userRepository.createOrder(
+      ALL_GYMS_TEST_EMAIL, [{ productId: PRE.id, qty: 1 }], 'card', 'pickup', 'es');
+    const en = await userRepository.createOrder(
+      ALL_GYMS_TEST_EMAIL, [{ productId: PRE.id, qty: 1 }], 'card', 'pickup', 'en');
+
+    expect(es.items[0].name).toBe(PRE.name.es);
+    expect(en.items[0].name).toBe(PRE.name.en);
+    expect(PRE.name.es).not.toBe(PRE.name.en);
   });
 
   it('gives the single-gym test user a membership scoped to one branch', async () => {
@@ -78,7 +131,7 @@ describe('userRepository', () => {
     expect(second.accessCode).toBe(first.accessCode);
 
     // Sobrevive también a una acción no relacionada sobre el mismo usuario.
-    await userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [], 0, 'card', 'pickup');
+    await userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [], 'card', 'pickup', 'es');
     const afterUnrelatedAction = await userRepository.getMembership(ALL_GYMS_TEST_EMAIL);
     expect(afterUnrelatedAction.accessCode).toBe(first.accessCode);
   });

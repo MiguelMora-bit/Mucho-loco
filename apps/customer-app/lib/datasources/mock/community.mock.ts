@@ -1,5 +1,7 @@
 import type { CommunityPost } from '@mucho-loco/types';
 import { delay } from './delay';
+import type { ICommunityRepository } from '../../repositories/community.repository';
+import { UserMockDatasource } from './user.mock';
 
 // likedBy vive solo del lado del mock (quién le dio like) — nunca se expone
 // tal cual, cada lectura lo proyecta a { likeCount, likedByMe } relativo a
@@ -61,18 +63,21 @@ function findPost(postId: string): StoredPost {
   return post;
 }
 
-export class CommunityMockDatasource {
+export class CommunityMockDatasource implements ICommunityRepository {
   async getFeed(email: string): Promise<CommunityPost[]> {
     await delay(200);
     return POSTS.map((post) => toPublic(post, email));
   }
 
-  async createPost(email: string, authorName: string, authorBranch: string, body: string): Promise<CommunityPost> {
+  async createPost(email: string, body: string): Promise<CommunityPost> {
     await delay(200);
+    // Mismo criterio que el backend: el autor sale de quién es el socio, no
+    // de lo que mande el caller.
+    const profile = await new UserMockDatasource().getProfile(email);
     const post: StoredPost = {
       id: `post-${Date.now()}`,
-      authorName,
-      authorBranch,
+      authorName: profile.name,
+      authorBranch: profile.branch,
       body,
       createdAt: new Date().toISOString(),
       likedBy: new Set(),
@@ -93,10 +98,11 @@ export class CommunityMockDatasource {
     return toPublic(post, email);
   }
 
-  async addComment(email: string, authorName: string, postId: string, body: string): Promise<CommunityPost> {
+  async addComment(email: string, postId: string, body: string): Promise<CommunityPost> {
     await delay(150);
     const post = findPost(postId);
-    post.comments = [...post.comments, { id: `comment-${Date.now()}`, authorName, body, createdAt: new Date().toISOString() }];
+    const profile = await new UserMockDatasource().getProfile(email);
+    post.comments = [...post.comments, { id: `comment-${Date.now()}`, authorName: profile.name, body, createdAt: new Date().toISOString() }];
     return toPublic(post, email);
   }
 }

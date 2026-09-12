@@ -1,4 +1,7 @@
-import type { UserProfile, MembershipInfo, Visit, Order, OrderItem, OnlinePaymentMethod } from '@mucho-loco/types';
+import type { UserProfile, MembershipInfo, Visit, Order, OrderItem, NewOrderLine, OnlinePaymentMethod, Lang } from '@mucho-loco/types';
+import type { IUserRepository } from '../../repositories/user.repository';
+import { PRODUCTS } from '../../data';
+import { HOME_SHIPPING_FEE } from '../../pricing';
 import { delay } from './delay';
 
 interface UserRecord {
@@ -177,7 +180,14 @@ function getRecord(email: string): UserRecord {
   return RECORDS[email];
 }
 
-export class UserMockDatasource {
+/** Pedido inválido (producto inexistente, efectivo a domicilio). Equivale al
+ *  400/404 que devuelve el backend real — `POST /api/orders` traduce ambos al
+ *  mismo status, ver su route handler. */
+export class OrderValidationError extends Error {
+  readonly name = 'OrderValidationError';
+}
+
+export class UserMockDatasource implements IUserRepository {
   async getProfile(email: string): Promise<UserProfile> {
     await delay(200);
     return getRecord(email).profile;
@@ -216,8 +226,34 @@ export class UserMockDatasource {
     return getRecord(email).orders;
   }
 
-  async createOrder(email: string, items: OrderItem[], total: number, paymentMethod: OnlinePaymentMethod, delivery: 'pickup' | 'home'): Promise<Order> {
+  /** Mismas reglas que UsersService.createOrder() del backend: el total se
+   *  calcula aquí desde el catálogo, nunca se recibe del cliente, y efectivo
+   *  exige "recoger en gym". Si esto se desviara del backend, el swap de
+   *  datasource cambiaría el comportamiento del checkout — por eso el mock
+   *  imita la regla en vez de confiar en quien lo llama. */
+  async createOrder(
+    email: string,
+    lines: NewOrderLine[],
+    paymentMethod: OnlinePaymentMethod,
+    delivery: 'pickup' | 'home',
+    lang: Lang,
+  ): Promise<Order> {
     await delay(150);
+    if (paymentMethod === 'cash' && delivery !== 'pickup') {
+      throw new OrderValidationError('cash payment method requires pickup delivery');
+    }
+
+    const items: OrderItem[] = [];
+    let subtotal = 0;
+    for (const line of lines) {
+      const product = PRODUCTS.find((p) => p.id === line.productId);
+      if (!product) {
+        throw new OrderValidationError(`Product not found: ${line.productId}`);
+      }
+      items.push({ name: product.name[lang], flav: product.flav[lang], img: product.img, qty: line.qty });
+      subtotal += product.price * line.qty;
+    }
+
     const record = getRecord(email);
     // Efectivo solo aplica con "recoger en gym" (ver CLAUDE.md raíz, "Pagos en
     // línea") — el pedido queda pendiente de pago hasta que se cobra en
@@ -228,7 +264,7 @@ export class UserMockDatasource {
       date: new Date().toISOString(),
       status,
       items,
-      total,
+      total: subtotal + (delivery === 'home' ? HOME_SHIPPING_FEE : 0),
       paymentMethod,
       delivery,
       branch: delivery === 'pickup' ? record.profile.branch : undefined,

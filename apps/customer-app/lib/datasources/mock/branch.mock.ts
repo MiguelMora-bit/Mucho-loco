@@ -1,8 +1,9 @@
 import type { Branch } from '@mucho-loco/types';
+import type { IBranchRepository } from '../../repositories/branch.repository';
 import { BRANCHES } from '../../data';
 import { delay } from './delay';
 
-export class BranchMockDatasource {
+export class BranchMockDatasource implements IBranchRepository {
   async getAll(): Promise<Branch[]> {
     await delay(160);
     return BRANCHES;

@@ -163,6 +163,18 @@ export interface OrderItem {
   img: string;
   qty: number;
 }
+/**
+ * Lo único que el cliente manda al crear un pedido: qué producto y cuántos.
+ *
+ * Nombre, sabor, imagen, precio unitario y total los resuelve el servidor
+ * desde el catálogo — un cliente no puede elegir cuánto paga (ver "Seguridad"
+ * en apps/backend/CLAUDE.md). `OrderItem` de arriba es la respuesta ya
+ * congelada, no la entrada.
+ */
+export interface NewOrderLine {
+  productId: string;
+  qty: number;
+}
 
 export interface Order {
   id: string;

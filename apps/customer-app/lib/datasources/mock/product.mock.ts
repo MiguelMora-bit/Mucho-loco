@@ -1,8 +1,9 @@
 import type { Product } from '@mucho-loco/types';
+import type { IProductRepository } from '../../repositories/product.repository';
 import { PRODUCTS } from '../../data';
 import { delay } from './delay';
 
-export class ProductMockDatasource {
+export class ProductMockDatasource implements IProductRepository {
   async getAll(): Promise<Product[]> {
     await delay(180);
     return PRODUCTS;

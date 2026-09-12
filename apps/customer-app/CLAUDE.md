@@ -105,10 +105,44 @@ O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 
 `Memberships`, `Contact` y `AnnouncementsBoard` no reciben su data por props: la leen de un store de Zustand (`lib/stores/announcements.store.ts`, `membershipTiers.store.ts`, `socialLinks.store.ts`, `socialFeed.store.ts`), todos construidos con el factory `lib/stores/createAsyncResource.ts` (`{ data, loading, error, hydrate, fetch }`). El Server Component de home (`app/[locale]/page.tsx`) sigue precargando estos datos vía repository — igual que branches/products — y `MuchoLoco.tsx` los recibe como props y los usa solo para llamar `hydrate()` una vez al montar (así no hay flash de loader en la primera carga). `loading`/`fetch()` quedan disponibles para cuando el componente sí necesita mostrar el loader — `AnnouncementsBoard` re-hace `fetch()` cada vez que se abre, y el botón "EN VIVO VÍA API" del feed de `Contact` lo dispara manualmente. Nuevo contenido de landing sin repository propio (nada de arrays sueltos en el componente) debería seguir este mismo patrón.
 
+## Swap de datasource: mock ↔ backend NestJS (2026-09-12)
+
+Los 8 dominios de `lib/repositories/` pueden leerse del backend real (`apps/backend`) en vez de los mocks. **El default sigue siendo mock** — sin variables de entorno nuevas, este app arranca sin Postgres ni NestJS, igual que antes.
+
+```bash
+# .env.local (o inline)
+NEXT_PUBLIC_DATA_SOURCE=http          # cualquier otro valor / ausente = mock
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+- **Dónde se decide**: una sola línea por repositorio (`isHttpDatasourceEnabled() ? new XHttpDatasource() : new XMockDatasource()`). Ni componentes, ni stores, ni páginas saben cuál está activo.
+- **`lib/datasources/http/`** espeja `lib/datasources/mock/` archivo por archivo. `client.ts` centraliza URL, query, `Authorization`, caché (`revalidate` para catálogo, `no-store` para cuenta), timeout de 10s y errores (`ApiRequestError`). Los 404 de `getById` se traducen a `null` (`apiGetOrNull`) porque el mock devuelve `null` y NestJS tira `NotFoundException`.
+- **Token**: los dominios de cuenta (`user`, `community`, `performance`) leen la cookie httpOnly `ml_session` con `cookieSessionToken` (`session-token.ts`, importa `next/headers` de forma dinámica). Por eso solo se pueden llamar desde el servidor — que es donde ya se llamaban (`app/[locale]/(account)/*/page.tsx` y `app/api/*`).
+- **Ambos datasources implementan la misma interfaz** (`implements IXRepository` en mock y HTTP): si uno se desvía del contrato, no compila.
+
+### Tres cambios de contrato que salieron del swap
+
+El swap no fue solo cableado — expuso tres lugares donde el contrato mock no era implementable por un backend real:
+
+1. **`createOrder` ya no recibe `total` ni `OrderItem[]`**, sino `NewOrderLine[]` (`{ productId, qty }`) + `lang`. El mock recibía nombre, sabor, imagen y total ya resueltos por el cliente — un cliente malicioso podía comprar a $1. Ahora el precio lo calcula quien implementa el contrato (el mock desde `PRODUCTS`, el backend desde la tabla `Product`), y `lang` dice en qué idioma congelar el recibo. El mock también imita las dos reglas de negocio del backend: efectivo exige `pickup`, y un `productId` fuera del catálogo se rechaza (`OrderValidationError`).
+2. **`createPost`/`addComment` de community ya no reciben `authorName`/`authorBranch`.** El autor lo deriva el datasource de la identidad del socio (el mock de su registro, el backend del ID token). Antes el caller lo pasaba, o sea que se podía firmar un post con el nombre de otra persona.
+3. **`HOME_SHIPPING_FEE`** (99) dejó de estar hardcodeado en 4 lugares y vive en `lib/pricing.ts`. El backend tiene su propia copia y **él es la autoridad** — el frontend solo la usa para previsualizar el total antes de mandar el pedido.
+
+### Diferencia conocida (no es bug)
+
+`AnnouncementsBoard` cambia de orden: el mock devuelve los avisos en el orden escrito a mano de `lib/data.ts`, el backend los ordena por fecha ascendente. El contenido es idéntico (el test de integración lo compara campo por campo). Si el orden del tablero importa, la solución es una columna de prioridad en el backend, no reproducir un orden arbitrario.
+
+### Testing del swap
+
+- **Unit** (`pnpm test`, sin red): `lib/datasources/http/client.test.ts` (URL, query, token, caché, 404→null, timeouts, errores de red), `catalog.http.test.ts` y `account.http.test.ts` (cada método de repositorio → su ruta, con `fetch` stubeado). Incluye las regresiones de seguridad: el email del caller nunca viaja en la URL ni en el body, y el body de un pedido nunca lleva `total`.
+- **Integración** (`pnpm test:integration`, contra el backend REAL en `:3001` y su Postgres — no corre en CI): `tests/integration/`. Compara la salida del datasource HTTP contra la del mock **campo por campo** para los 5 dominios públicos; si el seed de `apps/backend` se desincroniza de `lib/data.ts`, truena aquí. Para los dominios de cuenta verifica que el guard responde 401 y que ninguna ruta da 404 — la respuesta autenticada no se puede probar desde aquí porque no hay User Pool vivo (infra destruida, ver CLAUDE.md raíz); eso lo cubre `test/app.e2e-spec.ts` de `apps/backend`, que sobreescribe `CognitoVerifierService`.
+
+Levantar el backend antes: `pnpm --filter @mucho-loco/backend start:dev`.
+
 ## Próximo hito: backend NestJS
 
-Auth ya es real (Cognito, ver "Auth flow" arriba). Cuando exista `apps/backend`, los cambios serán en:
-1. `lib/repositories/*.ts` → reemplazar datasources mock con fetches a la API real (autenticados con el ID token de `ml_session`).
-2. Las páginas protegidas → pasar de datos mock (`MOCK_PROFILE`, etc.) a datos reales del usuario logueado.
+Auth ya es real (Cognito) y el swap de datasource ya existe (ver la sección anterior). Lo que falta para correr 100% contra el backend:
+1. Recrear la infra de AWS (`terraform apply`) para tener un User Pool vivo y poder ejercer los dominios de cuenta en HTTP.
+2. Poner `NEXT_PUBLIC_DATA_SOURCE=http` como default cuando el backend esté desplegado de verdad (hoy el default es mock a propósito).
 
 El middleware y el flujo de rutas NO cambian.

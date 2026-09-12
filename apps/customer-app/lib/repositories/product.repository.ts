@@ -1,5 +1,7 @@
 import type { Product } from '@mucho-loco/types';
 import { ProductMockDatasource } from '../datasources/mock/product.mock';
+import { ProductHttpDatasource } from '../datasources/http/product.http';
+import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
 export interface IProductRepository {
   getAll(): Promise<Product[]>;
@@ -8,4 +10,6 @@ export interface IProductRepository {
   getSiblings(id: string, cat: string): Promise<Product[]>;
 }
 
-export const productRepository: IProductRepository = new ProductMockDatasource();
+export const productRepository: IProductRepository = isHttpDatasourceEnabled()
+  ? new ProductHttpDatasource()
+  : new ProductMockDatasource();

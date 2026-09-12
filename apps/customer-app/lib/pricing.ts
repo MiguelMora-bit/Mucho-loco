@@ -14,3 +14,12 @@ export function calculateMembershipPrice(
 export function formatPrice(amount: number): string {
   return `$${amount.toLocaleString()}`;
 }
+
+/**
+ * Costo de envío a domicilio. El backend tiene su propia copia
+ * (`HOME_SHIPPING_FEE` en `users.service.ts`) y ÉL es la autoridad — el total
+ * que se cobra lo calcula el servidor, nunca el cliente. Esta constante solo
+ * existe para que el resumen del carrito muestre la misma cifra antes de
+ * mandar el pedido.
+ */
+export const HOME_SHIPPING_FEE = 99;

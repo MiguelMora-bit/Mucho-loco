@@ -1,5 +1,6 @@
 import type { Workout, PerformanceStat, PersonalRecord, HeatmapLevel } from '../../types/performance';
 import { delay } from './delay';
+import type { IPerformanceRepository } from '../../repositories/performance.repository';
 
 const MOCK_STATS: PerformanceStat[] = [
   { lbl: { es: 'ENTRENAMIENTOS ESTE MES', en: 'WORKOUTS THIS MONTH' }, num: '18', sub: { es: '+3 vs mes anterior', en: '+3 vs last month' }, color: 'var(--orange)' },
@@ -33,7 +34,7 @@ function generateHeatmap(): HeatmapLevel[][] {
   );
 }
 
-export class PerformanceMockDatasource {
+export class PerformanceMockDatasource implements IPerformanceRepository {
   async getStats(): Promise<PerformanceStat[]> {
     await delay(140);
     return MOCK_STATS;

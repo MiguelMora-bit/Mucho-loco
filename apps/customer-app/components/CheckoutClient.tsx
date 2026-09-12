@@ -11,7 +11,7 @@ import { useAsyncSubmit } from '../lib/hooks/useAsyncSubmit';
 import { useSessionRefresh } from '../lib/hooks/useSessionRefresh';
 import { useT } from '../lib/hooks/useT';
 import { Stepper, CartStep, PaymentStep, ConfirmationStep } from './checkout';
-import type { Lang, Order, OrderItem, OnlinePaymentMethod } from '@mucho-loco/types';
+import type { Lang, Order, NewOrderLine, OnlinePaymentMethod } from '@mucho-loco/types';
 
 type Delivery = 'pickup' | 'home';
 
@@ -32,11 +32,11 @@ export default function CheckoutClient() {
 
   async function placeOrder(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
-    const shipping = delivery === 'home' ? 99 : 0;
-    const total = cart.reduce((n, i) => n + i.price * i.qty, 0) + shipping;
-    const items: OrderItem[] = cart.map(({ name, flav, img, qty }) => ({ name: name[lang], flav: flav[lang], img, qty }));
+    // Solo id + cantidad: precio, nombre, sabor, imagen y total los resuelve
+    // el servidor desde el catálogo (ver IUserRepository.createOrder).
+    const items: NewOrderLine[] = cart.map(({ id, qty }) => ({ productId: id, qty }));
     await run(async () => {
-      await postJson<Order>('/api/orders', { items, total, paymentMethod: payMethod, delivery });
+      await postJson<Order>('/api/orders', { items, paymentMethod: payMethod, delivery, lang });
       clear();
       setStep(2);
     });
