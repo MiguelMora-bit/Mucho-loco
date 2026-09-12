@@ -1,0 +1,225 @@
+// Contrato derivado de apps/customer-app/lib/repositories/*.ts (branch, product,
+// membership, user) — ver root CLAUDE.md, "Metodología: contract-first". Cada
+// campo mapea 1:1 a algo que un repository mock ya modelaba, salvo donde se
+// nota una mejora deliberada (ver comentarios) al pasar de mock plano a un
+// backend real.
+//
+// Fuera de alcance de este primer corte (quedan en customer-app como mock por
+// ahora): Announcement, CommunityPost/Comment, SocialLink/FeedPost (feed de
+// marketing), Performance (workouts/records/heatmap). El root CLAUDE.md solo
+// nombra "branches, products, orders, memberships" para este paso — el resto
+// se migra en una pasada posterior.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum BranchTier {
+  Lite
+  Core
+  Premium
+}
+
+enum TierKey {
+  single
+  all
+}
+
+enum PlanKey {
+  visit
+  weekly
+  monthly
+  quarterly
+  annual
+}
+
+enum AccessStatus {
+  active
+  grace
+  expired
+}
+
+enum ProductCat {
+  proteinas
+  pre
+  energy
+  gomitas
+  agua
+  merch
+}
+
+enum OnlinePaymentMethod {
+  card
+  transfer
+  mercadopago
+  stripe
+  paypal
+  cash
+}
+
+enum DeliveryMethod {
+  pickup
+  home
+}
+
+enum OrderStatus {
+  ready
+  done
+}
+
+model Branch {
+  id       Int        @id
+  name     String
+  city     String
+  addr     String
+  phone    String
+  lat      Float
+  lng      Float
+  classes  Int
+  coaches  Int
+  price    Int
+  tier     BranchTier
+  featured Boolean    @default(false)
+  /// BranchPromo { label: LocalizedString, detail: LocalizedString, discountPercent: number } — null cuando no hay promo activa.
+  promo    Json?
+  hours    String
+  img      String
+
+  memberships Membership[]
+  visits      Visit[]
+  orders      Order[]
+
+  @@map("branches")
+}
+
+model Product {
+  id    String     @id
+  cat   ProductCat
+  /// LocalizedString { es, en }
+  name  Json
+  /// LocalizedString { es, en }
+  flav  Json
+  price Int
+  img   String
+  tag   String?
+
+  @@map("products")
+}
+
+/// Catálogo de tiers de membresía (single/all) — no es específico de un
+/// socio, es la tabla de precios que ve el landing. Ver Membership para la
+/// membresía real de un usuario.
+model MembershipTier {
+  key     TierKey @id
+  /// LocalizedString { es, en }
+  name    Json
+  factor  Float
+  /// Record<Lang, string[]>
+  perks   Json
+  /// LocalizedString { es, en }
+  badge   Json
+  popular Boolean @default(false)
+
+  @@map("membership_tiers")
+}
+
+/// La identidad vive en Cognito (auth); esta tabla es el perfil/negocio.
+/// cognitoSub es el `sub` del JWT — email puede cambiar en Cognito, sub no.
+model User {
+  id         String  @id @default(uuid())
+  cognitoSub String  @unique
+  email      String  @unique
+  name       String
+  phone      String  @default("")
+  /// String de display tal cual el mock ("14 MAR 1994") — el propio
+  /// customer-app ya marcó este campo fuera de alcance de su migración a
+  /// fechas ISO (ver su CLAUDE.md), así que el backend no le adelanta.
+  birthdate  String  @default("")
+  createdAt  DateTime @default(now())
+
+  membership Membership?
+  visits     Visit[]
+  orders     Order[]
+
+  @@map("users")
+}
+
+/// plan y daysLeft de MembershipInfo NO se guardan aquí — son derivados
+/// (plan se arma de tierKey+periodKey+branch, daysLeft de expiresAt) y se
+/// calculan en el service para no arriesgar que queden desincronizados,
+/// cosa que sí le podía pasar al mock (daysLeft era un campo suelto).
+model Membership {
+  id          String       @id @default(uuid())
+  userId      String       @unique
+  user        User         @relation(fields: [userId], references: [id])
+  branchId    Int
+  branch      Branch       @relation(fields: [branchId], references: [id])
+  tierKey     TierKey
+  periodKey   PlanKey
+  expiresAt   DateTime
+  status      AccessStatus @default(active)
+  graceEndsAt DateTime?
+  visits      Int          @default(0)
+  streak      Int          @default(0)
+  accessCode  String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("memberships")
+}
+
+/// day/month/duration del mock eran texto pre-formateado ("18"/"JUN"/"1h
+/// 24m") — mismo defecto que Order.date tenía antes de la migración a ISO
+/// de 2026-09-02 en customer-app. Aquí se corrige desde el inicio: fecha y
+/// duración reales, el frontend formatea al mostrar.
+model Visit {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  branchId        Int
+  branch          Branch   @relation(fields: [branchId], references: [id])
+  visitedAt       DateTime
+  durationMinutes Int
+
+  @@map("visits")
+}
+
+model Order {
+  id            String              @id @default(uuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id])
+  status        OrderStatus         @default(ready)
+  total         Int
+  paymentMethod OnlinePaymentMethod
+  delivery      DeliveryMethod
+  /// Solo cuando delivery = pickup — los pedidos a domicilio salen de la
+  /// bodega central, sin sucursal asociada (ver CLAUDE.md raíz).
+  branchId      Int?
+  branch        Branch?             @relation(fields: [branchId], references: [id])
+  deliveredAt   DateTime?
+  createdAt     DateTime            @default(now())
+
+  items OrderItem[]
+
+  @@map("orders")
+}
+
+/// name/flav son texto congelado al momento del pedido, no una referencia a
+/// Product — un pedido es un recibo, no debe cambiar si el catálogo cambia
+/// después (misma razón que ya documentó customer-app para este campo).
+model OrderItem {
+  id      String @id @default(uuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  name    String
+  flav    String
+  img     String
+  qty     Int
+
+  @@map("order_items")
+}

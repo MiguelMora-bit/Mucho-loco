@@ -3,8 +3,14 @@ packages:
   - "packages/*"
 allowBuilds:
   '@parcel/watcher': true
+  '@prisma/client': true
+  '@prisma/engines': true
   '@swc/core': true
+  esbuild: true
+  msgpackr-extract: true
+  prisma: true
   unrs-resolver: true
+  workerd: true
 minimumReleaseAgeExclude:
   - '@eloqnt/config@0.1.0'
   - '@eloqnt/format-json@0.1.0'

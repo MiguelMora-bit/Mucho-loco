@@ -20,6 +20,7 @@ coverage/
 .env
 .env.local
 .env.development.local
+.env.test
 .env.test.local
 .env.production.local
 
@@ -51,6 +52,9 @@ playwright/.cache/
 # ── TypeScript ────────────────────────────────────────
 *.tsbuildinfo
 next-env.d.ts
+
+# ── Prisma (apps/backend) — generado dentro de node_modules por defecto,
+# ya cubierto por la regla node_modules/ de arriba. Nada que agregar aquí.
 
 # ── Misc ─────────────────────────────────────────────
 *.pem

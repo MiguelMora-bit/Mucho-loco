@@ -11,10 +11,10 @@ Gestionado con **pnpm workspaces + Turborepo**. Un único desarrollador, así qu
 ```
 mucho-loco/
   apps/
-    customer-app/       # Next.js — tienda + app del socio
-    branch-app/         # Vite + React SPA — Fase 1 en progreso (versión mínima) / Fase 2 (completa)
-    owner-panel/        # Vite + React SPA — Fase 1 en progreso (solo lectura) / Fase 2 (completo)
-    backend/            # futuro — NestJS sobre AWS nativo, decidido (ver "Arquitectura de backend" abajo), sin código todavía
+    customer-app/       # Next.js — tienda + app del socio — Fase 1 completa
+    branch-app/         # Vite + React SPA — Fase 1 y 2 completas
+    owner-panel/        # Vite + React SPA — Fase 1, 2 y 3 completas
+    backend/            # NestJS + Prisma + Postgres — 4 dominios migrados (branches/products/membership-tiers/users), ver su CLAUDE.md
   packages/
     types/              # @mucho-loco/types — tipos de dominio compartidos (Branch, Product, etc.)
 ```
@@ -26,7 +26,7 @@ pnpm dev             # turbo run dev — corre dev de todos los apps (o pnpm --f
 pnpm build           # turbo run build — respeta orden de dependencias entre paquetes
 ```
 
-Cada app nuevo tiene su propio `CLAUDE.md` con sus convenciones específicas. `apps/customer-app/CLAUDE.md`, `apps/branch-app/CLAUDE.md` y `apps/owner-panel/CLAUDE.md` ya existen; `apps/backend/CLAUDE.md` se crea cuando arranque ese app.
+Cada app nuevo tiene su propio `CLAUDE.md` con sus convenciones específicas: `apps/customer-app/CLAUDE.md`, `apps/branch-app/CLAUDE.md`, `apps/owner-panel/CLAUDE.md` y `apps/backend/CLAUDE.md`.
 
 **branch-app y owner-panel son Vite + React (SPA), no Next.js** — decisión explícita (2026-09-02): son herramientas internas para staff/dueño sin necesidad de SEO/SSR, y usar un framework distinto por app (se evaluó Vue/Angular para aprender) hubiera fragmentado el stack de un desarrollador solo sin ganancia real. Comparten `@mucho-loco/types` con customer-app, pero **no** comparten código de runtime (stores, hooks) todavía — `lib/stores/createAsyncResource.ts` (el factory de Zustand para el patrón mock-first) vive duplicado en los 3 apps a propósito: son ~20 líneas, y extraerlo a un paquete compartido ahora costaría más en wiring de workspace que lo que ahorra. Extraer solo si crece lógica real (retries, caché) o aparece un 4to consumidor.
 
@@ -78,13 +78,13 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 **Contract-first**: terminar `customer-app` completamente mock-funcional (todos los flujos de usuario funcionando con datos falsos, sin huecos) ANTES de escribir el backend. La capa `lib/repositories/` de `customer-app` ya está diseñada para esto — cada método de repositorio define el contrato que el backend real va a tener que cumplir. Cuando el backend esté listo, solo se cambia el datasource (de mock a HTTP), no el resto de la app.
 
 Orden de fases:
-1. `customer-app` 100% mock-funcional (flujos completos: tienda, cuenta, checkout, panel, rendimiento).
-2. Definir contrato de API (DTOs/OpenAPI) a partir de los repositorios ya existentes.
-3. Fundaciones AWS vía Terraform: VPC, RDS Postgres, Cognito User Pool.
-4. Backend NestJS: módulos de dominio (branches, products, orders, memberships) + Prisma + auth con Cognito.
-5. Conectar: swap de datasource mock → HTTP en `customer-app`, Docker + ECS Fargate, CI/CD.
-6. Pagos (Stripe/PayPal/Mercado Pago) sobre la base ya funcional.
-7. `branch-app` y `owner-panel` (Fase 2/3 del negocio) reusando `apps/backend` y `packages/types`.
+1. ✅ `customer-app` 100% mock-funcional (flujos completos: tienda, cuenta, checkout, panel, rendimiento).
+2. ✅ (parcial) Contrato de API derivado de los repositorios existentes — hecho para `branches`/`products`/`membership-tiers`/`users` (los DTOs de respuesta son los tipos de `@mucho-loco/types` directamente). Falta derivar el contrato de `community`/`announcement`/`social`/`performance`.
+3. ⏳ Fundaciones AWS vía Terraform: código en `infra/` ya existe de una vuelta anterior, pero está **destruido** (ver "Nota operativa" abajo) — sin aplicar todavía.
+4. ✅ (parcial) Backend NestJS: `apps/backend` — módulos de `branches`/`products`/`memberships`/`users` + Prisma (Postgres local vía Homebrew, sin Docker en esta máquina) + auth con Cognito (`CognitoAuthGuard`, sin probar contra un User Pool real todavía porque la infra está destruida — sí probado end-to-end con `CognitoVerifierService` sobreescrito en tests). Ver `apps/backend/CLAUDE.md` para el detalle completo, incluida la decisión de usar Prisma 6 en vez de 7. Falta migrar `community`/`announcement`/`social`/`performance`.
+5. ⏳ Conectar: swap de datasource mock → HTTP en `customer-app` (todavía no se tocó, el backend corre standalone), Docker + ECS Fargate (sin Dockerfile probado, no hay Docker en esta máquina), CI/CD.
+6. ⏳ Pagos (Stripe/PayPal/Mercado Pago) sobre la base ya funcional.
+7. ⏳ `branch-app` y `owner-panel` (Fase 2/3 del negocio) reusando `apps/backend` y `packages/types`.
 
 ### Pendiente de decidir
 
@@ -100,7 +100,7 @@ Viven en la raíz del monorepo — aplican a todos los apps, no solo a `customer
 - `aws-auth` (oficial AWS) — Cognito.
 - `aws-cdk` (oficial AWS) — instalada pero no activa (IaC cambió a Terraform, ver "Arquitectura de backend"); no hay skill oficial de Terraform instalada, se trabaja directo con el usuario.
 - `aws-containers` (oficial AWS) — Docker/ECS/Fargate.
-- `prisma-database-setup` (oficial Prisma) — ORM + PostgreSQL.
+- `prisma-database-setup` (oficial Prisma) — ORM + PostgreSQL. La skill documenta el flujo de Prisma 7 (driver adapters, `prisma.config.ts`); `apps/backend` usa Prisma 6 clásico a propósito — ver "Decisión importante: Prisma 6, no Prisma 7" en `apps/backend/CLAUDE.md` antes de seguir la skill al pie de la letra aquí.
 - `database-schema-designer` — diseño de esquema multi-sucursal.
 - `nestjs-best-practices`, `nestjs-patterns`, `frontend-design`, `vercel-composition-patterns`, `vercel-react-native-skills`, `vercel-react-view-transitions`.
 - `tailwind-css` — se adapta a la versión de Tailwind instalada (hoy v3 en `customer-app`); no asume v4 aunque su metadata lo mencione.
