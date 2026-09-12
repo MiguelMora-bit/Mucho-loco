@@ -2,6 +2,7 @@ import type { BranchInventoryLevel, InventoryTransfer } from '@mucho-loco/types'
 import { BRANCH_INVENTORY, BRANCH_STATS, INVENTORY_TRANSFERS } from '../../data';
 import { delay } from './delay';
 import { InsufficientStockError, SameBranchError } from '../../repositories/inventoryTransfer.errors';
+import type { IInventoryTransferRepository } from '../../repositories/inventoryTransfer.repository';
 
 export interface CreateTransferInput {
   productId: string;
@@ -10,7 +11,7 @@ export interface CreateTransferInput {
   qty: number;
 }
 
-export class InventoryTransferMockDatasource {
+export class InventoryTransferMockDatasource implements IInventoryTransferRepository {
   async getBranchInventory(): Promise<BranchInventoryLevel[]> {
     await delay(150);
     return BRANCH_INVENTORY;

@@ -1,6 +1,7 @@
 import type { Expense, ExpenseCategory } from '@mucho-loco/types';
 import { EXPENSES } from '../../data';
 import { delay } from './delay';
+import type { IExpensesRepository } from '../../repositories/expenses.repository';
 
 export interface CreateExpenseInput {
   branchId: number | null;
@@ -9,7 +10,7 @@ export interface CreateExpenseInput {
   amount: number;
 }
 
-export class ExpensesMockDatasource {
+export class ExpensesMockDatasource implements IExpensesRepository {
   async getAll(): Promise<Expense[]> {
     await delay(160);
     return EXPENSES;
@@ -23,7 +24,11 @@ export class ExpensesMockDatasource {
       category: input.category,
       description: input.description,
       amount: input.amount,
-      date: new Date().toISOString(),
+      // Fecha sola, sin hora: un gasto es de un día, no de un instante — y es
+      // lo que devuelve el backend (`toExpense` recorta a 10 caracteres). Si
+      // el mock mandara el datetime completo, la lista se ordenaría distinto
+      // según el modo.
+      date: new Date().toISOString().slice(0, 10),
     };
     EXPENSES.push(expense);
     return expense;

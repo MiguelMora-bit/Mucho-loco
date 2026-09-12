@@ -32,6 +32,49 @@ Mismo patrón mock-first: `datasources/mock/stats.mock.ts` (un solo datasource c
 
 Transferencias (`inventoryTransfer.repository.ts` / `.mock.ts` / `.errors.ts`) es su propio dominio, no una tercera vista del mismo datasource de `stats.mock.ts` — a diferencia de branch stats/inventario (solo lectura), transferencias muta `BRANCH_INVENTORY` (decrementa origen, incrementa o abre nivel en destino) y valida (`SameBranchError`, `InsufficientStockError`), mismo patrón que `counterSale.mock.ts` de `branch-app`. Dos stores (`branchInventory.store.ts`, `inventoryTransfers.store.ts`); tras `create()` la página vuelve a pedir ambos (`fetch()`), nunca confía en la copia previa — mismo patrón que el resto del monorepo.
 
+## Swap de datasource: mock ↔ backend NestJS (2026-09-12)
+
+Los **4 repositorios están migrados** (`stats`, `inventoryTransfer`, `expenses`, `payroll`). Igual que en los otros dos apps, el default sigue siendo mock: sin configurar nada esto arranca sin Postgres ni backend.
+
+```bash
+# .env.local (o inline)
+VITE_DATA_SOURCE=http          # cualquier otro valor / ausente = mock
+VITE_API_URL=http://localhost:3001
+```
+
+`src/lib/datasources/http/client.ts` crea un cliente de `@mucho-loco/api-client` (compartido con `branch-app`) con la política de este app: token del store de auth y `?lang=` en toda request, porque el inventario global aplana nombres de producto.
+
+### Lo que cambia de verdad al prender el flag
+
+1. **`payroll.getAttendance()` deja de leer un dato semilla.** `ATTENDANCE_SUMMARIES` del mock era una lista escrita a mano; contra el backend, `daysWorked` son los turnos que `branch-app` fichó DE VERDAD. Ese era el pendiente explícito de la Fase 3 en el CLAUDE.md raíz, y es el motivo de que los dos apps compartan base.
+2. **El cálculo de nómina deja de correr en el navegador.** `runPayroll` ya no calcula: pide al backend que emita los recibos, y el backend los **guarda** con nombre, sucursal, puesto y sueldo congelados — un recibo es un documento histórico, no algo que se recalcule al abrir la pantalla. `lib/payroll.ts` sigue vivo porque lo usa el mock; en modo HTTP no se ejecuta y se puede borrar el día que el mock deje de hacer falta.
+3. **Los números de `BRANCH_STATS` se achican.** El mock devolvía cuatro filas a mano con `revenue: 186400`; el backend los deriva de transacciones reales. Contra una base recién sembrada eso da importes chicos — es el precio de que sean ciertos.
+4. **Una transferencia deja de poder quedarse a medias.** El mock mutaba dos arreglos; el backend descuenta del origen, suma al destino y registra el movimiento en una transacción de base de datos.
+
+### Errores tipados
+
+`inventoryTransfer.errors.ts` y `payroll.errors.ts` siempre pidieron que un datasource real rechace con los mismos tipos. El backend manda un código de máquina en el cuerpo de cada 4xx (`apps/backend/src/common/error-codes.ts`) y el datasource lo traduce:
+
+| Código del backend | Error del contrato |
+|---|---|
+| `SAME_BRANCH_TRANSFER` | `SameBranchError` |
+| `INSUFFICIENT_STOCK` | `InsufficientStockError` (con `productName`) |
+| `BRANCH_DOES_NOT_STOCK_PRODUCT` | `InsufficientStockError` — para HQ es lo mismo: no hay de dónde sacarlo |
+| `PERIOD_NOT_FOUND` / `PERIOD_ALREADY_CLOSED` | `PeriodNotFoundError` / `PeriodAlreadyClosedError` |
+
+Cualquier otro fallo pasa tal cual: un 500 no es un error de negocio y disfrazarlo de "sin stock" sería mentir.
+
+### Fechas
+
+Este app ya estaba bien: todas las fechas viajaban en ISO y se formatean al pintar con `lib/dates.ts`. El único ajuste fue que `expenses.mock.create()` devolvía un datetime completo mientras el backend manda fecha sola — con el datetime, la lista se ordenaba distinto según el modo.
+
+### Testing
+
+- **Unit** (`pnpm test`, sin red): `hq.http.test.ts` — cada método a su ruta, el token, `?lang=`, `branchId: null` viajando explícito en un gasto corporativo, y cada traducción de error (más las que no se traducen).
+- **Integración** (`pnpm test:integration`, contra el backend real en `:3001`, fuera de CI): las 12 llamadas verifican que la ruta existe y que el guard la protege. La respuesta autenticada campo por campo la cubre `test/branch-ops.e2e-spec.ts` del backend.
+
+**Sin verificar en navegador**: las rutas de HQ piden un token con grupo `owner` y no hay User Pool vivo (infra destruida, ver CLAUDE.md raíz).
+
 ## Comandos
 
 ```bash

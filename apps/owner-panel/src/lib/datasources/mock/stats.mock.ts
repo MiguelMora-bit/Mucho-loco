@@ -1,8 +1,9 @@
 import type { BranchStatsSummary, GlobalInventoryItem } from '@mucho-loco/types';
 import { BRANCH_STATS, BRANCH_INVENTORY } from '../../data';
 import { delay } from './delay';
+import type { IStatsRepository } from '../../repositories/stats.repository';
 
-export class StatsMockDatasource {
+export class StatsMockDatasource implements IStatsRepository {
   async getBranchStats(): Promise<BranchStatsSummary[]> {
     await delay(180);
     return BRANCH_STATS;
