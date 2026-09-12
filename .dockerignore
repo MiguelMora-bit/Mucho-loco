@@ -1,0 +1,17 @@
+# Build context es la raíz del monorepo (apps/backend depende del workspace
+# pnpm) — esto evita mandarle a Docker los otros 3 apps y todo node_modules,
+# el build de apps/backend/Dockerfile hace su propio pnpm install adentro.
+node_modules
+**/node_modules
+**/dist
+**/coverage
+**/.next
+**/.turbo
+.git
+.env
+.env.*
+!.env.example
+apps/customer-app
+apps/branch-app
+apps/owner-panel
+infra

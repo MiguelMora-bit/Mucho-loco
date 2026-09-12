@@ -44,7 +44,7 @@ El mock de `customer-app` confiaba en quien lo llamaba (era código del mismo fr
 
 ## Entorno local
 
-**Sin Docker en esta máquina** — Postgres corre nativo vía Homebrew (`brew services start postgresql@16`), dos bases: `mucho_loco_dev` y `mucho_loco_test`. `DATABASE_URL` en `.env`/`.env.test` apunta a `postgresql://<tu-usuario-de-mac>@localhost:5432/<db>` (sin password — cluster local de Homebrew). Si esta máquina cambia o alguien más clona el repo, instalar Postgres 16 (`brew install postgresql@16`) y crear ambas bases (`createdb mucho_loco_dev`, `createdb mucho_loco_test`) antes de migrar.
+Postgres corre nativo vía Homebrew (`brew services start postgresql@16`), dos bases: `mucho_loco_dev` y `mucho_loco_test`. `DATABASE_URL` en `.env`/`.env.test` apunta a `postgresql://<tu-usuario-de-mac>@localhost:5432/<db>` (sin password — cluster local de Homebrew). Si esta máquina cambia o alguien más clona el repo, instalar Postgres 16 (`brew install postgresql@16`) y crear ambas bases (`createdb mucho_loco_dev`, `createdb mucho_loco_test`) antes de migrar.
 
 ```bash
 pnpm --filter @mucho-loco/backend prisma generate        # regenerar el cliente tras cambiar schema.prisma
@@ -61,9 +61,31 @@ pnpm --filter @mucho-loco/backend start:dev               # PORT de .env (3001 h
 - **E2E** (`pnpm test:e2e`, corre contra `mucho_loco_test` REAL, no mocks): `test/app.e2e-spec.ts` levanta el `AppModule` completo vía `@nestjs/testing` + `supertest`, con `CognitoVerifierService` sobreescrito (`overrideProvider`) para simular sesión sin Cognito real. Cubre: guard (401 sin token / token inválido / rutas públicas sin auth), catálogo semillado (branches/products/tiers), y el flujo completo de un usuario nuevo (auto-provisión → membership → crear pedido con total calculado → retry-payment). Corre con `--runInBand` (una sola base de test compartida entre tests, evita carreras). Cada test de escritura limpia sus propias filas en `afterAll`.
 - `jose` (ESM-only) necesita `transformIgnorePatterns` explícito en `test/jest-e2e.json` para que Jest lo transforme en vez de ignorarlo (pnpm anida los paquetes bajo `node_modules/.pnpm/`, el patrón lo tiene en cuenta) — los tests unitarios no lo necesitan porque ninguno importa `cognito.ts`.
 
+## Docker (2026-09-12, validado)
+
+`Dockerfile` en la raíz de este app, pero el **build context es la raíz del monorepo** (workspace de pnpm — necesita ver `pnpm-workspace.yaml` y `packages/types`):
+
+```bash
+docker build -f apps/backend/Dockerfile -t mucho-loco-backend .
+docker run -d -p 3000:3000 \
+  -e DATABASE_URL="postgresql://<tu-usuario>@host.docker.internal:5432/mucho_loco_dev?schema=public" \
+  -e COGNITO_CLIENT_IDS=<algo-no-vacío> \
+  mucho-loco-backend
+```
+
+`host.docker.internal` (no `localhost`) porque Postgres corre en el HOST (Homebrew), no en un contenedor — Docker Desktop en Mac resuelve ese nombre al host automáticamente.
+
+Multi-stage (`deps` → `build` → `runtime`), probado de punta a punta: build limpio, contenedor arranca, conecta a Postgres real, `/health` pasa el `HEALTHCHECK` de la imagen, `/branches`/`/products` devuelven los datos sembrados, `/users/me` sin token da 401 — mismo comportamiento que corriendo con `pnpm start:dev`.
+
+**Dos gotchas ya resueltos, documentados en el propio Dockerfile con comentarios**: el entrypoint es `dist/src/main.js`, no `dist/main.js` (`tsconfig.json` no fija `rootDir` a `src`, así que `tsc` conserva esa carpeta dentro de `dist/`); y las etapas que corren `pnpm` necesitan el `package.json` raíz copiado (no solo el de `apps/backend`) para que `corepack` encuentre el campo `packageManager` y no descargue la última versión de pnpm en vez de la fijada.
+
+**Simplificación deliberada, tamaño de imagen ~934MB**: la imagen final carga `node_modules` completo (dev + prod), no uno podado a `--prod`. Se intentó separar una etapa `prod-deps` con `pnpm install --prod` aparte, pero `prisma generate` necesita el CLI de `prisma` (devDependency) — reinstalar con `--prod` en una etapa distinta no lo tiene disponible. La solución real es `pnpm deploy` o `pnpm prune --prod` corridos DESPUÉS de generar el cliente, en la misma etapa `build` — no se intentó a fondo por tiempo; si el tamaño de imagen importa (arranque en Fargate, egress de ECR), es el primer lugar donde optimizar, con cuidado porque `pnpm prune` en un checkout parcial del monorepo (sin los otros 3 apps) puede comportarse raro contra un lockfile que sí los referencia — probar en una rama aparte primero.
+
+**Sin probar todavía**: push a ECR (no hay repositorio creado, eso es Terraform) y correr en ECS Fargate real (necesita la infra aplicada).
+
 ## Pendiente (siguiente sesión)
 
-1. Dockerfile (multi-stage, `aws-containers`) — sin Docker instalado en esta máquina, no se pudo construir/correr localmente para validar; el código Node del backend en sí ya corre y está probado, falta el empaquetado.
-2. Terraform (`infra/`, ya existe de antes — VPC, RDS, Cognito) — código intacto, **sin aplicar**: aplicar significa gastar en la cuenta de AWS del usuario y necesita que él cree las apps OAuth de Google/Facebook primero (ver "Nota operativa" en el CLAUDE.md raíz) — pendiente de confirmación explícita antes de correr `terraform apply`.
+1. Optimizar tamaño de imagen (`pnpm deploy`/`prune --prod`) si hace falta — ver nota arriba.
+2. Terraform (`infra/`, ya existe de antes — VPC, RDS, Cognito, y ahora también necesitaría un repositorio ECR) — código intacto, **sin aplicar**: aplicar significa gastar en la cuenta de AWS del usuario y necesita que él cree las apps OAuth de Google/Facebook primero (ver "Nota operativa" en el CLAUDE.md raíz) — pendiente de confirmación explícita antes de correr `terraform apply`.
 3. Swap de datasource en `customer-app` (mock → HTTP) para los 4 dominios ya migrados — no se tocó todavía, cero riesgo de romper el mock-first que ya funciona.
 4. CI/CD, y después los dominios que faltan (community/announcements/social/performance) + branch-app/owner-panel.

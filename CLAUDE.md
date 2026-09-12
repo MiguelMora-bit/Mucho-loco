@@ -82,7 +82,7 @@ Orden de fases:
 2. ✅ (parcial) Contrato de API derivado de los repositorios existentes — hecho para `branches`/`products`/`membership-tiers`/`users` (los DTOs de respuesta son los tipos de `@mucho-loco/types` directamente). Falta derivar el contrato de `community`/`announcement`/`social`/`performance`.
 3. ⏳ Fundaciones AWS vía Terraform: código en `infra/` ya existe de una vuelta anterior, pero está **destruido** (ver "Nota operativa" abajo) — sin aplicar todavía.
 4. ✅ (parcial) Backend NestJS: `apps/backend` — módulos de `branches`/`products`/`memberships`/`users` + Prisma (Postgres local vía Homebrew, sin Docker en esta máquina) + auth con Cognito (`CognitoAuthGuard`, sin probar contra un User Pool real todavía porque la infra está destruida — sí probado end-to-end con `CognitoVerifierService` sobreescrito en tests). Ver `apps/backend/CLAUDE.md` para el detalle completo, incluida la decisión de usar Prisma 6 en vez de 7. Falta migrar `community`/`announcement`/`social`/`performance`.
-5. ⏳ Conectar: swap de datasource mock → HTTP en `customer-app` (todavía no se tocó, el backend corre standalone), Docker + ECS Fargate (sin Dockerfile probado, no hay Docker en esta máquina), CI/CD.
+5. ⏳ (parcial) Conectar: swap de datasource mock → HTTP en `customer-app` (todavía no se tocó, el backend corre standalone) sigue pendiente. ✅ Docker validado (2026-09-12) — `apps/backend/Dockerfile`, build + contenedor corriendo localmente contra Postgres real, ver su CLAUDE.md. Falta: push a ECR y correr en ECS Fargate real (ambos necesitan la infra de Terraform aplicada), CI/CD.
 6. ⏳ Pagos (Stripe/PayPal/Mercado Pago) sobre la base ya funcional.
 7. ⏳ `branch-app` y `owner-panel` (Fase 2/3 del negocio) reusando `apps/backend` y `packages/types`.
 
