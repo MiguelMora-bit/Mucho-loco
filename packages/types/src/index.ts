@@ -638,6 +638,12 @@ export interface MemberAccessRecord {
   tierKey: TierKey;
   homeBranchId: number;
   homeBranchName: string;
+  /** Set solo cuando el socio se dio de alta con huella dactilar en vez de QR
+   *  (ver CLAUDE.md raíz, "Métodos de acceso") — para socios sin la app. El
+   *  registro siempre conserva un `qrCode` interno (identidad del registro,
+   *  usado por mostrador para buscar/renovar), pero validar acceso en el
+   *  gimnasio puede hacerse por CUALQUIERA de los dos: qrCode O fingerprintId. */
+  fingerprintId?: string;
 }
 
 /** A membership sold or renewed in person at the counter — covers both

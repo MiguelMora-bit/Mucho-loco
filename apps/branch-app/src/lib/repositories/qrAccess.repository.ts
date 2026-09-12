@@ -10,6 +10,8 @@ export type QrValidationResult =
 export interface IQrAccessRepository {
   /** branchId = sucursal donde se está escaneando (ver getCurrentBranchId) — decide 'wrong_branch' para tier 'single'. 'expired' deniega el acceso sin importar sucursal/tier. */
   validate(qrCode: string, branchId: number): Promise<QrValidationResult>;
+  /** Mismo resultado/reglas que validate(), pero busca por huella dactilar en vez de QR — para socios dados de alta sin la app (ver CLAUDE.md raíz, "Métodos de acceso"). */
+  validateByFingerprint(fingerprintId: string, branchId: number): Promise<QrValidationResult>;
 }
 
 // Swap this line to plug in a real API datasource

@@ -11,12 +11,19 @@ import type { MemberAccessRecord } from '@mucho-loco/types';
 // ser rechazada acá porque el staff de prueba está en Roma Sur.
 const DEMO_CODES = ['ML-DIEGO-2026-ALLGYMS', 'ML-VALERIA-2026-CONDESA', 'ML-QR-ANA02', 'ML-QR-CARLOS03'];
 
+// Socios dados de alta con huella en vez de QR (sin la app) — ver lib/data.ts.
+// Rosa (all gyms) siempre pasa; Luis (single, Interlomas) debe ser rechazado
+// acá porque el staff de prueba está en Roma Sur.
+const DEMO_FINGERPRINTS = ['FP-DEMO-ROSA', 'FP-DEMO-LUIS'];
+
 export function QrValidationPage() {
   const { t } = useTranslation();
   const [code, setCode] = useState('');
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<QrValidationResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [fingerprintId, setFingerprintId] = useState('');
 
   const STATUS_COPY: Record<MemberAccessRecord['status'], { label: string; className: string }> = {
     active: { label: t('qr.statusActive'), className: 'bg-ml-green/10 border-ml-green text-ml-green' },
@@ -35,6 +42,19 @@ export function QrValidationPage() {
       setChecking(false);
       setCode('');
       inputRef.current?.focus();
+    }
+  }
+
+  async function validateFingerprint(scannedId: string) {
+    if (!scannedId.trim() || checking) return;
+    setChecking(true);
+    setResult(null);
+    try {
+      const outcome = await qrAccessRepository.validateByFingerprint(scannedId, getCurrentBranchId());
+      setResult(outcome);
+    } finally {
+      setChecking(false);
+      setFingerprintId('');
     }
   }
 
@@ -85,6 +105,43 @@ export function QrValidationPage() {
             className="text-xs font-mono px-2 py-1 rounded border border-ml-border text-ml-cream-dim hover:text-ml-cream"
           >
             {c}
+          </button>
+        ))}
+      </div>
+
+      <h2 className="text-lg font-bold mb-1 border-t border-ml-border pt-6">{t('qr.fingerprintSectionTitle')}</h2>
+      <p className="text-ml-cream-dim text-sm mb-4">{t('qr.fingerprintInstructions')}</p>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          validateFingerprint(fingerprintId);
+        }}
+        className="flex gap-2 mb-4"
+      >
+        <input
+          value={fingerprintId}
+          onChange={(e) => setFingerprintId(e.target.value)}
+          placeholder={t('qr.fingerprintPlaceholder')}
+          className="flex-1 bg-ml-card border border-ml-border rounded px-3 py-2 font-mono text-sm focus:outline-none focus:border-ml-red"
+        />
+        <button
+          type="submit"
+          disabled={checking || !fingerprintId.trim()}
+          className="px-4 py-2 rounded bg-ml-red text-ml-cream font-medium disabled:opacity-40"
+        >
+          {checking ? t('qr.validating') : t('qr.fingerprintValidate')}
+        </button>
+      </form>
+
+      <div className="flex gap-2 mb-8 flex-wrap">
+        {DEMO_FINGERPRINTS.map((id) => (
+          <button
+            key={id}
+            onClick={() => validateFingerprint(id)}
+            className="text-xs font-mono px-2 py-1 rounded border border-ml-border text-ml-cream-dim hover:text-ml-cream"
+          >
+            {id}
           </button>
         ))}
       </div>

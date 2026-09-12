@@ -4,7 +4,67 @@ import { membershipRepository } from '../../lib/repositories/membership.reposito
 import { getCurrentBranchId, getCurrentBranchName } from '../../lib/currentBranch';
 import { CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS, TIER_FACTORS } from '../../lib/membershipPlans';
 import { calculateMembershipPrice } from '../../lib/pricing';
+import { captureFingerprint } from '../../lib/fingerprintScanner';
 import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+
+type EnrollMethod = 'qr' | 'fingerprint';
+
+function EnrollMethodPicker({ value, onChange }: { value: EnrollMethod; onChange: (m: EnrollMethod) => void }) {
+  const { t } = useTranslation();
+  const options: Array<{ key: EnrollMethod; label: string }> = [
+    { key: 'qr', label: t('counter.membership.enrollQr') },
+    { key: 'fingerprint', label: t('counter.membership.enrollFingerprint') },
+  ];
+  return (
+    <div className="flex gap-2">
+      {options.map((opt) => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onChange(opt.key)}
+          className={
+            'flex-1 py-2 rounded text-sm font-medium border ' +
+            (value === opt.key ? 'bg-ml-red border-ml-red text-ml-cream' : 'border-ml-border text-ml-cream-dim')
+          }
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function FingerprintCapture({
+  fingerprintId,
+  capturing,
+  onCapture,
+}: {
+  fingerprintId: string | null;
+  capturing: boolean;
+  onCapture: () => void;
+}) {
+  const { t } = useTranslation();
+  if (fingerprintId) {
+    return (
+      <div className="bg-ml-green/10 border border-ml-green text-ml-green rounded p-3 text-sm flex items-center justify-between">
+        <span>✓ {t('counter.membership.fingerprintCaptured')} — <span className="font-mono">{fingerprintId}</span></span>
+        <button type="button" onClick={onCapture} className="text-xs underline text-ml-cream-dim hover:text-ml-cream">
+          {t('counter.membership.fingerprintRescan')}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onCapture}
+      disabled={capturing}
+      className="w-full py-2.5 rounded border border-ml-border text-sm text-ml-cream-dim hover:text-ml-cream disabled:opacity-40"
+    >
+      {capturing ? t('counter.membership.fingerprintCapturing') : t('counter.membership.fingerprintScan')}
+    </button>
+  );
+}
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-MX')}`;
@@ -111,6 +171,9 @@ export function MembershipTab() {
 
   const [memberName, setMemberName] = useState('');
   const [phone, setPhone] = useState('');
+  const [enrollMethod, setEnrollMethod] = useState<EnrollMethod>('qr');
+  const [fingerprintId, setFingerprintId] = useState<string | null>(null);
+  const [capturingFingerprint, setCapturingFingerprint] = useState(false);
 
   const [qrCode, setQrCode] = useState('');
   const [searching, setSearching] = useState(false);
@@ -120,15 +183,30 @@ export function MembershipTab() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successPayment, setSuccessPayment] = useState<MembershipPayment | null>(null);
+  // Capturado aparte porque resetForm() limpia fingerprintId justo después de
+  // fijar successPayment — MembershipPayment no carga fingerprintId (no es
+  // dato del cobro), así que este es el único registro de qué método se usó.
+  const [successFingerprintId, setSuccessFingerprintId] = useState<string | null>(null);
 
   const price = calculateMembershipPrice(CURRENT_BRANCH_PRICE, TIER_FACTORS[tierKey], PERIOD_MULTIPLIERS[periodKey]);
 
   function resetForm() {
     setMemberName(''); setPhone(''); setQrCode(''); setFoundMember(null); setSearchError(null);
+    setEnrollMethod('qr'); setFingerprintId(null); setCapturingFingerprint(false);
+  }
+
+  async function handleCaptureFingerprint() {
+    setCapturingFingerprint(true);
+    setFingerprintId(null);
+    try {
+      setFingerprintId(await captureFingerprint());
+    } finally {
+      setCapturingFingerprint(false);
+    }
   }
 
   function switchMode(next: 'new' | 'renew') {
-    setMode(next); setSuccessPayment(null); setSubmitError(null); resetForm();
+    setMode(next); setSuccessPayment(null); setSuccessFingerprintId(null); setSubmitError(null); resetForm();
   }
 
   async function handleSearch(code: string) {
@@ -144,8 +222,15 @@ export function MembershipTab() {
   async function handleSignUp() {
     setSubmitting(true); setSubmitError(null);
     try {
-      const payment = await membershipRepository.signUpNewMember(getCurrentBranchId(), getCurrentBranchName(), { memberName, phone, tierKey, periodKey, paymentMethod });
-      setSuccessPayment(payment); resetForm();
+      const payment = await membershipRepository.signUpNewMember(getCurrentBranchId(), getCurrentBranchName(), {
+        memberName,
+        phone,
+        tierKey,
+        periodKey,
+        paymentMethod,
+        fingerprintId: enrollMethod === 'fingerprint' ? (fingerprintId ?? undefined) : undefined,
+      });
+      setSuccessPayment(payment); setSuccessFingerprintId(enrollMethod === 'fingerprint' ? fingerprintId : null); resetForm();
     } catch (e) { console.error(e); setSubmitError(t('counter.membership.errorSignUp')); }
     finally { setSubmitting(false); }
   }
@@ -175,8 +260,13 @@ export function MembershipTab() {
           <div className="text-sm">
             {successPayment.memberName} · {t(`counter.membership.${TIER_I18N_KEY[successPayment.tierKey]}`)} · {t(`counter.membership.${PERIOD_I18N_KEY[successPayment.periodKey]}`)}
           </div>
+          {successPayment.isNewMember && successFingerprintId && (
+            <div className="font-mono text-lg mt-2 tracking-wide">{t('counter.membership.fingerprintIdLabel')}: {successFingerprintId}</div>
+          )}
           {successPayment.isNewMember && (
-            <div className="font-mono text-lg mt-2 tracking-wide">{t('counter.membership.qrCodeLabel')}: {successPayment.qrCode}</div>
+            <div className="font-mono text-sm mt-1 tracking-wide text-ml-cream-dim">
+              {successFingerprintId ? t('counter.membership.internalQrCodeLabel') : t('counter.membership.qrCodeLabel')}: {successPayment.qrCode}
+            </div>
           )}
         </div>
       )}
@@ -194,6 +284,16 @@ export function MembershipTab() {
               <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t('counter.membership.phonePlaceholder')}
                 className="w-full bg-ml-card-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red" />
             </div>
+            <div>
+              <label className="text-xs font-mono uppercase text-ml-cream-dim block mb-1.5">{t('counter.membership.enrollMethodLabel')}</label>
+              <EnrollMethodPicker value={enrollMethod} onChange={(m) => { setEnrollMethod(m); setFingerprintId(null); }} />
+              <p className="text-xs text-ml-cream-dim mt-1.5">
+                {enrollMethod === 'qr' ? t('counter.membership.enrollQrNote') : t('counter.membership.enrollFingerprintNote')}
+              </p>
+            </div>
+            {enrollMethod === 'fingerprint' && (
+              <FingerprintCapture fingerprintId={fingerprintId} capturing={capturingFingerprint} onCapture={handleCaptureFingerprint} />
+            )}
           </div>
         ) : (
           <div>
@@ -251,7 +351,14 @@ export function MembershipTab() {
               <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
             </div>
             {submitError && <p className="text-ml-red text-sm">{submitError}</p>}
-            <button onClick={mode === 'new' ? handleSignUp : handleRenew} disabled={submitting || (mode === 'new' ? !memberName.trim() : !foundMember)}
+            <button
+              onClick={mode === 'new' ? handleSignUp : handleRenew}
+              disabled={
+                submitting ||
+                (mode === 'new'
+                  ? !memberName.trim() || (enrollMethod === 'fingerprint' && !fingerprintId)
+                  : !foundMember)
+              }
               className="w-full py-2.5 rounded bg-ml-red text-ml-cream font-medium hover:bg-ml-red-bright disabled:opacity-40 transition-colors">
               {submitting ? t('counter.membership.processing') : mode === 'new' ? t('counter.membership.signUpAndCharge') : t('counter.membership.confirmRenewal')}
             </button>

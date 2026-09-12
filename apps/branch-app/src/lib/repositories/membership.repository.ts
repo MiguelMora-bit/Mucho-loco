@@ -1,12 +1,16 @@
 import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import { MembershipMockDatasource } from '../datasources/mock/membership.mock';
 
-interface SignUpInput {
+export interface SignUpInput {
   memberName: string;
   phone: string;
   tierKey: TierKey;
   periodKey: PlanKey;
   paymentMethod: PaymentMethod;
+  /** Presente cuando el alta se hizo por huella en vez de QR (ver
+   *  CLAUDE.md raíz, "Métodos de acceso") — el registro sigue teniendo un
+   *  qrCode interno, pero el acceso real se valida por este id. */
+  fingerprintId?: string;
 }
 
 export interface IMembershipRepository {

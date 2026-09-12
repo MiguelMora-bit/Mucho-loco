@@ -20,6 +20,35 @@ describe('membershipRepository', () => {
     expect(found?.homeBranchName).toBe('Roma Sur');
   });
 
+  // Ver CLAUDE.md raíz, "Métodos de acceso": alta sin la app, con huella.
+  it('signUpNewMember with a fingerprintId still mints a qrCode, and both credentials work', async () => {
+    const payment = await membershipRepository.signUpNewMember(1, 'Roma Sur', {
+      memberName: 'Huella Test',
+      phone: '5555555555',
+      tierKey: 'all',
+      periodKey: 'monthly',
+      paymentMethod: 'cash',
+      fingerprintId: 'FP-TEST-0001',
+    });
+
+    const found = await membershipRepository.findMember(payment.qrCode);
+    expect(found?.fingerprintId).toBe('FP-TEST-0001');
+    expect(found?.status).toBe('active');
+  });
+
+  it('signUpNewMember without a fingerprintId leaves it unset', async () => {
+    const payment = await membershipRepository.signUpNewMember(1, 'Roma Sur', {
+      memberName: 'QR Test',
+      phone: '5555555555',
+      tierKey: 'all',
+      periodKey: 'monthly',
+      paymentMethod: 'cash',
+    });
+
+    const found = await membershipRepository.findMember(payment.qrCode);
+    expect(found?.fingerprintId).toBeUndefined();
+  });
+
   it('renewMembership reactivates an existing member and extends their expiry', async () => {
     const before = await membershipRepository.findMember('ML-QR-ANA02');
     expect(before?.status).toBe('grace');

@@ -57,6 +57,12 @@ export const MEMBER_ACCESS_RECORDS: MemberAccessRecord[] = [
   { qrCode: 'ML-VALERIA-2026-CONDESA', memberName: 'Valeria Torres', status: 'active', expiresAt: '05 AGO 2026', tierKey: 'single', homeBranchId: 3, homeBranchName: 'Condesa' },
   { qrCode: 'ML-QR-ANA02', memberName: 'Ana López', status: 'grace', expiresAt: '05 JUN 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
   { qrCode: 'ML-QR-CARLOS03', memberName: 'Carlos Mendoza', status: 'expired', expiresAt: '10 MAY 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
+  // Dados de alta con huella en vez de QR (sin la app) — mismo qrCode interno
+  // que todos (usado por mostrador para buscar/renovar), pero el acceso real
+  // se valida por fingerprintId. Rosa entra en cualquier sucursal; Luis (tier
+  // 'single', Interlomas) debe ser RECHAZADO si se escanea en Roma Sur.
+  { qrCode: 'ML-QR-ROSA04', fingerprintId: 'FP-DEMO-ROSA', memberName: 'Rosa Jiménez', status: 'active', expiresAt: '18 AGO 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
+  { qrCode: 'ML-QR-LUIS05', fingerprintId: 'FP-DEMO-LUIS', memberName: 'Luis Herrera', status: 'active', expiresAt: '22 AGO 2026', tierKey: 'single', homeBranchId: 4, homeBranchName: 'Interlomas' },
 ];
 
 function daysAgo(days: number, hour: number): string {

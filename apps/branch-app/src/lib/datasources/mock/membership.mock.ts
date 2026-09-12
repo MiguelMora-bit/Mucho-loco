@@ -3,6 +3,7 @@ import { MEMBER_ACCESS_RECORDS, MEMBERSHIP_PAYMENTS } from '../../data';
 import { CURRENT_BRANCH_PRICE, PERIOD_DAYS, PERIOD_MULTIPLIERS, TIER_FACTORS } from '../../membershipPlans';
 import { calculateMembershipPrice } from '../../pricing';
 import { delay } from './delay';
+import type { SignUpInput } from '../../repositories/membership.repository';
 
 /**
  * Antes era un contador secuencial (ML-QR-0100, 0101, ...) — solo 9900
@@ -26,14 +27,6 @@ function addDays(base: Date, days: number): Date {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
   return d;
-}
-
-interface SignUpInput {
-  memberName: string;
-  phone: string;
-  tierKey: TierKey;
-  periodKey: PlanKey;
-  paymentMethod: PaymentMethod;
 }
 
 export class MembershipMockDatasource {
@@ -81,9 +74,13 @@ export class MembershipMockDatasource {
 
   async signUpNewMember(branchId: number, branchName: string, input: SignUpInput): Promise<MembershipPayment> {
     await delay(280);
+    // El qrCode interno se genera siempre (identidad del registro, usado por
+    // mostrador para buscar/renovar) incluso si el socio se dará de alta con
+    // huella — no necesita saber ni cargar este código, ver CLAUDE.md raíz.
     const qrCode = generateQrCode();
     const record: MemberAccessRecord = {
       qrCode,
+      fingerprintId: input.fingerprintId,
       memberName: input.memberName,
       status: 'active',
       expiresAt: formatDate(addDays(new Date(), PERIOD_DAYS[input.periodKey])),
