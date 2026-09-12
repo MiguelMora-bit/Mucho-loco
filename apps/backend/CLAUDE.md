@@ -91,9 +91,20 @@ Cobro con pasarela para los pedidos de la tienda. Módulo `payments`, dos endpoi
 - **Centavos.** El catálogo guarda pesos enteros y Stripe cobra en la unidad mínima — $1290 son 129000. Sin la conversión se cobraría $12.90.
 - **Modelo `Payment` aparte de `Order`.** Son ciclos de vida distintos: un pedido puede acumular varios intentos (el socio abandona el checkout y vuelve), y deja lugar para PayPal y Mercado Pago sin volver a tocar `Order`.
 
-### Probarlo de verdad
+### Probado contra Stripe real (2026-09-12) ✅
 
-El código está completo y testeado (13 unit + 11 e2e con `StripeService` sobreescrito), pero **nunca se ha ejercido contra Stripe real** — hace falta una cuenta:
+Flujo completo ejercido de punta a punta contra un sandbox real, no contra mocks:
+
+1. Token real de Cognito (`initiate-auth` con `diego@mucholoco.mx`) → `POST /payments/checkout-sessions`.
+2. Stripe devolvió una sesión real; el pedido quedó en `pending_payment` con `total: 2580` **calculado por el servidor** (1290 × 2), no por el cliente.
+3. Pago completado en la página hospedada de Stripe con la tarjeta de prueba `4242…`, manejando el navegador con Playwright (no hay API para "pagar" una sesión de Checkout — es una página de Stripe).
+4. Stripe redirigió a `successUrl` con el `session_id`, y entregó `checkout.session.completed` vía `stripe listen`.
+5. El backend verificó la firma REAL, respondió 200, y el pedido pasó a `ready` con `providerPaymentIntentId` guardado.
+6. Una firma inventada contra el mismo verificador real devolvió **400**.
+
+Un hallazgo del ejercicio: el aviso de WhatsApp se omitió con `Socio ... sin teléfono`. La auto-provisión desde Cognito deja `phone` vacío porque el registro de `customer-app` no lo pide — **el canal de avisos no puede funcionar hasta que el signup capture teléfono**. Está anotado abajo.
+
+Para repetirlo:
 
 ```bash
 npm i -g @stripe/cli
@@ -108,6 +119,7 @@ Sin esas dos variables el resto del backend funciona igual; solo `/payments/*` f
 
 ### Pendiente
 
+- **El registro no pide teléfono.** Sin él no hay WhatsApp posible para una cuenta creada desde la app (ver el hallazgo de arriba). Es un cambio de `SignupForm` + un atributo en Cognito, no del backend.
 - **PayPal y Mercado Pago.** El modelo `Payment` ya tiene `provider`, así que agregarlos es un módulo más, no un rediseño. Hay skill oficial de PayPal instalada; para Mercado Pago no hay y se diseña directo con el usuario.
 - **Membresía recurrente.** El CLAUDE.md raíz pide cobro recurrente con periodo de gracia. Eso son subscripciones (Billing API), no Checkout de pago único — otro conjunto de webhooks (`invoice.payment_failed`, `customer.subscription.updated`) y el que de verdad cierra la regla de negocio de la membresía.
 - **Reembolsos.** `providerPaymentIntentId` se guarda justo para eso, pero no hay endpoint todavía (y la política de devoluciones sigue sin decidirse — ver "Pendiente de decidir" en el CLAUDE.md raíz).
