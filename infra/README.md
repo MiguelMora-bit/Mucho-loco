@@ -81,7 +81,7 @@ aws ecs execute-command --cluster <cluster> --task <task-id> \
 # dentro: npx prisma migrate deploy && npx prisma db seed
 ```
 
-> ECS Exec necesita `enable_execute_command = true` en el servicio y permisos de SSM en el rol de tarea — **todavía no están puestos**. La alternativa mientras tanto es un bastión temporal o abrir RDS a tu IP por un rato. Es el primer pendiente de este módulo.
+> Requiere el plugin de Session Manager del AWS CLI (`brew install --cask session-manager-plugin`). El servicio ya trae `enable_execute_command = true` y el rol de tarea los permisos de SSM. En producción esto se apaga y las migraciones se corren desde el pipeline.
 
 **6. Apuntar los frontends al API.** `terraform output` da los ids nuevos de Cognito y la URL del backend:
 
@@ -108,7 +108,6 @@ Borra también el User Pool y con él los 6 usuarios de prueba; recrearlos es el
 
 ## Pendientes conocidos
 
-1. **ECS Exec no está habilitado** — sin él no hay forma limpia de correr migraciones contra RDS (ver paso 5).
-2. **State local.** Vive en `envs/dev/terraform.tfstate`, en esta máquina. Migrar a S3 + DynamoDB para el lock antes de que haya recursos que de verdad importe no perder.
-3. **Solo HTTP.** El ALB escucha en :80 sin TLS. Necesita un dominio y un certificado de ACM para :443 — sin eso el ID token de Cognito viaja en claro, así que no se puede usar con datos reales.
-4. **Sin CI/CD**: los pasos 3 y 4 son manuales.
+1. **State local.** Vive en `envs/dev/terraform.tfstate`, en esta máquina. Migrar a S3 + DynamoDB para el lock antes de que haya recursos que de verdad importe no perder.
+2. **Solo HTTP.** El ALB escucha en :80 sin TLS. Necesita un dominio y un certificado de ACM para :443 — sin eso el ID token de Cognito viaja en claro, así que no se puede usar con datos reales.
+3. **Sin CI/CD**: los pasos 3 y 4 son manuales.

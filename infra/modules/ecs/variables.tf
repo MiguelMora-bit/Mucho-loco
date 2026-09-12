@@ -85,3 +85,14 @@ variable "log_retention_days" {
   type        = number
   default     = 7
 }
+
+variable "enable_execute_command" {
+  description = <<-EOT
+    Permite `aws ecs execute-command` sobre la tarea (una shell dentro del
+    contenedor). Necesario para correr las migraciones de Prisma contra RDS,
+    que no es alcanzable desde fuera de la VPC. Es una puerta a producción:
+    apagarlo ahí y correr las migraciones desde el pipeline.
+  EOT
+  type        = bool
+  default     = true
+}

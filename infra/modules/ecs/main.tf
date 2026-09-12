@@ -99,9 +99,34 @@ resource "aws_iam_role_policy" "execution_secrets" {
   policy = data.aws_iam_policy_document.read_secrets.json
 }
 
+# El rol de TAREA es lo que puede hacer el código ya corriendo. La app en sí no
+# llama a ningún servicio de AWS (Cognito se verifica contra un JWKS público,
+# que es HTTP normal), así que lo único que lleva es el canal de ECS Exec.
 resource "aws_iam_role" "task" {
   name               = "${local.name}-task"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
+}
+
+# ECS Exec ("entrar" a la tarea) es la única forma limpia de correr
+# `prisma migrate deploy` contra RDS: la base no es alcanzable desde fuera de
+# la VPC a propósito, así que las migraciones se corren desde dentro. La
+# alternativa sería abrir RDS a internet o levantar un bastión — las dos peores.
+data "aws_iam_policy_document" "ecs_exec" {
+  statement {
+    actions = [
+      "ssmmessages:CreateControlChannel",
+      "ssmmessages:CreateDataChannel",
+      "ssmmessages:OpenControlChannel",
+      "ssmmessages:OpenDataChannel",
+    ]
+    resources = ["*"] # El canal de SSM no se puede acotar por recurso.
+  }
+}
+
+resource "aws_iam_role_policy" "task_exec" {
+  name   = "${local.name}-ecs-exec"
+  role   = aws_iam_role.task.id
+  policy = data.aws_iam_policy_document.ecs_exec.json
 }
 
 # --- Cluster, tarea y servicio ---------------------------------------------
@@ -187,6 +212,9 @@ resource "aws_ecs_service" "app" {
   task_definition = aws_ecs_task_definition.app.arn
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
+
+  # Ver el comentario del rol de tarea: es como se corren las migraciones.
+  enable_execute_command = var.enable_execute_command
 
   network_configuration {
     subnets = var.public_subnet_ids
