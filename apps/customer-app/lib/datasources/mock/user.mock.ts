@@ -18,12 +18,14 @@ interface UserRecord {
 export const ALL_GYMS_TEST_EMAIL = 'diego@mucholoco.mx';
 export const SINGLE_GYM_TEST_EMAIL = 'valeria@mucholoco.mx';
 
-// Mismo formato 'DD MES YYYY' que el resto de MembershipInfo (ver expiresAt
-// más abajo) — duplicado a propósito del helper análogo en
-// branch-app/src/lib/datasources/mock/membership.mock.ts, no compartido en
-// runtime entre apps (ver CLAUDE.md raíz).
-function formatDate(d: Date): string {
-  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase().replace('.', '');
+// MembershipInfo.expiresAt y .graceEndsAt viajan en ISO (fecha sola), no como
+// texto ya formateado en español: es el mismo criterio que Order.date desde
+// 2026-09-02 (ver CLAUDE.md de este app) y, sobre todo, es lo que devuelve el
+// backend real — si el mock mandara "20 JUL 2026" y el backend un ISO, la
+// pantalla se rompería solo al prender NEXT_PUBLIC_DATA_SOURCE=http. Quien
+// pinta la fecha la formatea con lib/dates.ts.
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
 function addDays(base: Date, days: number): Date {
@@ -56,7 +58,7 @@ function seedRecords(): Record<string, UserRecord> {
       plan: 'ALL GYMS · MENSUAL',
       branch: 'Roma Sur',
       tierKey: 'all',
-      expiresAt: '20 JUL 2026',
+      expiresAt: '2026-07-20',
       visits: 18,
       streak: 7,
       daysLeft: 12,
@@ -111,7 +113,7 @@ function seedRecords(): Record<string, UserRecord> {
       plan: '1 GYM · MENSUAL',
       branch: 'Condesa',
       tierKey: 'single',
-      expiresAt: '05 AGO 2026',
+      expiresAt: '2026-08-05',
       visits: 9,
       streak: 3,
       daysLeft: 27,
@@ -120,7 +122,7 @@ function seedRecords(): Record<string, UserRecord> {
       // fallido/periodo de gracia en el dashboard sin tocar al usuario 'all
       // gyms'. Ver AccessStatus en @mucho-loco/types.
       status: 'grace',
-      graceEndsAt: '22 JUN 2026',
+      graceEndsAt: '2026-06-22',
     },
     // Todas las visitas en Condesa a propósito — su membresía no da acceso a
     // otra sucursal (ver CLAUDE.md raíz, "Membresía y alcance de acceso").
@@ -157,7 +159,7 @@ function fallbackRecord(email: string): UserRecord {
       plan: 'ALL GYMS · MENSUAL',
       branch: 'Roma Sur',
       tierKey: 'all',
-      expiresAt: '—',
+      expiresAt: isoDate(addDays(new Date(), 30)),
       visits: 0,
       streak: 0,
       daysLeft: 30,
@@ -210,7 +212,7 @@ export class UserMockDatasource implements IUserRepository {
       ...record.membership,
       status: 'active',
       graceEndsAt: null,
-      expiresAt: formatDate(addDays(new Date(), 30)),
+      expiresAt: isoDate(addDays(new Date(), 30)),
       daysLeft: 30,
     };
     return record.membership;

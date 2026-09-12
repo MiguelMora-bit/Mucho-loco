@@ -75,6 +75,7 @@ export default function DashboardClient({ profile, membership, history, orders, 
 
       <HomePane
         t={t}
+        lang={lang}
         active={isActive('home')}
         profile={profile}
         membership={membershipState}
@@ -83,7 +84,7 @@ export default function DashboardClient({ profile, membership, history, orders, 
         retryingPayment={retryingPayment}
         retryError={retryError}
       />
-      <AccessPane t={t} active={isActive('access')} profile={profile} membership={membershipState} history={history} onShowQr={() => setQrOpen(true)} />
+      <AccessPane t={t} lang={lang} active={isActive('access')} profile={profile} membership={membershipState} history={history} onShowQr={() => setQrOpen(true)} />
       <OrdersPane t={t} lang={lang} active={isActive('orders')} orders={orders} onSelectOrder={setSelectedOrder} />
       <CommunityPane
         t={t}
@@ -96,7 +97,7 @@ export default function DashboardClient({ profile, membership, history, orders, 
         onToggleLike={handleToggleLike}
         onAddComment={handleAddComment}
       />
-      <ProfilePane t={t} active={isActive('profile')} profile={profile} membership={membershipState} onRenew={() => setPane('access')} />
+      <ProfilePane t={t} lang={lang} active={isActive('profile')} profile={profile} membership={membershipState} onRenew={() => setPane('access')} />
       <SettingsPane t={t} active={isActive('settings')} />
     </>
   );

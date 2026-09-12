@@ -99,6 +99,31 @@ describe('userRepository', () => {
     expect(history.every((v) => v.branch === 'Condesa')).toBe(true);
   });
 
+  // El backend real emite estas dos fechas en ISO. Si el mock volviera al
+  // texto español pre-formateado ("20 JUL 2026"), el dashboard se rompería
+  // solo al prender NEXT_PUBLIC_DATA_SOURCE=http, porque las pinta con
+  // lib/dates.ts — que necesita una fecha parseable, no un string ya armado.
+  it('exposes membership dates as ISO, the same shape the backend returns', async () => {
+    const membership = await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL);
+
+    expect(membership.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
+    expect(Number.isNaN(Date.parse(membership.expiresAt))).toBe(false);
+    expect(membership.graceEndsAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
+  });
+
+  it('keeps membership dates ISO after a payment retry extends them', async () => {
+    const updated = await userRepository.retryMembershipPayment(ALL_GYMS_TEST_EMAIL);
+
+    expect(updated.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
+    expect(updated.graceEndsAt).toBeNull();
+  });
+
+  it('gives an unknown account a real expiry date instead of a placeholder', async () => {
+    const membership = await userRepository.getMembership('desconocido@mucholoco.mx');
+
+    expect(Number.isNaN(Date.parse(membership.expiresAt))).toBe(false);
+  });
+
   it('gives the all-gyms test user a membership scoped to every branch', async () => {
     const membership = await userRepository.getMembership(ALL_GYMS_TEST_EMAIL);
     expect(membership.tierKey).toBe('all');

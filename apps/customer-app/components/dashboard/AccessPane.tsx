@@ -1,7 +1,9 @@
-import type { MembershipInfo, Translations, UserProfile, Visit } from '@mucho-loco/types';
+import type { Lang, MembershipInfo, Translations, UserProfile, Visit } from '@mucho-loco/types';
+import { formatDate } from '../../lib/dates';
 
 interface AccessPaneProps {
   t: Translations;
+  lang: Lang;
   active: boolean;
   profile: UserProfile;
   membership: MembershipInfo;
@@ -9,7 +11,7 @@ interface AccessPaneProps {
   onShowQr: () => void;
 }
 
-export function AccessPane({ t, active, profile, membership, history, onShowQr }: AccessPaneProps) {
+export function AccessPane({ t, lang, active, profile, membership, history, onShowQr }: AccessPaneProps) {
   return (
     <div className={'pane' + (active ? ' active' : '')}>
       <div className="grid grid-cols-[460px_1fr] gap-6 items-start">
@@ -24,7 +26,7 @@ export function AccessPane({ t, active, profile, membership, history, onShowQr }
               <div className="w-[70px] h-[70px] rounded-full border-2 border-ml-red bg-ml-card grid place-items-center font-display text-[30px]">{profile.name[0]}</div>
             </div>
             <div className="grid grid-cols-2 gap-4 py-5 border-t border-[rgba(255,255,255,0.08)]">
-              <div><div className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl mb-1">{t.dashboard.access.expiresLabel}</div><b className="font-display text-lg">{membership.expiresAt}</b></div>
+              <div><div className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl mb-1">{t.dashboard.access.expiresLabel}</div><b className="font-display text-lg">{formatDate(membership.expiresAt, lang)}</b></div>
               <div><div className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl mb-1">{t.dashboard.access.branchLabel}</div><b className="font-display text-lg">{membership.tierKey === 'all' ? t.dashboard.access.allGyms : membership.branch}</b></div>
             </div>
             {membership.status !== 'active' && (

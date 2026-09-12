@@ -1,16 +1,18 @@
 import { LuUser, LuMail, LuPhone, LuCake } from 'react-icons/lu';
-import type { MembershipInfo, Translations, UserProfile } from '@mucho-loco/types';
+import type { Lang, MembershipInfo, Translations, UserProfile } from '@mucho-loco/types';
 import { InfoList } from './InfoList';
+import { formatDate } from '../../lib/dates';
 
 interface ProfilePaneProps {
   t: Translations;
+  lang: Lang;
   active: boolean;
   profile: UserProfile;
   membership: MembershipInfo;
   onRenew: () => void;
 }
 
-export function ProfilePane({ t, active, profile, membership, onRenew }: ProfilePaneProps) {
+export function ProfilePane({ t, lang, active, profile, membership, onRenew }: ProfilePaneProps) {
   return (
     <div className={'pane' + (active ? ' active' : '')}>
       <div className="grid grid-cols-2 gap-6 max-w-[900px]">
@@ -31,7 +33,7 @@ export function ProfilePane({ t, active, profile, membership, onRenew }: Profile
             items={[
               [t.dashboard.profile.planLabel, membership.plan],
               [t.dashboard.profile.branchLabel, membership.branch],
-              [t.dashboard.profile.expiresLabel, membership.expiresAt],
+              [t.dashboard.profile.expiresLabel, formatDate(membership.expiresAt, lang)],
               [t.dashboard.profile.statusLabel, t.dashboard.membershipStatus[membership.status]],
               [t.dashboard.profile.partnersLabel, t.dashboard.profile.notLinked],
             ]}
