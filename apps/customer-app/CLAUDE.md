@@ -128,6 +128,14 @@ El swap no fue solo cableado — expuso tres lugares donde el contrato mock no e
 2. **`createPost`/`addComment` de community ya no reciben `authorName`/`authorBranch`.** El autor lo deriva el datasource de la identidad del socio (el mock de su registro, el backend del ID token). Antes el caller lo pasaba, o sea que se podía firmar un post con el nombre de otra persona.
 3. **`HOME_SHIPPING_FEE`** (99) dejó de estar hardcodeado en 4 lugares y vive en `lib/pricing.ts`. El backend tiene su propia copia y **él es la autoridad** — el frontend solo la usa para previsualizar el total antes de mandar el pedido.
 
+### Fechas: ISO de punta a punta (2026-09-12)
+
+Se cerró el último hueco. `Visit` dejó de viajar como texto pre-armado (`day: '18'`, `month: 'JUN'`, `duration: '1h 24m'`) y ahora lleva `visitedAt` en ISO y `durationMinutes` como número; `AccessPane` formatea con `lib/dates.ts` (`formatDayOfMonth`, `formatMonthShort`, `formatDuration`), todos con `timeZone: 'UTC'` fijado.
+
+Importa por dos razones, no una: con texto pre-armado la lista **no podía cambiar de idioma**, y era el backend quien tenía que saber los nombres de los meses en español — 24 líneas de formato que ya se borraron de `users.service.ts`.
+
+Lo único que sigue siendo texto de display es `UserProfile.birthdate`, y a propósito: es un dato que el socio escribe, no una marca de tiempo que el sistema genere.
+
 ### Diferencia conocida (no es bug)
 
 `AnnouncementsBoard` cambia de orden: el mock devuelve los avisos en el orden escrito a mano de `lib/data.ts`, el backend los ordena por fecha ascendente. El contenido es idéntico (el test de integración lo compara campo por campo). Si el orden del tablero importa, la solución es una columna de prioridad en el backend, no reproducir un orden arbitrario.

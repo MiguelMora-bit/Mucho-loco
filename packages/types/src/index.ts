@@ -116,11 +116,19 @@ export interface MembershipInfo {
   graceEndsAt: string | null;
 }
 
+/**
+ * Una visita al gimnasio.
+ *
+ * `visitedAt` en ISO y `durationMinutes` como número, NO texto ya formateado
+ * (antes eran `day: '18'`, `month: 'JUN'`, `duration: '1h 24m'`). El formato
+ * es decisión de quien pinta, y con texto pre-armado la pantalla no podía
+ * cambiar de idioma — el mismo defecto que ya se corrigió en `Order.date` y
+ * en `MembershipInfo.expiresAt`.
+ */
 export interface Visit {
-  day: string;
-  month: string;
+  visitedAt: string;
   branch: string;
-  duration: string;
+  durationMinutes: number;
 }
 
 export interface CommunityComment {

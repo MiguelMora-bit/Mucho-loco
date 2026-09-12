@@ -21,36 +21,11 @@ import { cashRequiresPickup, productNotFound } from '../common/error-codes';
 // todavía, ver CLAUDE.md raíz sobre esa misma decisión entre apps).
 const HOME_SHIPPING_FEE = 99;
 
-const MONTHS_ES = [
-  'ENE',
-  'FEB',
-  'MAR',
-  'ABR',
-  'MAY',
-  'JUN',
-  'JUL',
-  'AGO',
-  'SEP',
-  'OCT',
-  'NOV',
-  'DIC',
-];
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
-}
-
-// day/month/duration pre-formateados en español, igual que el mock — mismo
-// defecto latente que Visit ya tenía documentado en customer-app (no se
-// corrige aquí para no forzar un cambio de frontend fuera de alcance).
 function toVisit(row: VisitRow & { branch: Branch }): Visit {
   return {
-    day: String(row.visitedAt.getUTCDate()).padStart(2, '0'),
-    month: MONTHS_ES[row.visitedAt.getUTCMonth()],
+    visitedAt: row.visitedAt.toISOString(),
     branch: row.branch.name,
-    duration: formatDuration(row.durationMinutes),
+    durationMinutes: row.durationMinutes,
   };
 }
 

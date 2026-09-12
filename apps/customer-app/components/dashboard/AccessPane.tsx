@@ -1,5 +1,5 @@
 import type { Lang, MembershipInfo, Translations, UserProfile, Visit } from '@mucho-loco/types';
-import { formatDate } from '../../lib/dates';
+import { formatDate, formatDayOfMonth, formatDuration, formatMonthShort } from '../../lib/dates';
 
 interface AccessPaneProps {
   t: Translations;
@@ -45,17 +45,23 @@ export function AccessPane({ t, lang, active, profile, membership, history, onSh
         </div>
         <div>
           <div className="font-display text-22 mb-3.5">{t.dashboard.access.accessHistory}</div>
-          {history.map((h, i) => (
-            <div key={i} className="acc-row">
+          {history.map((h) => (
+            <div key={h.visitedAt} className="acc-row">
               <div className="w-[50px] text-center flex-[0_0_50px]">
-                <b className="font-display text-22 leading-none text-ml-red block">{h.day}</b>
-                <small className="text-10 text-ml-cream-dim font-mono">{h.month}</small>
+                <b className="font-display text-22 leading-none text-ml-red block">
+                  {formatDayOfMonth(h.visitedAt, lang)}
+                </b>
+                <small className="text-10 text-ml-cream-dim font-mono">
+                  {formatMonthShort(h.visitedAt, lang)}
+                </small>
               </div>
               <div className="flex-1 text-sm">
                 <b>{h.branch}</b>
                 <small className="text-ml-cream-dim text-11 block">{t.dashboard.access.entryNote}</small>
               </div>
-              <span className="font-mono text-ml-orange text-xs tracking-[0.05em]">{h.duration}</span>
+              <span className="font-mono text-ml-orange text-xs tracking-[0.05em]">
+                {formatDuration(h.durationMinutes, lang)}
+              </span>
             </div>
           ))}
         </div>

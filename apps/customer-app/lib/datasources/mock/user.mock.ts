@@ -67,12 +67,12 @@ function seedRecords(): Record<string, UserRecord> {
       graceEndsAt: null,
     },
     history: [
-      { day: '18', month: 'JUN', branch: 'Roma Sur',   duration: '1h 24m' },
-      { day: '16', month: 'JUN', branch: 'Santa Fe',   duration: '58m' },
-      { day: '14', month: 'JUN', branch: 'Roma Sur',   duration: '2h 02m' },
-      { day: '12', month: 'JUN', branch: 'Condesa',    duration: '1h 11m' },
-      { day: '10', month: 'JUN', branch: 'Roma Sur',   duration: '1h 45m' },
-      { day: '07', month: 'JUN', branch: 'Interlomas', duration: '1h 33m' },
+      { visitedAt: '2026-06-18T07:30:00.000Z', branch: 'Roma Sur',   durationMinutes: 84 },
+      { visitedAt: '2026-06-16T07:15:00.000Z', branch: 'Santa Fe',   durationMinutes: 58 },
+      { visitedAt: '2026-06-14T16:00:00.000Z', branch: 'Roma Sur',   durationMinutes: 122 },
+      { visitedAt: '2026-06-12T07:45:00.000Z', branch: 'Condesa',    durationMinutes: 71 },
+      { visitedAt: '2026-06-10T17:00:00.000Z', branch: 'Roma Sur',   durationMinutes: 105 },
+      { visitedAt: '2026-06-07T08:00:00.000Z', branch: 'Interlomas', durationMinutes: 93 },
     ],
     orders: [
       {
@@ -127,9 +127,9 @@ function seedRecords(): Record<string, UserRecord> {
     // Todas las visitas en Condesa a propósito — su membresía no da acceso a
     // otra sucursal (ver CLAUDE.md raíz, "Membresía y alcance de acceso").
     history: [
-      { day: '18', month: 'JUN', branch: 'Condesa', duration: '55m' },
-      { day: '15', month: 'JUN', branch: 'Condesa', duration: '1h 10m' },
-      { day: '11', month: 'JUN', branch: 'Condesa', duration: '48m' },
+      { visitedAt: '2026-06-18T18:00:00.000Z', branch: 'Condesa', durationMinutes: 55 },
+      { visitedAt: '2026-06-15T18:30:00.000Z', branch: 'Condesa', durationMinutes: 70 },
+      { visitedAt: '2026-06-11T19:00:00.000Z', branch: 'Condesa', durationMinutes: 48 },
     ],
     orders: [
       {

@@ -92,6 +92,14 @@ Orden de fases:
 - Qué pasa con socios/empleados si cierra una sucursal.
 - Política de devoluciones/cancelaciones.
 
+### Convención: fechas en ISO (2026-09-12)
+
+Toda fecha que cruza el contrato va en **ISO** y la formatea quien la pinta, con `timeZone: 'UTC'` fijado (una fecha sin hora se parsea como medianoche UTC, y en México imprimiría el día anterior). Cada app tiene su `lib/dates.ts`.
+
+No es cosmético: mandar `'20 JUL 2026'` obliga al backend a saber los nombres de los meses en español y deja una pantalla que **no puede cambiar de idioma**. Además, mock y backend formateando distinto rompía la UI al prender `DATA_SOURCE=http` — pasó de verdad en el pase del socio de `customer-app`.
+
+Ya convertidos: `Order.date`, `MembershipInfo.expiresAt`/`.graceEndsAt`, `MemberAccessRecord.expiresAt`, `Visit` (`visitedAt` + `durationMinutes`), `Expense.date`, `Employee.hireDate`, `PayrollPeriod`, `Payslip.generatedAt`. La excepción deliberada es `UserProfile.birthdate`: lo escribe el socio, no lo genera el sistema.
+
 ### Skills instaladas para este proyecto (`.agents/skills/`, ver `skills-lock.json`)
 
 Viven en la raíz del monorepo — aplican a todos los apps, no solo a `customer-app`.

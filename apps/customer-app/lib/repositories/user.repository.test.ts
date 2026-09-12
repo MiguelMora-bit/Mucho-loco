@@ -103,6 +103,17 @@ describe('userRepository', () => {
   // texto español pre-formateado ("20 JUL 2026"), el dashboard se rompería
   // solo al prender NEXT_PUBLIC_DATA_SOURCE=http, porque las pinta con
   // lib/dates.ts — que necesita una fecha parseable, no un string ya armado.
+  // Una visita ya no viaja como texto pre-armado ('18'/'JUN'/'1h 24m'): con
+  // eso la pantalla no podía cambiar de idioma y el backend tenía que
+  // formatear en español. Ahora manda el dato y el frontend decide.
+  it('exposes visits as an ISO instant plus real minutes', async () => {
+    const [visit] = await userRepository.getVisitHistory(ALL_GYMS_TEST_EMAIL);
+
+    expect(Number.isNaN(Date.parse(visit.visitedAt))).toBe(false);
+    expect(typeof visit.durationMinutes).toBe('number');
+    expect(visit.durationMinutes).toBeGreaterThan(0);
+  });
+
   it('exposes membership dates as ISO, the same shape the backend returns', async () => {
     const membership = await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL);
 
