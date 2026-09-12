@@ -7,8 +7,12 @@ import type {
   CashRegisterShift,
   CounterSale,
   GlobalInventoryItem,
+  BranchSalesReport,
+  BranchStatsSummary,
   InventoryTransfer,
   MembershipPayment,
+  Order,
+  PickupOrder,
   ShiftTransaction,
 } from '@mucho-loco/types';
 import { AppModule } from '../src/app.module';
@@ -96,6 +100,10 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
     // cognitoSub, así que borrarlos no toca a ningún usuario de la app.
     await prisma.membership.deleteMany({ where: { user: { cognitoSub: null } } });
     await prisma.user.deleteMany({ where: { cognitoSub: null } });
+    await prisma.orderItem.deleteMany({ where: { order: { user: { email: { startsWith: 'pickup-e2e' } } } } });
+    await prisma.order.deleteMany({ where: { user: { email: { startsWith: 'pickup-e2e' } } } });
+    await prisma.membership.deleteMany({ where: { user: { email: { startsWith: 'pickup-e2e' } } } });
+    await prisma.user.deleteMany({ where: { email: { startsWith: 'pickup-e2e' } } });
 
     await prisma.branchInventory.deleteMany();
     await prisma.branchInventory.createMany({ data: SEEDED_INVENTORY });
@@ -603,6 +611,132 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         .expect(200);
 
       expect(body<ShiftTransaction[]>(after)).toHaveLength(body<ShiftTransaction[]>(before).length);
+    });
+  });
+
+  // El cruce que dos mocks aislados nunca pudieron hacer: el pedido lo crea el
+  // socio desde la tienda (customer-app) y lo entrega mostrador (branch-app).
+  describe('pickup orders (tienda → mostrador)', () => {
+    const CUSTOMER = 'pickup-e2e@mucholoco.mx';
+    let orderId: string;
+    let branchShift: CashRegisterShift;
+
+    // El turno se abre ANTES de entregar, como en la vida real: mostrador
+    // llega, abre caja, y luego atiende. Un turno abierto después no puede
+    // contener el efectivo de una entrega anterior — esa es justamente la
+    // ventana que el corte respeta.
+    beforeAll(async () => {
+      const res = await request(app.getHttpServer())
+        .get('/branches/1/cash-register/open-shift')
+        .set(...auth('staff'))
+        .expect(200);
+      branchShift = body<CashRegisterShift>(res);
+    });
+
+    it('an order placed by a member in the store shows up in their branch queue', async () => {
+      const placed = await request(app.getHttpServer())
+        .post('/users/me/orders')
+        .set('Authorization', `Bearer :${CUSTOMER}`)
+        .send({
+          items: [{ productId: 'p7', qty: 1 }],
+          paymentMethod: 'cash',
+          delivery: 'pickup',
+          lang: 'es',
+        })
+        .expect(201);
+      orderId = body<Order>(placed).id;
+
+      // La auto-provisión da de alta al socio en Roma Sur (ver UsersService).
+      const res = await request(app.getHttpServer())
+        .get('/branches/1/pickup-orders')
+        .set(...auth('staff'))
+        .expect(200);
+      const queue = body<PickupOrder[]>(res);
+      const mine = queue.find((o) => o.id === orderId);
+
+      expect(mine).toBeDefined();
+      expect(mine?.status).toBe('ready');
+      expect(mine?.customerName).toBe('PICKUP-E2E');
+      expect(mine?.total).toBe(790);
+    });
+
+    it('marking it delivered flips it for the member too, in the same row', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/pickup-orders/${orderId}/deliver`)
+        .set(...auth('staff'))
+        .expect(201);
+      expect(body<PickupOrder>(res).status).toBe('delivered');
+
+      const mine = await request(app.getHttpServer())
+        .get('/users/me/orders')
+        .set('Authorization', `Bearer :${CUSTOMER}`)
+        .expect(200);
+      const order = body<Order[]>(mine).find((o) => o.id === orderId);
+
+      expect(order?.status).toBe('done');
+      expect(order?.deliveredAt).toBeTruthy();
+    });
+
+    it('refuses to deliver the same order twice', async () => {
+      await request(app.getHttpServer())
+        .post(`/pickup-orders/${orderId}/deliver`)
+        .set(...auth('staff'))
+        .expect(400);
+    });
+
+    // El efectivo lo cobra mostrador al entregar, así que el corte de caja de
+    // esa sucursal tiene que verlo — un pedido pagado con tarjeta en línea no.
+    it('the cash it collected shows up in that branch cash-up', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/cash-register/shifts/${branchShift.id}/transactions`)
+        .set(...auth('staff'))
+        .expect(200);
+      const pickup = body<ShiftTransaction[]>(res).find((t) => t.kind === 'pickup');
+
+      expect(pickup).toMatchObject({ amount: 790, paymentMethod: 'cash' });
+    });
+  });
+
+  describe('reports', () => {
+    it('a branch sales report adds counter sales, memberships and pickups', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/branches/1/reports/sales?days=7')
+        .set(...auth('manager'))
+        .expect(200);
+      const report = body<BranchSalesReport>(res);
+
+      expect(report.branchId).toBe(1);
+      expect(report.days).toBe(7);
+      expect(report.totalRevenue).toBeGreaterThan(0);
+      expect(report.byDay.map((d) => d.date)).toEqual([...report.byDay.map((d) => d.date)].sort());
+      expect(report.topProducts.length).toBeLessThanOrEqual(5);
+    });
+
+    it('a report is not visible to counter staff', async () => {
+      await request(app.getHttpServer())
+        .get('/branches/1/reports/sales')
+        .set(...auth('staff'))
+        .expect(403);
+    });
+
+    it('owner stats list every branch, deriving revenue instead of hardcoding it', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/stats/branches')
+        .set(...auth('owner'))
+        .expect(200);
+      const stats = body<BranchStatsSummary[]>(res);
+
+      // Las 15, no solo las que tuvieron movimiento.
+      expect(stats).toHaveLength(15);
+      expect(stats.find((s) => s.branchId === 1)?.revenue).toBeGreaterThan(0);
+      expect(stats.every((s) => s.branchName.length > 0)).toBe(true);
+    });
+
+    it('owner stats are not visible to a branch manager', async () => {
+      await request(app.getHttpServer())
+        .get('/stats/branches')
+        .set(...auth('manager'))
+        .expect(403);
     });
   });
 });

@@ -59,13 +59,26 @@ export class CashRegisterService {
 
     const window = { gte: shift.openedAt, lte: shift.closedAt ?? new Date() };
 
-    const [sales, payments] = await Promise.all([
+    const [sales, payments, cashPickups] = await Promise.all([
       this.prisma.counterSale.findMany({
         where: { branchId: shift.branchId, createdAt: window },
         include: { items: true },
       }),
       this.prisma.membershipPayment.findMany({
         where: { branchId: shift.branchId, createdAt: window },
+      }),
+      // Por deliveredAt, no por createdAt: el efectivo entra al cajón cuando
+      // el socio recoge, no cuando hizo el pedido — pudo haberlo hecho en un
+      // turno anterior, o el día pasado.
+      this.prisma.order.findMany({
+        where: {
+          branchId: shift.branchId,
+          delivery: 'pickup',
+          paymentMethod: 'cash',
+          status: 'done',
+          deliveredAt: window,
+        },
+        include: { items: true, user: true },
       }),
     ]);
 
@@ -77,6 +90,14 @@ export class CashRegisterService {
         amount: sale.total,
         paymentMethod: sale.paymentMethod as PaymentMethod,
         createdAt: sale.createdAt.toISOString(),
+      })),
+      ...cashPickups.map((order) => ({
+        id: order.id,
+        kind: 'pickup' as const,
+        description: `Pedido en efectivo — ${order.user.name}`,
+        amount: order.total,
+        paymentMethod: 'cash' as PaymentMethod,
+        createdAt: (order.deliveredAt as Date).toISOString(),
       })),
       ...payments.map((payment) => ({
         id: payment.id,

@@ -164,7 +164,8 @@
     "noTransactions": "No sales or payments in this shift yet.",
     "source": {
       "sale": "Sale",
-      "membership": "Membership"
+      "membership": "Membership",
+      "pickup": "Cash pickup order"
     },
     "closeButton": "Close shift",
     "closeConfirm": "Sure? Confirm close",

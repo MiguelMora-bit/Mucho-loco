@@ -708,7 +708,11 @@ export interface CashRegisterShift {
  *  tenga que combinar dos formas distintas de transacción. */
 export interface ShiftTransaction {
   id: string;
-  kind: 'sale' | 'membership';
+  /** 'pickup' = pedido de la tienda pagado en efectivo AL RECOGER (ver "Pagos
+   *  en línea" en el CLAUDE.md raíz) — ese dinero entra al cajón de la
+   *  sucursal en el momento de la entrega, así que el corte tiene que verlo.
+   *  Un pedido pagado en línea con tarjeta no entra: nunca tocó esa caja. */
+  kind: 'sale' | 'membership' | 'pickup';
   description: string;
   amount: number;
   paymentMethod: PaymentMethod;

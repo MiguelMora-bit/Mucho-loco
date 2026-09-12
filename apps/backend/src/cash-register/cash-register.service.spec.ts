@@ -18,6 +18,7 @@ describe('CashRegisterService', () => {
     };
     counterSale: { findMany: jest.Mock };
     membershipPayment: { findMany: jest.Mock };
+    order: { findMany: jest.Mock };
   };
 
   const openShift = { id: 's1', branchId: 1, openedAt: OPENED, closedAt: null, status: 'open' };
@@ -33,6 +34,7 @@ describe('CashRegisterService', () => {
       },
       counterSale: { findMany: jest.fn().mockResolvedValue([]) },
       membershipPayment: { findMany: jest.fn().mockResolvedValue([]) },
+      order: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const module = await Test.createTestingModule({
       providers: [CashRegisterService, { provide: PrismaService, useValue: prisma }],
@@ -127,6 +129,47 @@ describe('CashRegisterService', () => {
       expect(prisma.counterSale.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { branchId: 1, createdAt: { gte: OPENED, lte: closedAt } },
+        }),
+      );
+    });
+
+    // Efectivo cobrado al entregar un pedido de la tienda: entra al cajón de
+    // la sucursal, así que tiene que salir en el corte. Uno pagado con tarjeta
+    // en línea no — ese dinero nunca tocó esta caja.
+    it('counts a cash pickup order as money entering the register', async () => {
+      prisma.cashRegisterShift.findUnique.mockResolvedValue(openShift);
+      prisma.order.findMany.mockResolvedValue([
+        {
+          id: 'o1',
+          total: 2080,
+          deliveredAt: new Date('2026-09-12T17:00:00.000Z'),
+          user: { name: 'Diego Ramírez' },
+          items: [],
+        },
+      ]);
+
+      const [tx] = await service.getTransactions('s1');
+
+      expect(tx).toMatchObject({
+        kind: 'pickup',
+        amount: 2080,
+        paymentMethod: 'cash',
+        description: 'Pedido en efectivo — Diego Ramírez',
+      });
+    });
+
+    it('only looks at cash pickups already delivered inside the window', async () => {
+      prisma.cashRegisterShift.findUnique.mockResolvedValue(openShift);
+
+      await service.getTransactions('s1');
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            delivery: 'pickup',
+            paymentMethod: 'cash',
+            status: 'done',
+          }),
         }),
       );
     });

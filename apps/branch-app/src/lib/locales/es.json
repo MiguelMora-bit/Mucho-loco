@@ -164,7 +164,8 @@
     "noTransactions": "Todavía no hay ninguna venta ni pago en este corte.",
     "source": {
       "sale": "Venta",
-      "membership": "Membresía"
+      "membership": "Membresía",
+      "pickup": "Pedido en efectivo"
     },
     "closeButton": "Cerrar corte",
     "closeConfirm": "¿Seguro? Confirmar cierre",
