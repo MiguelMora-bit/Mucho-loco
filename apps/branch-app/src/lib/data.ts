@@ -63,6 +63,10 @@ export const MEMBER_ACCESS_RECORDS: MemberAccessRecord[] = [
   // 'single', Interlomas) debe ser RECHAZADO si se escanea en Roma Sur.
   { qrCode: 'ML-QR-ROSA04', fingerprintId: 'FP-DEMO-ROSA', memberName: 'Rosa Jiménez', status: 'active', expiresAt: '18 AGO 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
   { qrCode: 'ML-QR-LUIS05', fingerprintId: 'FP-DEMO-LUIS', memberName: 'Luis Herrera', status: 'active', expiresAt: '22 AGO 2026', tierKey: 'single', homeBranchId: 4, homeBranchName: 'Interlomas' },
+  // Comparte nombre de pila con Carlos Mendoza a propósito — buscar "Carlos"
+  // en el método de acceso por nombre debe dar 'ambiguous' con los dos, para
+  // demostrar que el staff necesita desambiguar antes de decidir el acceso.
+  { qrCode: 'ML-QR-CARLOS06', memberName: 'Carlos Vega', status: 'active', expiresAt: '30 SEP 2026', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
 ];
 
 function daysAgo(days: number, hour: number): string {

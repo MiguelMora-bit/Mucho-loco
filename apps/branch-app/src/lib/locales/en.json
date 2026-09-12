@@ -127,8 +127,15 @@
     "fingerprintInstructions": "For members without the app — type the id the branch fingerprint reader returns.",
     "fingerprintPlaceholder": "Fingerprint id",
     "fingerprintValidate": "Validate fingerprint",
-    "notFound": "CODE NOT FOUND",
-    "notFoundNote": "There's no membership with that QR.",
+    "nameSectionTitle": "Or by searching a name",
+    "nameInstructions": "Last resort if there's no app and the fingerprint reader isn't working — type the member's name.",
+    "namePlaceholder": "Member's name",
+    "nameValidate": "Search",
+    "ambiguousTitle": "MORE THAN ONE MEMBER MATCHES",
+    "ambiguousNote": "Confirm with the member and select the right one:",
+    "selectCandidate": "Select",
+    "notFound": "NOT FOUND",
+    "notFoundNote": "There's no member with that information.",
     "statusActive": "ACCESS GRANTED",
     "statusGrace": "GRACE PERIOD — ALLOW AND NOTIFY",
     "statusExpired": "ACCESS DENIED — MEMBERSHIP EXPIRED",
@@ -136,7 +143,7 @@
     "wrongBranchNote": "This membership is only valid at",
     "expiresOn": "Expires on",
     "expiredOn": "Expired on",
-    "scanNext": "Scan another"
+    "scanNext": "Check another"
   },
   "qrScanner": {
     "start": "📷 Turn on camera",

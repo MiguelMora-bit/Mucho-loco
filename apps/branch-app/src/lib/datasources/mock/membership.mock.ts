@@ -50,7 +50,7 @@ export class MembershipMockDatasource {
     member.status = 'active';
     member.expiresAt = formatDate(addDays(new Date(), PERIOD_DAYS[periodKey]));
     // Una renovación puede cambiar de tier/sucursal de inscripción — el
-    // alcance de acceso (ver qrAccess.mock.ts) debe reflejar el plan nuevo.
+    // alcance de acceso (ver lib/access/evaluateAccess.ts) debe reflejar el plan nuevo.
     member.tierKey = tierKey;
     member.homeBranchId = branchId;
     member.homeBranchName = branchName;

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { qrAccessRepository } from '../lib/repositories/qrAccess.repository';
-import type { QrValidationResult } from '../lib/repositories/qrAccess.repository';
+import { qrAccessMethod, fingerprintAccessMethod, nameAccessMethod } from '../lib/access/methods';
+import type { AccessCheckResult, AccessMethod } from '../lib/access/AccessMethod';
 import { getCurrentBranchId } from '../lib/currentBranch';
 import { QrCameraScanner } from '../components/QrCameraScanner';
 import type { MemberAccessRecord } from '@mucho-loco/types';
@@ -16,14 +16,20 @@ const DEMO_CODES = ['ML-DIEGO-2026-ALLGYMS', 'ML-VALERIA-2026-CONDESA', 'ML-QR-A
 // acá porque el staff de prueba está en Roma Sur.
 const DEMO_FINGERPRINTS = ['FP-DEMO-ROSA', 'FP-DEMO-LUIS'];
 
+// Último recurso: buscar por nombre — ver lib/data.ts. "Carlos" es ambiguo a
+// propósito (Carlos Mendoza y Carlos Vega), para mostrar cómo el staff
+// desambigua antes de decidir el acceso.
+const DEMO_NAMES = ['Diego', 'Carlos'];
+
 export function QrValidationPage() {
   const { t } = useTranslation();
   const [code, setCode] = useState('');
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<QrValidationResult | null>(null);
+  const [result, setResult] = useState<AccessCheckResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [fingerprintId, setFingerprintId] = useState('');
+  const [nameQuery, setNameQuery] = useState('');
 
   const STATUS_COPY: Record<MemberAccessRecord['status'], { label: string; className: string }> = {
     active: { label: t('qr.statusActive'), className: 'bg-ml-green/10 border-ml-green text-ml-green' },
@@ -31,36 +37,49 @@ export function QrValidationPage() {
     expired: { label: t('qr.statusExpired'), className: 'bg-ml-red/10 border-ml-red text-ml-red' },
   };
 
-  async function validate(qrCode: string) {
-    if (!qrCode.trim() || checking) return;
+  // Cada sección de la pantalla (QR/huella/nombre) llama este único helper
+  // con SU método — QrValidationPage no conoce las reglas de negocio de
+  // ninguno, solo que todos implementan `AccessMethod` y devuelven el mismo
+  // `AccessCheckResult` (ver lib/access/AccessMethod.ts).
+  async function check(method: AccessMethod, query: string, onSettled?: () => void) {
+    if (!query.trim() || checking) return;
     setChecking(true);
     setResult(null);
     try {
-      const outcome = await qrAccessRepository.validate(qrCode, getCurrentBranchId());
+      const outcome = await method.checkAccess(query, getCurrentBranchId());
       setResult(outcome);
     } finally {
       setChecking(false);
-      setCode('');
-      inputRef.current?.focus();
+      onSettled?.();
     }
   }
 
-  async function validateFingerprint(scannedId: string) {
-    if (!scannedId.trim() || checking) return;
-    setChecking(true);
-    setResult(null);
-    try {
-      const outcome = await qrAccessRepository.validateByFingerprint(scannedId, getCurrentBranchId());
-      setResult(outcome);
-    } finally {
-      setChecking(false);
-      setFingerprintId('');
-    }
+  function validate(qrCode: string) {
+    return check(qrAccessMethod, qrCode, () => {
+      setCode('');
+      inputRef.current?.focus();
+    });
+  }
+
+  function validateFingerprint(scannedId: string) {
+    return check(fingerprintAccessMethod, scannedId, () => setFingerprintId(''));
+  }
+
+  function validateName(query: string) {
+    return check(nameAccessMethod, query, () => setNameQuery(''));
+  }
+
+  // Desambiguar un resultado 'ambiguous' (solo lo produce la búsqueda por
+  // nombre) es, ni más ni menos, resolver por el qrCode interno del
+  // candidato que el staff confirmó con el socio — todo registro tiene uno,
+  // incluso los dados de alta por huella (ver CLAUDE.md de este app).
+  function selectCandidate(candidate: MemberAccessRecord) {
+    return check(qrAccessMethod, candidate.qrCode);
   }
 
   // Mientras se muestra un resultado, un frame nuevo de la cámara no dispara
   // otra validación — evita re-escanear el mismo QR en bucle. Hay que limpiar
-  // el resultado ("Escanear otro") antes de que un scan cuente de nuevo.
+  // el resultado ("Validar otro") antes de que un scan cuente de nuevo.
   function handleCameraScan(scanned: string) {
     if (result || checking) return;
     validate(scanned);
@@ -146,6 +165,43 @@ export function QrValidationPage() {
         ))}
       </div>
 
+      <h2 className="text-lg font-bold mb-1 border-t border-ml-border pt-6">{t('qr.nameSectionTitle')}</h2>
+      <p className="text-ml-cream-dim text-sm mb-4">{t('qr.nameInstructions')}</p>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          validateName(nameQuery);
+        }}
+        className="flex gap-2 mb-4"
+      >
+        <input
+          value={nameQuery}
+          onChange={(e) => setNameQuery(e.target.value)}
+          placeholder={t('qr.namePlaceholder')}
+          className="flex-1 bg-ml-card border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
+        />
+        <button
+          type="submit"
+          disabled={checking || !nameQuery.trim()}
+          className="px-4 py-2 rounded bg-ml-red text-ml-cream font-medium disabled:opacity-40"
+        >
+          {checking ? t('qr.validating') : t('qr.nameValidate')}
+        </button>
+      </form>
+
+      <div className="flex gap-2 mb-8 flex-wrap">
+        {DEMO_NAMES.map((name) => (
+          <button
+            key={name}
+            onClick={() => validateName(name)}
+            className="text-xs px-2 py-1 rounded border border-ml-border text-ml-cream-dim hover:text-ml-cream"
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+
       {result && (
         <div className="rounded border p-6 text-center border-ml-border bg-ml-card">
           {result.outcome === 'not_found' && (
@@ -153,6 +209,30 @@ export function QrValidationPage() {
               <div className="text-4xl mb-2">✕</div>
               <div className="font-bold text-ml-red">{t('qr.notFound')}</div>
               <p className="text-ml-cream-dim text-sm mt-1">{t('qr.notFoundNote')}</p>
+            </>
+          )}
+
+          {result.outcome === 'ambiguous' && (
+            <>
+              <div className="text-4xl mb-2">❓</div>
+              <div className="inline-block px-2 py-1 rounded border font-mono text-xs uppercase mb-3 bg-ml-orange/10 border-ml-orange text-ml-orange">
+                {t('qr.ambiguousTitle')}
+              </div>
+              <p className="text-ml-cream-dim text-sm mb-3">{t('qr.ambiguousNote')}</p>
+              <div className="flex flex-col gap-2 text-left">
+                {result.candidates.map((candidate) => (
+                  <button
+                    key={candidate.qrCode}
+                    onClick={() => selectCandidate(candidate)}
+                    className="flex items-center justify-between px-3 py-2 rounded border border-ml-border hover:border-ml-red text-sm"
+                  >
+                    <span>
+                      {candidate.memberName} <span className="text-ml-cream-dim">· {candidate.homeBranchName}</span>
+                    </span>
+                    <span className="text-xs text-ml-cream-dim underline">{t('qr.selectCandidate')}</span>
+                  </button>
+                ))}
+              </div>
             </>
           )}
 

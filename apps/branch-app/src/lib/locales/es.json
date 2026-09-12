@@ -127,8 +127,15 @@
     "fingerprintInstructions": "Para socios sin la app — escribe el id que regresa el lector de huella de sucursal.",
     "fingerprintPlaceholder": "ID de huella",
     "fingerprintValidate": "Validar huella",
-    "notFound": "CÓDIGO NO ENCONTRADO",
-    "notFoundNote": "No existe ninguna membresía con ese QR.",
+    "nameSectionTitle": "O buscando por nombre",
+    "nameInstructions": "Último recurso si no hay app y el lector de huella no funciona — escribe el nombre del socio.",
+    "namePlaceholder": "Nombre del socio",
+    "nameValidate": "Buscar",
+    "ambiguousTitle": "MÁS DE UN SOCIO COINCIDE",
+    "ambiguousNote": "Confirma con el socio y selecciona el correcto:",
+    "selectCandidate": "Seleccionar",
+    "notFound": "NO ENCONTRADO",
+    "notFoundNote": "No existe ningún socio con esos datos.",
     "statusActive": "ACCESO PERMITIDO",
     "statusGrace": "PERIODO DE GRACIA — PERMITIR Y AVISAR",
     "statusExpired": "ACCESO DENEGADO — MEMBRESÍA VENCIDA",
@@ -136,7 +143,7 @@
     "wrongBranchNote": "Esta membresía solo es válida en",
     "expiresOn": "Vence el",
     "expiredOn": "Venció el",
-    "scanNext": "Escanear otro"
+    "scanNext": "Validar otro"
   },
   "qrScanner": {
     "start": "📷 Activar cámara",
