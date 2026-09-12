@@ -13,6 +13,7 @@ import type {
   Payslip as PayslipRow,
 } from '@prisma/client';
 import { calculatePayroll } from './payroll.math';
+import { periodAlreadyClosed, periodNotFound } from '../common/error-codes';
 
 const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
 
@@ -123,9 +124,9 @@ export class PayrollService {
    */
   async runPayroll(periodId: string): Promise<Payslip[]> {
     const period = await this.prisma.payrollPeriod.findUnique({ where: { id: periodId } });
-    if (!period) throw new NotFoundException(`Payroll period not found: ${periodId}`);
+    if (!period) throw new NotFoundException(periodNotFound(periodId));
     if (period.status === 'closed') {
-      throw new BadRequestException(`Payroll period already closed: ${periodId}`);
+      throw new BadRequestException(periodAlreadyClosed(periodId));
     }
 
     const summaries = (await this.getAttendanceSummaries()).filter((s) => s.periodId === periodId);

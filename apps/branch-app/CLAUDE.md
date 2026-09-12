@@ -70,6 +70,51 @@ Datos demo en `lib/data.ts`: Rosa Jiménez (`FP-DEMO-ROSA`, tier `all`, Roma Sur
 
 Mismo patrón mock-first que `customer-app`: `datasources/mock/` (datos + delay simulado) → `repositories/` (`I*Repository` + instancia singleton, con el comentario "Swap this line..." marcando la costura hacia el backend real) → `stores/` (Zustand, un store por recurso vía `createAsyncResource`). Cada repository tiene su test de Vitest.
 
+## Swap de datasource: mock ↔ backend NestJS (2026-09-12, parcial)
+
+Igual que hizo `customer-app` — misma variable, mismo patrón, mismo default: **sin configurar nada, este app sigue en mocks** y arranca sin Postgres ni backend.
+
+```bash
+# .env.local (o inline)
+VITE_DATA_SOURCE=http          # cualquier otro valor / ausente = mock
+VITE_API_URL=http://localhost:3001
+```
+
+**Migrado hasta ahora: `counterSale`** (inventario de la sucursal + venta de mostrador). Los otros 5 repositorios (`pickupOrder`, `cashRegisterShift`, `attendance`, `reports`, `membership`) siguen en mock — el backend YA los cubre, solo falta el datasource de este lado.
+
+### Diferencias con el cliente HTTP de customer-app
+
+`src/lib/datasources/http/client.ts` es gemelo del de `customer-app`, con dos cambios que vienen de ser una SPA:
+
+- **El token sale del store de auth** (`useAuthStore`, persistido en localStorage), no de una cookie httpOnly — este app no tiene servidor propio donde leerla.
+- **No hay caché de framework** que configurar (`revalidate` es de Next).
+- **`?lang=`** se agrega solo en los endpoints donde el backend aplana un `LocalizedString` a texto (nombre de producto). El idioma sale de i18next, no de una prop.
+
+Cuando `owner-panel` haga este mismo swap serán tres copias de este cliente y valdrá la pena extraerlo a un paquete compartido. No antes: con tres consumidores a la vista la abstracción correcta se ve, adivinarla con uno solo no.
+
+### Errores tipados: por qué el backend ahora manda códigos
+
+`counterSale.errors.ts` siempre dijo que un datasource real debe rechazar con los MISMOS tipos de error "so the UI layer never has to read a raw error message". Para poder cumplirlo, el backend dejó de mandar solo prosa en español y ahora incluye un código de máquina en el cuerpo del 4xx (`apps/backend/src/common/error-codes.ts`):
+
+| Código del backend | Error del contrato |
+|---|---|
+| `INSUFFICIENT_STOCK` | `InsufficientStockError` (con `productName`, que la UI muestra) |
+| `PRODUCT_NOT_FOUND` | `ProductNotFoundError` |
+| `BRANCH_DOES_NOT_STOCK_PRODUCT` | `ProductNotFoundError` — para quien cobra es lo mismo: no se puede vender aquí |
+
+Cualquier otro fallo (500, red caída) se deja pasar tal cual: un backend muerto no es un error de negocio y disfrazarlo de "sin stock" sería mentirle a mostrador.
+
+### Un cambio en el mock, para que el swap no se note
+
+`BRANCH_INVENTORY` escribía `productName` a mano y a veces se saltaba el sabor (`'Shaker Loco'` vs `'Whey Protein 5LBS · Strawberry'`). El backend lo arma siempre igual (`nombre · sabor`), así que prender el flag cambiaba el texto en pantalla. El mock ya está alineado — el swap no debería verse.
+
+### Testing
+
+- **Unit** (`pnpm test`, sin red): `counterSale.http.test.ts` — cada método a su ruta, el token en la cabecera, `?lang=` según idioma, y las tres traducciones de error (más la que NO se traduce).
+- **Integración** (`pnpm test:integration`, contra el backend real en `:3001`, fuera de CI): verifica que **la ruta existe y el guard la protege**. Un error de dedo en la URL pasa todos los unitarios —afirman contra la misma URL equivocada— y solo se cae en producción; aquí se cae como un 404. La respuesta autenticada campo por campo la cubre `test/branch-ops.e2e-spec.ts` del backend, que sí puede sobreescribir el verifier.
+
+**Sin verificar en navegador todavía**: los endpoints de sucursal exigen un ID token con grupo `staff` y no hay User Pool vivo (infra destruida, ver CLAUDE.md raíz).
+
 ## Comandos
 
 ```bash

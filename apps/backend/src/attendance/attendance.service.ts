@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { AttendanceEntry } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AttendanceEntry as EntryRow } from '@prisma/client';
+import { alreadyClockedIn, noOpenEntry } from '../common/error-codes';
 
 function toEntry(row: EntryRow): AttendanceEntry {
   return {
@@ -50,7 +51,7 @@ export class AttendanceService {
       where: { staffEmail, clockOut: null },
     });
     if (open) {
-      throw new BadRequestException(`${staffEmail} ya tiene un turno abierto`);
+      throw new BadRequestException(alreadyClockedIn(staffEmail));
     }
 
     const employee = await this.prisma.employee.findUnique({ where: { email: staffEmail } });
@@ -65,7 +66,7 @@ export class AttendanceService {
       where: { staffEmail, clockOut: null },
     });
     if (!open) {
-      throw new NotFoundException(`${staffEmail} no tiene un turno abierto`);
+      throw new NotFoundException(noOpenEntry(staffEmail));
     }
 
     const row = await this.prisma.attendanceEntry.update({

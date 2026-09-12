@@ -35,13 +35,17 @@ export const PICKUP_ORDERS: PickupOrder[] = [
 
 // Mutated in place by counterSale.mock.ts on each sale — same pattern as
 // PICKUP_ORDERS' markDelivered mutating this array directly.
+// productName va SIEMPRE como "nombre · sabor", igual que lo arma el backend
+// (`displayName` en inventory.service.ts). Antes algunos entraban sin sabor
+// ('Shaker Loco') y otros con él, así que prender VITE_DATA_SOURCE=http
+// cambiaba el texto en pantalla — el swap de datasource no debería notarse.
 export const BRANCH_INVENTORY: BranchInventoryLevel[] = [
   { branchId: 1, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 12 },
   { branchId: 1, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 18 },
   { branchId: 1, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 40 },
-  { branchId: 1, productId: 'p13', productName: 'Goma de Mascar Energética', unitPrice: 95, qty: 25 },
+  { branchId: 1, productId: 'p13', productName: 'Goma de Mascar Energética · Energía Bestial', unitPrice: 95, qty: 25 },
   { branchId: 1, productId: 'p11', productName: "BCAA's en polvo · Watermelon", unitPrice: 690, qty: 0 },
-  { branchId: 1, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 9 },
+  { branchId: 1, productId: 'p18', productName: 'Shaker Loco · 700ml', unitPrice: 290, qty: 9 },
 ];
 
 // Mutated by membership.mock.ts on sign-up or renewal — same pattern as
@@ -92,10 +96,10 @@ export const MEMBERSHIP_PAYMENTS: MembershipPayment[] = [
 // MEMBERSHIP_PAYMENTS above.
 export const COUNTER_SALES: CounterSale[] = [
   { id: '#CS-SEED-1', branchId: 1, items: [{ productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', qty: 2, unitPrice: 790 }], total: 1580, paymentMethod: 'card', createdAt: daysAgo(1, 8) },
-  { id: '#CS-SEED-2', branchId: 1, items: [{ productId: 'p18', productName: 'Shaker Loco', qty: 3, unitPrice: 290 }], total: 870, paymentMethod: 'cash', createdAt: daysAgo(1, 18) },
+  { id: '#CS-SEED-2', branchId: 1, items: [{ productId: 'p18', productName: 'Shaker Loco · 700ml', qty: 3, unitPrice: 290 }], total: 870, paymentMethod: 'cash', createdAt: daysAgo(1, 18) },
   { id: '#CS-SEED-3', branchId: 1, items: [{ productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', qty: 4, unitPrice: 45 }], total: 180, paymentMethod: 'cash', createdAt: daysAgo(3, 12) },
-  { id: '#CS-SEED-4', branchId: 1, items: [{ productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', qty: 1, unitPrice: 790 }, { productId: 'p13', productName: 'Goma de Mascar Energética', qty: 2, unitPrice: 95 }], total: 980, paymentMethod: 'transfer', createdAt: daysAgo(4, 17) },
-  { id: '#CS-SEED-5', branchId: 1, items: [{ productId: 'p18', productName: 'Shaker Loco', qty: 1, unitPrice: 290 }], total: 290, paymentMethod: 'card', createdAt: daysAgo(6, 9) },
+  { id: '#CS-SEED-4', branchId: 1, items: [{ productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', qty: 1, unitPrice: 790 }, { productId: 'p13', productName: 'Goma de Mascar Energética · Energía Bestial', qty: 2, unitPrice: 95 }], total: 980, paymentMethod: 'transfer', createdAt: daysAgo(4, 17) },
+  { id: '#CS-SEED-5', branchId: 1, items: [{ productId: 'p18', productName: 'Shaker Loco · 700ml', qty: 1, unitPrice: 290 }], total: 290, paymentMethod: 'card', createdAt: daysAgo(6, 9) },
 ];
 
 // Mutated by cashRegisterShift.mock.ts — closeShift() flips status, a fresh

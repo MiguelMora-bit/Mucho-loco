@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { Branch, Membership, User } from '@prisma/client';
 import { RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dto';
 import { PERIOD_DAYS, addDays, calculateMembershipPrice } from './membership-plans';
+import { memberNotFound } from '../common/error-codes';
 
 type MembershipWithOwner = Membership & { user: User; branch: Branch };
 
@@ -133,7 +134,7 @@ export class CounterMembershipsService {
       where: { accessCode: dto.qrCode.trim() },
       include: this.include,
     });
-    if (!membership) throw new NotFoundException(`Member QR code not found: ${dto.qrCode}`);
+    if (!membership) throw new NotFoundException(memberNotFound(dto.qrCode));
 
     const amount = await this.priceFor(branchId, dto.tierKey, dto.periodKey);
 

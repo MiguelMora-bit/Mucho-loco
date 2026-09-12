@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { PickupOrder } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Order as OrderRow, OrderItem as OrderItemRow, User } from '@prisma/client';
+import { notAPickupOrder, orderAlreadyDelivered } from '../common/error-codes';
 
 /**
  * Un pedido "recoger en gym" visto por mostrador. NO es un modelo aparte: es
@@ -49,10 +50,10 @@ export class PickupOrdersService {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException(`Pickup order not found: ${orderId}`);
     if (order.delivery !== 'pickup') {
-      throw new BadRequestException(`Order ${orderId} no es de recoger en gym`);
+      throw new BadRequestException(notAPickupOrder(orderId));
     }
     if (order.status === 'done') {
-      throw new BadRequestException(`Pickup order already delivered: ${orderId}`);
+      throw new BadRequestException(orderAlreadyDelivered(orderId));
     }
 
     const updated = await this.prisma.order.update({

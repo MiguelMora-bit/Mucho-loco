@@ -76,7 +76,11 @@ describe('CounterSalesService', () => {
     await service.createSale(1, { picks: [{ productId: 'p7', qty: 2 }], paymentMethod: 'card' }, 'es');
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(inventory.decrementForSale).toHaveBeenCalledWith(prisma, 1, 'p7', 2);
+    // El nombre viaja para que el error de stock diga "no hay suficiente
+    // Pre-Entreno Bestia" y no "de p7" — ver common/error-codes.ts.
+    expect(inventory.decrementForSale).toHaveBeenCalledWith(
+      prisma, 1, 'p7', 2, 'Pre-Entreno Bestia · Mango Chamoy',
+    );
   });
 
   // Si el stock no alcanza, no puede quedar una venta cobrada sin producto que

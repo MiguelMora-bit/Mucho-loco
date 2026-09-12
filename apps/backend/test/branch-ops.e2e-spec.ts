@@ -229,6 +229,43 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         .expect(400);
     });
 
+    // El frontend mapea estos códigos a errores tipados (ProductNotFoundError,
+    // InsufficientStockError). Si el backend volviera a mandar solo prosa, la
+    // UI tendría que leer el mensaje para saber qué pasó.
+    it('answers with a machine-readable code, not just a message', async () => {
+      const outOfStock = await request(app.getHttpServer())
+        .post('/branches/1/counter-sales')
+        .set(...auth('staff'))
+        .send({ picks: [{ productId: 'p11', qty: 1 }], paymentMethod: 'cash' })
+        .expect(400);
+      expect(outOfStock.body).toMatchObject({
+        code: 'INSUFFICIENT_STOCK',
+        productId: 'p11',
+        available: 0,
+        requested: 1,
+      });
+      // El nombre viene en el cuerpo porque la UI lo muestra tal cual.
+      expect(outOfStock.body).toHaveProperty('productName');
+
+      const unknown = await request(app.getHttpServer())
+        .post('/branches/1/counter-sales')
+        .set(...auth('staff'))
+        .send({ picks: [{ productId: 'fantasma', qty: 1 }], paymentMethod: 'cash' })
+        .expect(404);
+      expect(unknown.body).toMatchObject({ code: 'PRODUCT_NOT_FOUND', productId: 'fantasma' });
+
+      const notStocked = await request(app.getHttpServer())
+        .post('/branches/3/counter-sales')
+        .set(...auth('staff'))
+        .send({ picks: [{ productId: 'p1', qty: 1 }], paymentMethod: 'cash' })
+        .expect(404);
+      expect(notStocked.body).toMatchObject({
+        code: 'BRANCH_DOES_NOT_STOCK_PRODUCT',
+        branchId: 3,
+        productId: 'p1',
+      });
+    });
+
     it('refuses to sell more than the branch has and leaves stock untouched', async () => {
       const before = await prisma.branchInventory.findUniqueOrThrow({
         where: { branchId_productId: { branchId: 1, productId: 'p11' } },

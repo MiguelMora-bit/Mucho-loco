@@ -2,8 +2,9 @@ import type { BranchInventoryLevel, CounterSale, CounterSaleItem, PaymentMethod 
 import { BRANCH_INVENTORY, COUNTER_SALES } from '../../data';
 import { delay } from './delay';
 import { ProductNotFoundError, InsufficientStockError } from '../../repositories/counterSale.errors';
+import type { ICounterSaleRepository } from '../../repositories/counterSale.repository';
 
-export class CounterSaleMockDatasource {
+export class CounterSaleMockDatasource implements ICounterSaleRepository {
   async getInventory(branchId: number): Promise<BranchInventoryLevel[]> {
     await delay(150);
     return BRANCH_INVENTORY.filter((i) => i.branchId === branchId);

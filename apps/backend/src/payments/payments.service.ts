@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from './stripe.provider';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
+import { productNotFound } from '../common/error-codes';
 
 /** Mismo cargo que aplica UsersService.createOrder — el envío no deja de cobrarse por pagar con tarjeta. */
 const HOME_SHIPPING_FEE = 99;
@@ -61,7 +62,7 @@ export class PaymentsService {
 
     const lines = dto.items.map((line) => {
       const product = productById.get(line.productId);
-      if (!product) throw new NotFoundException(`Product not found: ${line.productId}`);
+      if (!product) throw new NotFoundException(productNotFound(line.productId));
       const name = (product.name as unknown as LocalizedString)[dto.lang];
       const flav = (product.flav as unknown as LocalizedString)[dto.lang];
       return { product, name, flav, qty: line.qty };

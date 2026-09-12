@@ -1,5 +1,7 @@
 import type { BranchInventoryLevel, CounterSale, PaymentMethod } from '@mucho-loco/types';
 import { CounterSaleMockDatasource } from '../datasources/mock/counterSale.mock';
+import { CounterSaleHttpDatasource } from '../datasources/http/counterSale.http';
+import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
 export { ProductNotFoundError, InsufficientStockError } from './counterSale.errors';
 
@@ -12,5 +14,7 @@ export interface ICounterSaleRepository {
   ): Promise<CounterSale>;
 }
 
-// Swap this line to plug in a real API datasource
-export const counterSaleRepository: ICounterSaleRepository = new CounterSaleMockDatasource();
+// Mock o backend NestJS real, según VITE_DATA_SOURCE — ver datasources/http/config.ts.
+export const counterSaleRepository: ICounterSaleRepository = isHttpDatasourceEnabled()
+  ? new CounterSaleHttpDatasource()
+  : new CounterSaleMockDatasource();

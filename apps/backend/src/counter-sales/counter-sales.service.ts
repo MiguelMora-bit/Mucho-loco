@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService, displayName } from '../inventory/inventory.service';
 import { CreateCounterSaleDto } from './dto/create-counter-sale.dto';
 import type { CounterSale as SaleRow, CounterSaleItem as SaleItemRow } from '@prisma/client';
+import { productNotFound } from '../common/error-codes';
 
 function toCounterSale(row: SaleRow & { items: SaleItemRow[] }): CounterSale {
   return {
@@ -42,7 +43,7 @@ export class CounterSalesService {
 
     const items = dto.picks.map((pick) => {
       const product = productById.get(pick.productId);
-      if (!product) throw new NotFoundException(`Product not found: ${pick.productId}`);
+      if (!product) throw new NotFoundException(productNotFound(pick.productId));
       return {
         productId: product.id,
         productName: displayName(product, lang),
@@ -54,7 +55,9 @@ export class CounterSalesService {
 
     const sale = await this.prisma.$transaction(async (tx) => {
       for (const item of items) {
-        await this.inventory.decrementForSale(tx, branchId, item.productId, item.qty);
+        await this.inventory.decrementForSale(
+          tx, branchId, item.productId, item.qty, item.productName,
+        );
       }
       return tx.counterSale.create({
         data: {

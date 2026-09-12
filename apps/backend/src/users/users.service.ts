@@ -14,6 +14,7 @@ import type {
   User,
   Visit as VisitRow,
 } from '@prisma/client';
+import { cashRequiresPickup, productNotFound } from '../common/error-codes';
 
 // Mismo cargo fijo que hoy vive hardcodeado en CheckoutClient.tsx del
 // frontend — duplicado a propósito (sin runtime compartido entre back/front
@@ -146,9 +147,7 @@ export class UsersService {
   async createOrder(userId: string, dto: CreateOrderDto): Promise<Order> {
     if (dto.paymentMethod === 'cash' && dto.delivery !== 'pickup') {
       // Efectivo online solo aplica cuando la entrega es "recoger en gym" — ver CLAUDE.md raíz.
-      throw new BadRequestException(
-        'cash payment method requires pickup delivery',
-      );
+      throw new BadRequestException(cashRequiresPickup());
     }
 
     const productIds = dto.items.map((i) => i.productId);
@@ -160,7 +159,7 @@ export class UsersService {
     const items = dto.items.map((line) => {
       const product = productById.get(line.productId);
       if (!product)
-        throw new NotFoundException(`Product not found: ${line.productId}`);
+        throw new NotFoundException(productNotFound(line.productId));
       const name = (product.name as Record<string, string>)[dto.lang];
       const flav = (product.flav as Record<string, string>)[dto.lang];
       return {

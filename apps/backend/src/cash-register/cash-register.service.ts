@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { CashRegisterShift, PaymentMethod, ShiftTransaction } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CashRegisterShift as ShiftRow } from '@prisma/client';
+import { shiftAlreadyClosed, shiftNotFound } from '../common/error-codes';
 
 function toShift(row: ShiftRow): CashRegisterShift {
   return {
@@ -55,7 +56,7 @@ export class CashRegisterService {
    */
   async getTransactions(shiftId: string): Promise<ShiftTransaction[]> {
     const shift = await this.prisma.cashRegisterShift.findUnique({ where: { id: shiftId } });
-    if (!shift) throw new NotFoundException(`Shift not found: ${shiftId}`);
+    if (!shift) throw new NotFoundException(shiftNotFound(shiftId));
 
     const window = { gte: shift.openedAt, lte: shift.closedAt ?? new Date() };
 
@@ -128,9 +129,9 @@ export class CashRegisterService {
    */
   async closeShift(shiftId: string): Promise<CashRegisterShift> {
     const shift = await this.prisma.cashRegisterShift.findUnique({ where: { id: shiftId } });
-    if (!shift) throw new NotFoundException(`Shift not found: ${shiftId}`);
+    if (!shift) throw new NotFoundException(shiftNotFound(shiftId));
     if (shift.status === 'closed') {
-      throw new BadRequestException(`Shift already closed: ${shiftId}`);
+      throw new BadRequestException(shiftAlreadyClosed(shiftId));
     }
 
     const closed = await this.prisma.cashRegisterShift.update({

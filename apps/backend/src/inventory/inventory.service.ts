@@ -13,6 +13,11 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma, Product as ProductRow } from '@prisma/client';
 import { CreateTransferDto } from './dto/create-transfer.dto';
+import {
+  branchDoesNotStockProduct,
+  insufficientStock,
+  sameBranchTransfer,
+} from '../common/error-codes';
 
 /**
  * Nombre de producto para pantallas de inventario/venta: "Whey Protein 5LBS ·
@@ -99,7 +104,7 @@ export class InventoryService {
    */
   async createTransfer(dto: CreateTransferDto): Promise<InventoryTransfer> {
     if (dto.fromBranchId === dto.toBranchId) {
-      throw new BadRequestException('No se puede transferir a la misma sucursal');
+      throw new BadRequestException(sameBranchTransfer());
     }
 
     const created = await this.prisma.$transaction(async (tx) => {
@@ -108,12 +113,12 @@ export class InventoryService {
       });
       if (!source) {
         throw new NotFoundException(
-          `La sucursal ${dto.fromBranchId} no maneja el producto ${dto.productId}`,
+          branchDoesNotStockProduct(dto.fromBranchId, dto.productId),
         );
       }
       if (source.qty < dto.qty) {
         throw new BadRequestException(
-          `Stock insuficiente: hay ${source.qty}, se piden ${dto.qty}`,
+          insufficientStock(dto.productId, dto.productId, source.qty, dto.qty),
         );
       }
 
@@ -165,18 +170,18 @@ export class InventoryService {
     branchId: number,
     productId: string,
     qty: number,
+    /** Para el mensaje de error: la UI muestra "no hay suficiente Whey", no "de p1". */
+    productName?: string,
   ): Promise<void> {
     const level = await tx.branchInventory.findUnique({
       where: { branchId_productId: { branchId, productId } },
     });
     if (!level) {
-      throw new NotFoundException(
-        `La sucursal ${branchId} no maneja el producto ${productId}`,
-      );
+      throw new NotFoundException(branchDoesNotStockProduct(branchId, productId));
     }
     if (level.qty < qty) {
       throw new BadRequestException(
-        `Stock insuficiente de ${productId}: hay ${level.qty}, se piden ${qty}`,
+        insufficientStock(productId, productName ?? productId, level.qty, qty),
       );
     }
     await tx.branchInventory.update({

@@ -7,5 +7,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // Los de integración necesitan el backend vivo — corren aparte, con
+    // vitest.integration.config.mts.
+    exclude: ['**/node_modules/**', 'src/**/*.integration.test.ts'],
   },
 });
