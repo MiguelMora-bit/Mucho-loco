@@ -1,0 +1,96 @@
+name: deploy backend
+
+# Manual a propósito, no en cada push a main.
+#
+# El entorno de AWS se destruye entre sesiones para no pagar (ver "Nota
+# operativa" en el CLAUDE.md raíz), así que un deploy automático fallaría la
+# mayor parte del tiempo contra infraestructura que no existe. Cuando el
+# entorno viva de forma permanente, esto pasa a `push: branches: [main]`.
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Tag de la imagen. Por default, el SHA del commit.'
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false # Nunca cancelar un deploy a medias.
+
+# Necesario para OIDC: `id-token: write` deja que la corrida pida el token que
+# AWS cambia por credenciales temporales. Sin llaves de larga vida en secretos.
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: mucho-loco-dev-backend
+  ECS_CLUSTER: mucho-loco-dev
+  ECS_SERVICE: mucho-loco-dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # `terraform output github_deploy_role_arn`, guardado como secreto.
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+
+      # La task definition declara ARM64 (la imagen se construye en un Mac con
+      # Apple Silicon y sale más barato en Fargate). El runner es x86, así que
+      # sin QEMU el build multiplataforma no puede correr.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build y push
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ inputs.image_tag || github.sha }}
+        run: |
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:$TAG"
+          # El build context es la RAÍZ del monorepo: el Dockerfile necesita
+          # ver pnpm-workspace.yaml y packages/types (ver apps/backend/CLAUDE.md).
+          docker buildx build \
+            --platform linux/arm64 \
+            -f apps/backend/Dockerfile \
+            -t "$IMAGE" \
+            -t "$REGISTRY/$ECR_REPOSITORY:latest" \
+            --push \
+            .
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      # Etiquetar con el SHA (y no solo :latest) hace que un rollback sea
+      # apuntar el servicio a un tag anterior, en vez de reconstruir.
+      - name: Desplegar en ECS y esperar a que estabilice
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --no-cli-pager > /dev/null
+
+          # Sin esto el job termina en verde aunque la tarea nueva muera en el
+          # health check: "desplegado" tiene que significar "está sirviendo".
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Backend desplegado"
+            echo ""
+            echo "- Imagen: \`${{ steps.build.outputs.image }}\`"
+            echo "- Servicio: \`$ECS_SERVICE\` en \`$ECS_CLUSTER\`"
+          } >> "$GITHUB_STEP_SUMMARY"

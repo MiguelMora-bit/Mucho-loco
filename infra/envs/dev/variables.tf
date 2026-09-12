@@ -74,3 +74,9 @@ variable "cors_origins" {
   type        = list(string)
   default     = ["http://localhost:3000", "http://localhost:5173"]
 }
+
+variable "github_repository" {
+  description = "owner/repo autorizado a desplegar vía OIDC. Solo este repositorio puede asumir el rol."
+  type        = string
+  default     = "MiguelMora-bit/Mucho-loco"
+}

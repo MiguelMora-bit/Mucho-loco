@@ -83,3 +83,16 @@ module "ecs" {
   ])
   cors_origins = join(",", var.cors_origins)
 }
+
+module "cicd" {
+  source = "../../modules/cicd"
+
+  project     = var.project
+  environment = "dev"
+
+  github_repository  = var.github_repository
+  ecr_repository_arn = module.ecr.repository_arn
+  ecs_cluster_arn    = module.ecs.cluster_arn
+  ecs_service_arn    = module.ecs.service_arn
+  task_role_arns     = module.ecs.task_role_arns
+}

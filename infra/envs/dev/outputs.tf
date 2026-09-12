@@ -54,3 +54,8 @@ output "database_url_secret_arn" {
   description = "Secreto con la DATABASE_URL completa (usuario y contraseña incluidos)."
   value       = module.database.database_url_secret_arn
 }
+
+output "github_deploy_role_arn" {
+  description = "Guardar como secreto AWS_DEPLOY_ROLE_ARN en el repositorio de GitHub."
+  value       = module.cicd.role_arn
+}

@@ -98,6 +98,21 @@ NEXT_PUBLIC_API_URL=<api_url>
 
 Y los `COGNITO_*` de los tres apps con los ids nuevos — el User Pool se recrea con ids distintos cada vez.
 
+## CI/CD
+
+`.github/workflows/deploy.yml` construye la imagen, la sube a ECR y redespliega el servicio. **No usa llaves de acceso**: GitHub emite un token OIDC por corrida y AWS lo cambia por credenciales temporales, acotadas a este repositorio y a la rama `main` (`modules/cicd`).
+
+Después del primer `terraform apply`, guardar el rol como secreto del repositorio:
+
+```bash
+gh secret set AWS_DEPLOY_ROLE_ARN \
+  --body "$(terraform -chdir=infra/envs/dev output -raw github_deploy_role_arn)"
+```
+
+El workflow es **manual** (`workflow_dispatch`) a propósito: este entorno se destruye entre sesiones, así que un deploy automático en cada push fallaría contra infraestructura que no existe. Cuando el entorno viva de forma permanente, cambiar el trigger a `push: branches: [main]`.
+
+`.github/workflows/test.yml` sí corre en cada push y PR: typecheck + lint, unit tests, e2e del backend contra un Postgres real (service container), los tests de contrato de `customer-app` contra el backend levantado en el propio runner, y el build de los 4 apps. Nada de eso necesita AWS.
+
 ## Tirar todo
 
 ```bash
@@ -110,4 +125,4 @@ Borra también el User Pool y con él los 6 usuarios de prueba; recrearlos es el
 
 1. **State local.** Vive en `envs/dev/terraform.tfstate`, en esta máquina. Migrar a S3 + DynamoDB para el lock antes de que haya recursos que de verdad importe no perder.
 2. **Solo HTTP.** El ALB escucha en :80 sin TLS. Necesita un dominio y un certificado de ACM para :443 — sin eso el ID token de Cognito viaja en claro, así que no se puede usar con datos reales.
-3. **Sin CI/CD**: los pasos 3 y 4 son manuales.
+3. **El primer despliegue sigue siendo manual** (pasos 3 y 4). A partir del segundo lo hace `.github/workflows/deploy.yml` — ver abajo.
