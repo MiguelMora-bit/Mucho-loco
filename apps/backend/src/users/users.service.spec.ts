@@ -145,14 +145,22 @@ describe('UsersService', () => {
       expect(prisma.order.create).not.toHaveBeenCalled();
     });
 
-    it('allows cash payment for pickup', async () => {
+    it('allows cash payment for pickup, but leaves it pending payment until collected in person', async () => {
       prisma.membership.findUniqueOrThrow.mockResolvedValue({ branchId: 1 });
-      await expect(
-        service.createOrder(
-          'user-1',
-          dto({ paymentMethod: 'cash', delivery: 'pickup' }),
-        ),
-      ).resolves.toBeDefined();
+      const order = await service.createOrder(
+        'user-1',
+        dto({ paymentMethod: 'cash', delivery: 'pickup' }),
+      );
+      expect(order.status).toBe('pending_payment');
+    });
+
+    it('marks non-cash orders ready immediately, since they were already charged online', async () => {
+      prisma.membership.findUniqueOrThrow.mockResolvedValue({ branchId: 1 });
+      const order = await service.createOrder(
+        'user-1',
+        dto({ paymentMethod: 'card', delivery: 'pickup' }),
+      );
+      expect(order.status).toBe('ready');
     });
   });
 });

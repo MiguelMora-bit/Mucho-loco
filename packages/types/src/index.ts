@@ -146,7 +146,12 @@ export interface CommunityPost {
   comments: CommunityComment[];
 }
 
-export type OrderStatus = 'ready' | 'done';
+/** 'pending_payment' only applies to cash + pickup (the online checkout lets
+ *  you choose "efectivo" only when delivery is pickup — see CLAUDE.md raíz,
+ *  "Pagos en línea"): the order isn't paid yet, cash is collected in person
+ *  when the member picks it up at the branch. Every other payment method
+ *  starts at 'ready' since it was already charged online. */
+export type OrderStatus = 'pending_payment' | 'ready' | 'done';
 
 /** Online checkout methods (customer-app). Distinct from the in-person
  *  `PaymentMethod` below (counter sales) — see that type's comment. */
@@ -435,6 +440,7 @@ export interface Translations {
     };
     orders: {
       ready: string;
+      pendingPayment: string;
       delivered: string;
       showQrLabel: string;
       pickupNote: string;

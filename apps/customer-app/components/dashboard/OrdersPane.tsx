@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { formatPrice } from '@/lib/pricing';
 import { formatDate } from '@/lib/dates';
+import { orderStatusLabel } from '@/lib/orderStatus';
 import type { Lang, Order, Translations } from '@mucho-loco/types';
 
 interface OrdersPaneProps {
@@ -18,7 +19,7 @@ export function OrdersPane({ t, lang, active, orders, onSelectOrder }: OrdersPan
         <div key={order.id} className="order-card cursor-pointer" onClick={() => onSelectOrder(order)}>
           <div className="flex items-center justify-between mb-3.5">
             <span className="font-mono text-xs text-ml-cream-dim uppercase tracking-[0.12em]">{order.id} · {formatDate(order.date, lang)}</span>
-            <span className={'status ' + order.status}>{order.status === 'ready' ? t.dashboard.orders.ready : t.dashboard.orders.delivered}</span>
+            <span className={'status ' + order.status}>{orderStatusLabel(order.status, t)}</span>
           </div>
           <div className="flex gap-2.5 flex-wrap">
             {order.items.map((item, i) => (

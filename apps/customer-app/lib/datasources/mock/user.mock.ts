@@ -219,10 +219,14 @@ export class UserMockDatasource {
   async createOrder(email: string, items: OrderItem[], total: number, paymentMethod: OnlinePaymentMethod, delivery: 'pickup' | 'home'): Promise<Order> {
     await delay(150);
     const record = getRecord(email);
+    // Efectivo solo aplica con "recoger en gym" (ver CLAUDE.md raíz, "Pagos en
+    // línea") — el pedido queda pendiente de pago hasta que se cobra en
+    // mostrador, no "listo para retiro" como si ya estuviera pagado.
+    const status = paymentMethod === 'cash' ? 'pending_payment' : 'ready';
     const order: Order = {
       id: `#ML-${Date.now().toString().slice(-6)}`,
       date: new Date().toISOString(),
-      status: 'ready',
+      status,
       items,
       total,
       paymentMethod,

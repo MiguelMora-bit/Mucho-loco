@@ -183,10 +183,15 @@ export class UsersService {
       branchId = membership.branchId;
     }
 
+    // Efectivo solo aplica con pickup (ya validado arriba) — el pedido queda
+    // pendiente de pago hasta que se cobra en mostrador, no "listo" como si
+    // ya estuviera pagado (ver CLAUDE.md raíz, "Pagos en línea").
+    const status = dto.paymentMethod === 'cash' ? 'pending_payment' : 'ready';
+
     const order = await this.prisma.order.create({
       data: {
         userId,
-        status: 'ready',
+        status,
         total: subtotal + shipping,
         paymentMethod: dto.paymentMethod,
         delivery: dto.delivery,

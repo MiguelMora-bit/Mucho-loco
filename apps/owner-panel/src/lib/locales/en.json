@@ -54,7 +54,7 @@
   "payroll": {
     "title": "Payroll",
     "subtitle": "Calculate each biweekly period's payroll from recorded attendance.",
-    "disclaimer": "ISR and IMSS amounts are a simplified calculation for demo purposes — not the real SAT withholding tables or real IMSS contribution rates. Do not use these figures for actual payroll.",
+    "disclaimer": "ISR and IMSS amounts are a simplified calculation for demo purposes — not the real SAT withholding tables or real IMSS contribution rates. Do not use these figures for actual payroll. Attendance shown here is also fixed sample data: it isn't connected yet to the real attendance branches capture.",
     "periodLabel": "Pay period",
     "statusOpen": "Open",
     "statusClosed": "Closed",

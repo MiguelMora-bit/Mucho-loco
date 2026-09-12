@@ -276,6 +276,7 @@
     },
     "orders": {
       "ready": "LISTO PARA RETIRO",
+      "pendingPayment": "PENDIENTE DE PAGO",
       "delivered": "ENTREGADO",
       "showQrLabel": "MUESTRA ESTE QR",
       "pickupNote": "Muestra este código al llegar. Recoger en:",

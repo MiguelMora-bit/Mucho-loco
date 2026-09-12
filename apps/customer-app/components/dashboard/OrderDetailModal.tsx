@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatDate } from '@/lib/dates';
 import { formatPrice } from '@/lib/pricing';
+import { orderStatusLabel } from '@/lib/orderStatus';
 import { PAY_ICON, payLabels } from '../paymentMethodIcons';
 import type { Lang, Order, Translations } from '@mucho-loco/types';
 
@@ -26,7 +27,7 @@ export function OrderDetailModal({ t, lang, order, onClose }: OrderDetailModalPr
             {order.id} · {formatDate(order.date, lang)}
           </span>
           <span className={'status ' + order.status}>
-            {order.status === 'ready' ? t.dashboard.orders.ready : t.dashboard.orders.delivered}
+            {orderStatusLabel(order.status, t)}
           </span>
         </div>
 
@@ -52,7 +53,7 @@ export function OrderDetailModal({ t, lang, order, onClose }: OrderDetailModalPr
           </span>
         </div>
 
-        {order.status === 'ready' ? (
+        {order.status !== 'done' ? (
           <div className="mt-1 pt-3 border-t border-ml-border text-center">
             <div className="bg-white p-4 inline-block">
               <QRCodeSVG value={order.id} size={140} marginSize={0} level="M" />

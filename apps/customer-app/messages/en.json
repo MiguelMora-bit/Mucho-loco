@@ -276,6 +276,7 @@
     },
     "orders": {
       "ready": "READY FOR PICKUP",
+      "pendingPayment": "PAYMENT DUE AT PICKUP",
       "delivered": "DELIVERED",
       "showQrLabel": "SHOW THIS QR",
       "pickupNote": "Show this code when you arrive. Pick up at:",
