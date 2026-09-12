@@ -135,6 +135,9 @@ importers:
       '@aws-sdk/client-cognito-identity-provider':
         specifier: ^3.1128.0
         version: 3.1128.0
+      '@mucho-loco/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@mucho-loco/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -299,6 +302,9 @@ importers:
       '@aws-sdk/client-cognito-identity-provider':
         specifier: ^3.1128.0
         version: 3.1128.0
+      '@mucho-loco/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@mucho-loco/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -378,6 +384,8 @@ importers:
       vitest:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@26.4.0)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@1.21.7)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
+
+  packages/api-client: {}
 
   packages/types: {}
 

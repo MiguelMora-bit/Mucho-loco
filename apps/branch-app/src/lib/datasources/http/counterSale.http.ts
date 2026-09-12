@@ -1,7 +1,7 @@
 import type { BranchInventoryLevel, CounterSale, PaymentMethod } from '@mucho-loco/types';
 import type { ICounterSaleRepository } from '../../repositories/counterSale.repository';
 import { InsufficientStockError, ProductNotFoundError } from '../../repositories/counterSale.errors';
-import { ApiRequestError, apiGet, apiPost } from './client';
+import { ApiRequestError, api } from './client';
 
 /**
  * Traduce el error del API al error TIPADO que el contrato promete.
@@ -29,9 +29,9 @@ function toDomainError(e: unknown): unknown {
 }
 
 export class CounterSaleHttpDatasource implements ICounterSaleRepository {
-  /** `?lang=` lo agrega el cliente: el backend arma "Whey Protein 5LBS · Fresa" según idioma. */
+  /** `?lang=` lo agrega el cliente para todas: el backend arma "Whey Protein 5LBS · Fresa" según idioma. */
   getInventory(branchId: number): Promise<BranchInventoryLevel[]> {
-    return apiGet<BranchInventoryLevel[]>(`/branches/${branchId}/inventory`, {}, true);
+    return api.get<BranchInventoryLevel[]>(`/branches/${branchId}/inventory`);
   }
 
   async createSale(
@@ -40,12 +40,10 @@ export class CounterSaleHttpDatasource implements ICounterSaleRepository {
     paymentMethod: PaymentMethod,
   ): Promise<CounterSale> {
     try {
-      return await apiPost<CounterSale>(
-        `/branches/${branchId}/counter-sales`,
-        { picks, paymentMethod },
-        {},
-        true,
-      );
+      return await api.post<CounterSale>(`/branches/${branchId}/counter-sales`, {
+        picks,
+        paymentMethod,
+      });
     } catch (e) {
       throw toDomainError(e);
     }
