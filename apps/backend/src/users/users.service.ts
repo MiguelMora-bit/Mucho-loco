@@ -8,6 +8,7 @@ import type { Order, UserProfile, Visit } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { MembershipsService } from '../memberships/memberships.service';
 import type { CreateOrderDto } from './dto/create-order.dto';
+import { Prisma } from '@prisma/client';
 import type {
   Branch,
   Order as OrderRow,
@@ -15,7 +16,29 @@ import type {
   User,
   Visit as VisitRow,
 } from '@prisma/client';
-import { cashRequiresPickup, emailAlreadyLinked, productNotFound } from '../common/error-codes';
+import {
+  cashRequiresPickup,
+  emailAlreadyLinked,
+  productNotFound,
+} from '../common/error-codes';
+
+/**
+ * Quién es el socio según su ID token. Estructuralmente es un subconjunto de
+ * `IdTokenClaims`, así que los controllers pasan `@CurrentUser()` tal cual.
+ */
+export interface CognitoIdentity {
+  sub: string;
+  email: string;
+  name: string;
+  /** `phone_number` del token, en E.164. Solo lo trae quien lo dio al registrarse (hoy, mobile-app). */
+  phone?: string;
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+  );
+}
 
 // Mismo cargo fijo que hoy vive hardcodeado en CheckoutClient.tsx del
 // frontend — duplicado a propósito (sin runtime compartido entre back/front
@@ -80,15 +103,12 @@ export class UsersService {
    *   en el CLAUDE.md raíz) — los socios viejos quedan con un `sub` que ya no
    *   existe y hay que limpiarlos o volver a ligarlos a mano.
    */
-  async findOrCreateByCognito(
-    sub: string,
-    email: string,
-    name: string,
-  ): Promise<User> {
+  async findOrCreateByCognito(identity: CognitoIdentity): Promise<User> {
+    const { sub, email, name, phone } = identity;
     const existing = await this.prisma.user.findUnique({
       where: { cognitoSub: sub },
     });
-    if (existing) return existing;
+    if (existing) return this.backfillPhone(existing, phone);
 
     const displayName = name || email.split('@')[0].toUpperCase();
 
@@ -96,31 +116,74 @@ export class UsersService {
       ? await this.prisma.user.findUnique({ where: { email } })
       : null;
     if (sameEmail) {
+      // Ligado a ESTE mismo sub: lo creó una request paralela del mismo socio
+      // entre las dos búsquedas de arriba (no existía por `cognitoSub`, y para
+      // cuando se buscó por correo ya sí). Es él, no otra cuenta.
+      if (sameEmail.cognitoSub === sub) {
+        return this.backfillPhone(sameEmail, phone);
+      }
       if (sameEmail.cognitoSub !== null) {
         throw new ConflictException(emailAlreadyLinked(email));
       }
       return this.prisma.user.update({
         where: { id: sameEmail.id },
-        data: { cognitoSub: sub, name: sameEmail.name || displayName },
+        data: {
+          cognitoSub: sub,
+          name: sameEmail.name || displayName,
+          // El teléfono que dio en mostrador gana: es el que ya se verificó en persona.
+          ...(phone && !sameEmail.phone ? { phone } : {}),
+        },
       });
     }
 
-    const user = await this.prisma.user.create({
-      // `email || null` y no `email`: un token sin correo guardaría la cadena
-      // vacía, y como la columna es UNIQUE el segundo caso así reventaría.
-      // "Sin correo" es null, que Postgres sí permite repetir.
-      data: { cognitoSub: sub, email: email || null, name: displayName },
-    });
-    await this.memberships.createDefaultForUser(user.id);
-    return user;
+    // Socio y membresía en UNA transacción, y el choque de índice único
+    // tratado como "ya lo creó otro". El panel del móvil pide perfil,
+    // membresía, visitas y pedidos a la vez: con un socio nuevo, las cuatro
+    // requests llegan aquí antes de que exista. Gana un insert; los demás
+    // esperan a que ese commit termine, chocan con el índice de `cognitoSub`
+    // y leen al ganador — ya con su membresía, porque nacieron juntos. Sin la
+    // transacción, un perdedor podía encontrar al socio pero no su membresía.
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          // `email || null` y no `email`: un token sin correo guardaría la cadena
+          // vacía, y como la columna es UNIQUE el segundo caso así reventaría.
+          // "Sin correo" es null, que Postgres sí permite repetir.
+          data: {
+            cognitoSub: sub,
+            email: email || null,
+            name: displayName,
+            phone: phone ?? '',
+          },
+        });
+        await this.memberships.createDefaultForUser(user.id, tx);
+        return user;
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        return this.prisma.user.findUniqueOrThrow({
+          where: { cognitoSub: sub },
+        });
+      }
+      throw err;
+    }
   }
 
-  async getProfile(
-    sub: string,
-    email: string,
-    name: string,
-  ): Promise<UserProfile> {
-    const user = await this.findOrCreateByCognito(sub, email, name);
+  /**
+   * Un socio que se registró antes de que se pidiera teléfono (la web todavía
+   * no lo pide) lo gana la primera vez que entra con un token que sí lo trae.
+   * Nunca se sobrescribe uno que ya tenía.
+   */
+  private async backfillPhone(
+    user: User,
+    phone: string | undefined,
+  ): Promise<User> {
+    if (!phone || user.phone) return user;
+    return this.prisma.user.update({ where: { id: user.id }, data: { phone } });
+  }
+
+  async getProfile(identity: CognitoIdentity): Promise<UserProfile> {
+    const user = await this.findOrCreateByCognito(identity);
     const membership = await this.prisma.membership.findUniqueOrThrow({
       where: { userId: user.id },
       include: { branch: true },

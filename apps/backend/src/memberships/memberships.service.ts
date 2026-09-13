@@ -11,6 +11,7 @@ import type {
   Branch,
   Membership,
   MembershipTier as MembershipTierRow,
+  Prisma,
 } from '@prisma/client';
 
 // Roma Sur — mismo default que fallbackRecord() en customer-app/lib/datasources/mock/user.mock.ts.
@@ -72,8 +73,12 @@ export class MembershipsService {
     return rows.map(toMembershipTier);
   }
 
-  async createDefaultForUser(userId: string): Promise<void> {
-    await this.prisma.membership.create({
+  /** `db` = la transacción del caller, para que el socio y su membresía nazcan juntos (ver findOrCreateByCognito). */
+  async createDefaultForUser(
+    userId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    await db.membership.create({
       data: {
         userId,
         branchId: DEFAULT_BRANCH_ID,

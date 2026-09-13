@@ -26,11 +26,13 @@ async function bootstrap() {
   // 5173 Y 5174 porque los dos apps de Vite piden el mismo puerto por default:
   // con branch-app y owner-panel abiertos a la vez —el caso normal cuando se
   // trabaja en los dos— el segundo cae en 5174 y sin esto el navegador le
-  // bloquea todas las llamadas por CORS.
+  // bloquea todas las llamadas por CORS. 8081 es la versión web de mobile-app
+  // (Expo), que existe para desarrollar y probar; el app nativo no pasa por
+  // CORS.
   app.enableCors({
     origin: (
       process.env.CORS_ORIGINS ??
-      'http://localhost:3000,http://localhost:5173,http://localhost:5174'
+      'http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:8081'
     ).split(','),
   });
 

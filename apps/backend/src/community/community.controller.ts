@@ -19,11 +19,7 @@ export class CommunityController {
 
   @Get()
   async getFeed(@CurrentUser() user: IdTokenClaims): Promise<CommunityPost[]> {
-    const dbUser = await this.users.findOrCreateByCognito(
-      user.sub,
-      user.email,
-      user.name,
-    );
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.community.getFeed(dbUser.id);
   }
 
@@ -32,11 +28,7 @@ export class CommunityController {
     @CurrentUser() user: IdTokenClaims,
     @Body() dto: CreatePostDto,
   ): Promise<CommunityPost> {
-    const dbUser = await this.users.findOrCreateByCognito(
-      user.sub,
-      user.email,
-      user.name,
-    );
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.community.createPost(dbUser.id, dto.body);
   }
 
@@ -45,11 +37,7 @@ export class CommunityController {
     @CurrentUser() user: IdTokenClaims,
     @Param('id') postId: string,
   ): Promise<CommunityPost> {
-    const dbUser = await this.users.findOrCreateByCognito(
-      user.sub,
-      user.email,
-      user.name,
-    );
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.community.toggleLike(dbUser.id, postId);
   }
 
@@ -59,11 +47,7 @@ export class CommunityController {
     @Param('id') postId: string,
     @Body() dto: AddCommentDto,
   ): Promise<CommunityPost> {
-    const dbUser = await this.users.findOrCreateByCognito(
-      user.sub,
-      user.email,
-      user.name,
-    );
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.community.addComment(dbUser.id, postId, dto.body);
   }
 }

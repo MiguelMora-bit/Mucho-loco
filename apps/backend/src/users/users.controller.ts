@@ -23,18 +23,14 @@ export class UsersController {
 
   @Get()
   getProfile(@CurrentUser() user: IdTokenClaims): Promise<UserProfile> {
-    return this.users.getProfile(user.sub, user.email, user.name);
+    return this.users.getProfile(user);
   }
 
   @Get('membership')
   async getMembership(
     @CurrentUser() user: IdTokenClaims,
   ): Promise<MembershipInfo> {
-    const dbUser = await this.users.findOrCreateByCognito(
-      user.sub,
-      user.email,
-      user.name,
-    );
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.memberships.getForUser(dbUser.id);
   }
 
@@ -42,31 +38,19 @@ export class UsersController {
   async retryPayment(
     @CurrentUser() user: IdTokenClaims,
   ): Promise<MembershipInfo> {
-    const dbUser = await this.users.findOrCreateByCognito(
-      user.sub,
-      user.email,
-      user.name,
-    );
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.memberships.retryPayment(dbUser.id);
   }
 
   @Get('visits')
   async getVisitHistory(@CurrentUser() user: IdTokenClaims): Promise<Visit[]> {
-    const dbUser = await this.users.findOrCreateByCognito(
-      user.sub,
-      user.email,
-      user.name,
-    );
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.users.getVisitHistory(dbUser.id);
   }
 
   @Get('orders')
   async getOrders(@CurrentUser() user: IdTokenClaims): Promise<Order[]> {
-    const dbUser = await this.users.findOrCreateByCognito(
-      user.sub,
-      user.email,
-      user.name,
-    );
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.users.getOrders(dbUser.id);
   }
 
@@ -75,11 +59,7 @@ export class UsersController {
     @CurrentUser() user: IdTokenClaims,
     @Body() dto: CreateOrderDto,
   ): Promise<Order> {
-    const dbUser = await this.users.findOrCreateByCognito(
-      user.sub,
-      user.email,
-      user.name,
-    );
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.users.createOrder(dbUser.id, dto);
   }
 }

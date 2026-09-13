@@ -119,7 +119,7 @@ Sin esas dos variables el resto del backend funciona igual; solo `/payments/*` f
 
 ### Pendiente
 
-- **El registro no pide teléfono.** Sin él no hay WhatsApp posible para una cuenta creada desde la app (ver el hallazgo de arriba). Es un cambio de `SignupForm` + un atributo en Cognito, no del backend.
+- **El registro web no pide teléfono.** mobile-app sí (desde 2026-09-12): lo manda como `phone_number` y `findOrCreateByCognito` lo guarda (ver "Auth" abajo). Falta lo mismo en `SignupForm` de customer-app — que además pide cumpleaños y nunca lo manda a Cognito.
 - **PayPal y Mercado Pago.** El modelo `Payment` ya tiene `provider`, así que agregarlos es un módulo más, no un rediseño. Hay skill oficial de PayPal instalada; para Mercado Pago no hay y se diseña directo con el usuario.
 - **Membresía recurrente.** El CLAUDE.md raíz pide cobro recurrente con periodo de gracia. Eso son subscripciones (Billing API), no Checkout de pago único — otro conjunto de webhooks (`invoice.payment_failed`, `customer.subscription.updated`) y el que de verdad cierra la regla de negocio de la membresía.
 - **Reembolsos.** `providerPaymentIntentId` se guarda justo para eso, pero no hay endpoint todavía (y la política de devoluciones sigue sin decidirse — ver "Pendiente de decidir" en el CLAUDE.md raíz).
@@ -183,9 +183,11 @@ El mock de `customer-app` confiaba en quien lo llamaba (era código del mismo fr
 ## Auth (Cognito — mismo User Pool que los 3 frontends)
 
 - **`CognitoAuthGuard`** (`src/auth/`) es global (`APP_GUARD` en `AppModule`) — toda ruta pide `Authorization: Bearer <idToken>` salvo que use `@Public()` (catálogo: branches, products, membership-tiers, health).
-- **Verificación real vía `jose`** (`src/auth/cognito.ts`, `verifyIdToken()`) — mismo criterio que `lib/jwt.ts` en los 3 frontends (firma + expiración + issuer + audience contra el JWKS público de Cognito). `COGNITO_CLIENT_IDS` (coma-separado) acepta el ID token de cualquiera de los 3 app clients (`web`/`owner_panel`/`branch_app`), no solo el de customer-app — para cuando branch-app/owner-panel conecten aquí.
+- **Verificación real vía `jose`** (`src/auth/cognito.ts`, `verifyIdToken()`) — mismo criterio que `lib/jwt.ts` en los 3 frontends (firma + expiración + issuer + audience contra el JWKS público de Cognito). `COGNITO_CLIENT_IDS` (coma-separado) acepta el ID token de cualquiera de los 4 app clients (`web`/`mobile`/`owner_panel`/`branch_app`), no solo el de customer-app.
 - **`CognitoVerifierService`** envuelve `verifyIdToken()` como provider inyectable — el guard depende de la clase, no de la función suelta. Es la costura que permite testear: los tests e2e hacen `overrideProvider(CognitoVerifierService)` para simular un usuario autenticado sin un User Pool real (no hay uno vivo hoy, ver "Infra destruida" en el CLAUDE.md raíz), sin mockear módulos con `jest.mock()`.
-- **Auto-provisión**: la primera vez que se ve un `cognitoSub`, `UsersService.findOrCreateByCognito()` crea el `User` + una membresía default (tier `all`, Roma Sur, activa 30 días) — mismo comportamiento que `fallbackRecord()` en `user.mock.ts` para una cuenta real sin dato curado.
+- **Auto-provisión**: la primera vez que se ve un `cognitoSub`, `UsersService.findOrCreateByCognito()` crea el `User` + una membresía default (tier `all`, Roma Sur, activa 30 días) — mismo comportamiento que `fallbackRecord()` en `user.mock.ts` para una cuenta real sin dato curado. Recibe los claims completos (`@CurrentUser()` tal cual), no `sub/email/name` sueltos.
+  - **Teléfono (2026-09-12)**: `IdTokenClaims.phone` sale del claim `phone_number` (E.164). Se guarda al crear al socio y se completa en uno que no tenía; nunca se sobrescribe uno existente (el de mostrador gana). Hoy solo mobile-app lo pide al registrarse.
+  - **Requests paralelas del mismo socio nuevo (2026-09-12)**: el panel del móvil pide perfil, membresía, visitas y pedidos a la vez, y las cuatro llegan antes de que el socio exista. Socio + membresía se crean en UNA transacción; un choque de índice único (P2002) se trata como "ya lo creó otro" y se relee. Y si el correo ya está ligado a ESTE mismo `sub` (lo creó la request de al lado entre las dos búsquedas), es él, no un 409. Lo prueba el e2e "a brand-new member opening the mobile dashboard" contra Postgres real — ese test fue el que destapó el 409.
 
 ## Entorno local
 

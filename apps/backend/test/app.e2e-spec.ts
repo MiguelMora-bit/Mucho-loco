@@ -329,6 +329,45 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
     });
   });
 
+  // El panel del móvil pide perfil, membresía, visitas y pedidos AL MISMO
+  // TIEMPO. Con un socio que el backend nunca ha visto, las cuatro requests
+  // compiten por crearlo: ninguna debe fallar, y debe quedar UN socio con UNA
+  // membresía (ver findOrCreateByCognito).
+  describe('a brand-new member opening the mobile dashboard', () => {
+    const email = `e2e-race-${Date.now()}@mucholoco.mx`;
+
+    afterAll(async () => {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (user) {
+        await prisma.membership.deleteMany({ where: { userId: user.id } });
+        await prisma.user.delete({ where: { id: user.id } });
+      }
+    });
+
+    it('survives four parallel first requests: all 200, one member, one membership', async () => {
+      const server = app.getHttpServer();
+      const responses = await Promise.all(
+        [
+          '/users/me',
+          '/users/me/membership',
+          '/users/me/visits',
+          '/users/me/orders',
+        ].map((path) =>
+          request(server)
+            .get(path)
+            .set(...fakeAuthHeader(email)),
+        ),
+      );
+
+      expect(responses.map((r) => r.status)).toEqual([200, 200, 200, 200]);
+      expect(await prisma.user.count({ where: { email } })).toBe(1);
+      const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+      expect(
+        await prisma.membership.count({ where: { userId: user.id } }),
+      ).toBe(1);
+    });
+  });
+
   describe('a new user end to end', () => {
     const email = `e2e-${Date.now()}@mucholoco.mx`;
 

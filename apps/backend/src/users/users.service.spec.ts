@@ -2,6 +2,7 @@
 import { Test } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MembershipsService } from '../memberships/memberships.service';
@@ -10,22 +11,38 @@ import type { CreateOrderDto } from './dto/create-order.dto';
 describe('UsersService', () => {
   let service: UsersService;
   let prisma: {
-    user: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
+    user: {
+      findUnique: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+    };
     membership: { findUniqueOrThrow: jest.Mock };
     visit: { findMany: jest.Mock };
     order: { findMany: jest.Mock; create: jest.Mock };
     product: { findMany: jest.Mock };
+    $transaction: jest.Mock;
   };
   let memberships: { createDefaultForUser: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
-      user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+      user: {
+        findUnique: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
       membership: { findUniqueOrThrow: jest.fn() },
       visit: { findMany: jest.fn() },
       order: { findMany: jest.fn(), create: jest.fn() },
       product: { findMany: jest.fn() },
+      $transaction: jest.fn(),
     };
+    // La transacción corre el callback con el mismo mock como `tx`.
+    prisma.$transaction.mockImplementation(
+      (fn: (tx: typeof prisma) => unknown) => fn(prisma),
+    );
     memberships = { createDefaultForUser: jest.fn() };
     const module = await Test.createTestingModule({
       providers: [
@@ -44,11 +61,11 @@ describe('UsersService', () => {
         email: 'diego@mucholoco.mx',
       });
 
-      const user = await service.findOrCreateByCognito(
-        'sub-1',
-        'diego@mucholoco.mx',
-        'Diego',
-      );
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-1',
+        email: 'diego@mucholoco.mx',
+        name: 'Diego',
+      });
 
       expect(user.id).toBe('u1');
       expect(prisma.user.create).not.toHaveBeenCalled();
@@ -62,19 +79,28 @@ describe('UsersService', () => {
         email: 'nuevo@mucholoco.mx',
       });
 
-      const user = await service.findOrCreateByCognito(
-        'sub-2',
-        'nuevo@mucholoco.mx',
-        '',
-      );
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-2',
+        email: 'nuevo@mucholoco.mx',
+        name: '',
+      });
 
       expect(user.id).toBe('new-1');
       expect(prisma.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ cognitoSub: 'sub-2', name: 'NUEVO' }),
+          data: expect.objectContaining({
+            cognitoSub: 'sub-2',
+            name: 'NUEVO',
+            phone: '',
+          }),
         }),
       );
-      expect(memberships.createDefaultForUser).toHaveBeenCalledWith('new-1');
+      // Misma transacción: la membresía se crea con el `tx`, no con el cliente suelto.
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(memberships.createDefaultForUser).toHaveBeenCalledWith(
+        'new-1',
+        prisma,
+      );
     });
 
     // Un socio dado de alta en mostrador (sin cuenta de acceso) que después se
@@ -83,10 +109,19 @@ describe('UsersService', () => {
     it('links the account to a counter-created member who now installed the app', async () => {
       prisma.user.findUnique
         .mockResolvedValueOnce(null) // por cognitoSub
-        .mockResolvedValueOnce({ id: 'counter-1', email: 'socio@mucholoco.mx', cognitoSub: null, name: 'SOCIO DE MOSTRADOR' });
+        .mockResolvedValueOnce({
+          id: 'counter-1',
+          email: 'socio@mucholoco.mx',
+          cognitoSub: null,
+          name: 'SOCIO DE MOSTRADOR',
+        });
       prisma.user.update.mockResolvedValue({ id: 'counter-1' });
 
-      const user = await service.findOrCreateByCognito('sub-3', 'socio@mucholoco.mx', 'Socio');
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-3',
+        email: 'socio@mucholoco.mx',
+        name: 'Socio',
+      });
 
       expect(user.id).toBe('counter-1');
       expect(prisma.user.update).toHaveBeenCalledWith({
@@ -102,14 +137,41 @@ describe('UsersService', () => {
     // recrear el User Pool: los socios viejos quedan con un sub que ya no
     // existe (ver "Nota operativa" en el CLAUDE.md raíz).
     it('refuses to take over an email that already belongs to another login', async () => {
-      prisma.user.findUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'u1', email: 'diego@mucholoco.mx', cognitoSub: 'sub-viejo' });
+      prisma.user.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({
+        id: 'u1',
+        email: 'diego@mucholoco.mx',
+        cognitoSub: 'sub-viejo',
+      });
 
       await expect(
-        service.findOrCreateByCognito('sub-nuevo', 'diego@mucholoco.mx', 'Diego'),
+        service.findOrCreateByCognito({
+          sub: 'sub-nuevo',
+          email: 'diego@mucholoco.mx',
+          name: 'Diego',
+        }),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    // El otro lado del caso anterior, y lo que destapó el e2e de requests
+    // paralelas: una request paralela del MISMO socio lo creó entre la
+    // búsqueda por sub y la búsqueda por correo. No es otra cuenta: es él.
+    it('recognizes itself when a parallel request linked the email to the same sub', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({
+        id: 'same-1',
+        email: 'nuevo@mucholoco.mx',
+        cognitoSub: 'sub-mismo',
+        phone: '',
+      });
+
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-mismo',
+        email: 'nuevo@mucholoco.mx',
+        name: 'Nuevo',
+      });
+
+      expect(user.id).toBe('same-1');
       expect(prisma.user.create).not.toHaveBeenCalled();
     });
 
@@ -119,14 +181,114 @@ describe('UsersService', () => {
       prisma.user.findUnique.mockResolvedValueOnce(null);
       prisma.user.create.mockResolvedValue({ id: 'new-2' });
 
-      await service.findOrCreateByCognito('sub-4', '', 'Alguien');
+      await service.findOrCreateByCognito({
+        sub: 'sub-4',
+        email: '',
+        name: 'Alguien',
+      });
 
       expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
       // "Sin correo" se guarda como null: la columna es UNIQUE y la cadena
       // vacía solo cabe una vez.
       expect(prisma.user.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ email: null }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ email: null }),
+        }),
       );
+    });
+
+    // mobile-app pide teléfono al registrarse y viaja en el ID token
+    // (`phone_number`). Sin él no hay avisos de WhatsApp.
+    it('stores the phone from the token when provisioning a new member', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({ id: 'new-3' });
+
+      await service.findOrCreateByCognito({
+        sub: 'sub-5',
+        email: 'tel@mucholoco.mx',
+        name: 'Tel',
+        phone: '+525512345678',
+      });
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ phone: '+525512345678' }),
+        }),
+      );
+    });
+
+    it('backfills the phone of an existing member who did not have one', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1', phone: '' });
+      prisma.user.update.mockResolvedValue({
+        id: 'u1',
+        phone: '+525512345678',
+      });
+
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-1',
+        email: 'diego@mucholoco.mx',
+        name: 'Diego',
+        phone: '+525512345678',
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'u1' },
+        data: { phone: '+525512345678' },
+      });
+      expect(user.phone).toBe('+525512345678');
+    });
+
+    it('never overwrites a phone the member already has', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        phone: '+525500000000',
+      });
+
+      await service.findOrCreateByCognito({
+        sub: 'sub-1',
+        email: 'diego@mucholoco.mx',
+        name: 'Diego',
+        phone: '+525512345678',
+      });
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    // Varias requests del mismo socio nuevo al mismo tiempo: gana un insert,
+    // los demás chocan con el índice único y leen al ganador.
+    it('returns the winner when a parallel first request already created the member', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.$transaction.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        }),
+      );
+      prisma.user.findUniqueOrThrow.mockResolvedValue({ id: 'winner' });
+
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-6',
+        email: 'race@mucholoco.mx',
+        name: 'Race',
+      });
+
+      expect(user.id).toBe('winner');
+      expect(prisma.user.findUniqueOrThrow).toHaveBeenCalledWith({
+        where: { cognitoSub: 'sub-6' },
+      });
+    });
+
+    it('does not swallow errors that are not a unique violation', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.$transaction.mockRejectedValueOnce(new Error('connection lost'));
+
+      await expect(
+        service.findOrCreateByCognito({
+          sub: 'sub-7',
+          email: 'x@y.mx',
+          name: 'X',
+        }),
+      ).rejects.toThrow('connection lost');
     });
   });
 

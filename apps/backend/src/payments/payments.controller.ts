@@ -30,7 +30,7 @@ export class PaymentsController {
     @CurrentUser() user: IdTokenClaims,
     @Body() dto: CreateCheckoutSessionDto,
   ): Promise<CheckoutSessionResult> {
-    const dbUser = await this.users.findOrCreateByCognito(user.sub, user.email, user.name);
+    const dbUser = await this.users.findOrCreateByCognito(user);
     return this.payments.createCheckoutSession(dbUser.id, dto);
   }
 
