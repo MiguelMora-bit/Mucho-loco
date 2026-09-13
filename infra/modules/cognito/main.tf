@@ -119,6 +119,60 @@ resource "aws_cognito_user_pool_client" "web" {
   logout_urls                          = var.logout_urls
 }
 
+# App nativo del socio (apps/mobile-app, Expo). Mismo tipo que `web`: cliente
+# público, sin secreto — un binario instalado en un teléfono no puede guardar
+# uno. Cliente aparte y no reusar `web`: sus callbacks son otros
+# (mucholoco://…) y así el backend puede distinguir de dónde viene cada token
+# (`aud`).
+resource "aws_cognito_user_pool_client" "mobile" {
+  name         = "${var.project}-${var.environment}-mobile"
+  user_pool_id = aws_cognito_user_pool.this.id
+
+  generate_secret = false
+
+  explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_USER_SRP_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+  ]
+
+  prevent_user_existence_errors = "ENABLED"
+
+  # Cerrar sesión en el teléfono = RevokeToken del refresh token, que mata
+  # también los ID/access tokens emitidos con él. Es el default del provider;
+  # explícito porque el app depende de esto.
+  enable_token_revocation = true
+
+  # Sin rotación de refresh token, a propósito: con rotación Cognito rechaza
+  # REFRESH_TOKEN_AUTH y hay que refrescar con GetTokensFromRefreshToken. El
+  # refresh token vive en el llavero del SO (Keychain/Keystore), no en
+  # localStorage. Rotación = endurecimiento futuro, ver CLAUDE.md del app.
+
+  access_token_validity  = 60
+  id_token_validity      = 60
+  refresh_token_validity = 30
+
+  token_validity_units {
+    access_token  = "minutes"
+    id_token      = "minutes"
+    refresh_token = "days"
+  }
+
+  # Login social: Hosted UI + authorization code + PKCE, igual que `web`,
+  # pero regresando al app por deep link en vez de a una ruta de Next.
+  supported_identity_providers = concat(
+    ["COGNITO"],
+    length(aws_cognito_identity_provider.google) > 0 ? [aws_cognito_identity_provider.google[0].provider_name] : [],
+    length(aws_cognito_identity_provider.facebook) > 0 ? [aws_cognito_identity_provider.facebook[0].provider_name] : [],
+  )
+
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  callback_urls                        = var.mobile_callback_urls
+  logout_urls                          = var.mobile_logout_urls
+}
+
 resource "aws_cognito_user_pool_client" "owner_panel" {
   name         = "${var.project}-${var.environment}-owner-panel"
   user_pool_id = aws_cognito_user_pool.this.id

@@ -6,6 +6,11 @@ output "web_client_id" {
   value = module.cognito.web_client_id
 }
 
+output "mobile_client_id" {
+  description = "EXPO_PUBLIC_COGNITO_CLIENT_ID de apps/mobile-app."
+  value       = module.cognito.mobile_client_id
+}
+
 output "owner_panel_client_id" {
   value = module.cognito.owner_panel_client_id
 }

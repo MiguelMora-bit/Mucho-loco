@@ -16,6 +16,10 @@ google_client_secret = ""
 facebook_app_id     = ""
 facebook_app_secret = ""
 
+# El app móvil (app client `mobile`) usa estos MISMOS IdPs y la misma URL de
+# arriba en Google/Meta: el deep link del app (mucholoco://auth/callback) es el
+# callback de Cognito, no el de Google ni el de Meta — no hay que registrarlo allá.
+
 # Cambiar solo si "mucho-loco-gym-dev" ya está tomado (el prefijo de dominio
 # de Cognito es único a nivel global en AWS, no solo dentro de esta cuenta).
 # domain_prefix = "mucho-loco-gym-dev"

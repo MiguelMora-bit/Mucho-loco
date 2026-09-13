@@ -7,7 +7,7 @@
 # la cabeza al leer):
 #   network → (SGs, subredes) → database → (secreto con la DATABASE_URL) → ecs
 #   ecr     → (URL del repo)                                             → ecs
-#   cognito → (pool + 3 clients)                                         → ecs
+#   cognito → (pool + 4 clients)                                         → ecs
 #
 # ANTES DE `terraform apply`, leer la "Nota operativa" del CLAUDE.md raíz:
 # esto CUESTA DINERO mientras esté arriba y hay pasos manuales previos (las
@@ -78,6 +78,7 @@ module "ecs" {
   cognito_user_pool_id = module.cognito.user_pool_id
   cognito_client_ids = join(",", [
     module.cognito.web_client_id,
+    module.cognito.mobile_client_id,
     module.cognito.owner_panel_client_id,
     module.cognito.branch_app_client_id,
   ])
