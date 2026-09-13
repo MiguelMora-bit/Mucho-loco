@@ -11,12 +11,15 @@ Gestionado con **pnpm workspaces + Turborepo**. Un único desarrollador, así qu
 ```
 mucho-loco/
   apps/
-    customer-app/       # Next.js — tienda + app del socio — Fase 1 completa
+    customer-app/       # Next.js — tienda + app del socio (web) — Fase 1 completa
+    mobile-app/         # Expo (React Native) — app del socio nativa, iOS/Android — primer corte mock-first (2026-09-12)
     branch-app/         # Vite + React SPA — Fase 1 y 2 completas
     owner-panel/        # Vite + React SPA — Fase 1, 2 y 3 completas
     backend/            # NestJS + Prisma + Postgres — 4 dominios migrados (branches/products/membership-tiers/users), ver su CLAUDE.md
   packages/
     types/              # @mucho-loco/types — tipos de dominio compartidos (Branch, Product, etc.)
+    api-client/         # @mucho-loco/api-client — cliente HTTP del backend (los 4 frontends)
+    customer-core/      # @mucho-loco/customer-core — contrato, mocks, catálogo semilla, formato y textos del socio (customer-app, mobile-app)
 ```
 
 Comandos desde la raíz:
@@ -26,15 +29,17 @@ pnpm dev             # turbo run dev — corre dev de todos los apps (o pnpm --f
 pnpm build           # turbo run build — respeta orden de dependencias entre paquetes
 ```
 
-Cada app nuevo tiene su propio `CLAUDE.md` con sus convenciones específicas: `apps/customer-app/CLAUDE.md`, `apps/branch-app/CLAUDE.md`, `apps/owner-panel/CLAUDE.md` y `apps/backend/CLAUDE.md`.
+Cada app nuevo tiene su propio `CLAUDE.md` con sus convenciones específicas: `apps/customer-app/CLAUDE.md`, `apps/mobile-app/CLAUDE.md`, `apps/branch-app/CLAUDE.md`, `apps/owner-panel/CLAUDE.md` y `apps/backend/CLAUDE.md`.
 
-**branch-app y owner-panel son Vite + React (SPA), no Next.js** — decisión explícita (2026-09-02): son herramientas internas para staff/dueño sin necesidad de SEO/SSR, y usar un framework distinto por app (se evaluó Vue/Angular para aprender) hubiera fragmentado el stack de un desarrollador solo sin ganancia real. Comparten `@mucho-loco/types` con customer-app y, desde 2026-09-12, `@mucho-loco/api-client` (el cliente HTTP del backend) entre ellos dos. `lib/stores/createAsyncResource.ts` (el factory de Zustand para el patrón mock-first) sigue duplicado en los 3 apps a propósito: son ~20 líneas sin lógica que se pueda desincronizar. El cliente HTTP sí se extrajo porque cumplió el criterio contrario — 130 líneas de lógica real (timeouts, traducción de errores, 404→null) a punto de tener una tercera copia, donde un arreglo en una no llegaba a las otras.
+**branch-app y owner-panel son Vite + React (SPA), no Next.js** — decisión explícita (2026-09-02): son herramientas internas para staff/dueño sin necesidad de SEO/SSR, y usar un framework distinto por app (se evaluó Vue/Angular para aprender) hubiera fragmentado el stack de un desarrollador solo sin ganancia real. Comparten `@mucho-loco/types` con customer-app y, desde 2026-09-12, `@mucho-loco/api-client` (el cliente HTTP del backend) — que ese mismo día adoptaron también customer-app y mobile-app, a través de los datasources de `@mucho-loco/customer-core/http`. `lib/stores/createAsyncResource.ts` (el factory de Zustand para el patrón mock-first) sigue duplicado en los 3 apps a propósito: son ~20 líneas sin lógica que se pueda desincronizar. El cliente HTTP sí se extrajo porque cumplió el criterio contrario — 130 líneas de lógica real (timeouts, traducción de errores, 404→null) a punto de tener una tercera copia, donde un arreglo en una no llegaba a las otras.
+
+**mobile-app es React Native + Expo, no Flutter** — decisión explícita (2026-09-12), mismo argumento que la de arriba: todo lo que no es UI ya era TypeScript puro (tipos, contrato `I*Repository`, mocks, precios, fechas, textos) y se reusa tal cual; con Flutter (Dart) había que reescribir `@mucho-loco/types` a mano y tener una cuarta copia del cliente HTTP en otro lenguaje. Para compartirlo se extrajo `@mucho-loco/customer-core` de customer-app (que dejó re-exports de una línea en `lib/data|pricing|dates|orderStatus.ts` para no tocar a sus importadores). Lo que NO se comparte es la UI: DOM + Tailwind en la web, componentes nativos en el móvil — las pantallas se escriben dos veces, con cualquier framework. Detalle en `apps/mobile-app/CLAUDE.md`.
 
 ## Visión completa del proyecto (negocio)
 
 Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena de ~15 sucursales (se abren/cierran) que también vende productos propios (preentrenos, proteína, gomitas). Son 3 sistemas:
 
-1. **Tienda + app del cliente** — hoy vive en `apps/customer-app`.
+1. **Tienda + app del cliente** — hoy vive en `apps/customer-app` (web) y `apps/mobile-app` (iOS/Android).
 2. **App de sucursal** (staff) — pedidos a entregar, venta de mostrador, caja.
 3. **Panel del dueño** (HQ) — estadísticas, inventario global, nómina.
 
@@ -49,7 +54,7 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 - **Control de dinero en sucursal**: corte de caja por turno/día, auditable desde el panel del dueño.
 - **Roles en sucursal**: diferenciados — gerente (caja, reportes, inventario local) vs. mostrador (pedidos, cobro, QR).
 - **Nómina**: cálculo completo (asistencia, deducciones, recibos), no solo registro de gasto.
-- **Login social (decidido 2026-09-11): Google y Facebook**, solo para `customer-app` (staff/gerente/dueño siguen email/password). Implementado vía Hosted UI de Cognito (IdPs `aws_cognito_identity_provider` en `infra/modules/cognito`) — ver detalle del flujo OAuth/PKCE en `apps/customer-app/CLAUDE.md`, sección "Auth flow". Credenciales de Google/Facebook van en `infra/envs/dev/terraform.tfvars` (gitignored, plantilla en `terraform.tfvars.example`), nunca en el código ni en el chat.
+- **Login social (decidido 2026-09-11): Google y Facebook**, para los dos clientes del socio: `customer-app` y, desde 2026-09-12, `mobile-app` con su propio app client `mobile` (staff/gerente/dueño siguen email/password). Implementado vía Hosted UI de Cognito (IdPs `aws_cognito_identity_provider` en `infra/modules/cognito`) — ver detalle del flujo OAuth/PKCE en `apps/customer-app/CLAUDE.md`, sección "Auth flow". Credenciales de Google/Facebook van en `infra/envs/dev/terraform.tfvars` (gitignored, plantilla en `terraform.tfvars.example`), nunca en el código ni en el chat.
 - **Sin clases con reservación** (por ahora): acceso libre a pesas/máquinas. Coaches son parte del staff/ambiente, sin agenda con cupo.
 - **Comunidad**: feed social básico entre socios (posts, likes, comentarios). Sin rankings ni conexión automática con el módulo Rendimiento por ahora.
 
@@ -83,7 +88,7 @@ Orden de fases:
 2. ✅ Contrato de API derivado de los repositorios existentes — hecho para los 8 dominios ya migrados (`branches`/`products`/`membership-tiers`/`users`/`announcements`/`social`/`performance`/`community`, ver punto 4).
 3. ⏳ Fundaciones AWS vía Terraform: código en `infra/` ya existe de una vuelta anterior, pero está **destruido** (ver "Nota operativa" abajo) — sin aplicar todavía.
 4. ✅ Backend NestJS: `apps/backend` — 8 dominios migrados (`branches`/`products`/`memberships`/`users` + `announcements`/`social`/`performance`/`community`, esta segunda tanda 2026-09-12) + Prisma (Postgres local vía Homebrew, sin Docker en esta máquina) + auth con Cognito (`CognitoAuthGuard`, sin probar contra un User Pool real todavía porque la infra está destruida — sí probado end-to-end con `CognitoVerifierService` sobreescrito en tests). Ver `apps/backend/CLAUDE.md` para el detalle completo, incluida la decisión de usar Prisma 6 en vez de 7 y el tratamiento especial de `performance` (seed fijo, sin captura real de entrenamientos todavía) y `community` (el único de los 4 nuevos con lógica real, feed sin datos semilla).
-5. ⏳ (parcial) Conectar: ✅ swap de datasource mock → HTTP en `customer-app` implementado y verificado (2026-09-12) — los 8 dominios tienen datasource HTTP detrás de `NEXT_PUBLIC_DATA_SOURCE=http`, con el mock como default; ver "Swap de datasource" en `apps/customer-app/CLAUDE.md`. Los dominios públicos se probaron contra el backend real (tests de integración que comparan mock vs HTTP campo por campo + páginas SSR renderizando dato vivo de Postgres); los de cuenta solo hasta el 401 del guard, porque no hay User Pool vivo. ✅ Docker validado (2026-09-12) — `apps/backend/Dockerfile`, build + contenedor corriendo localmente contra Postgres real, ver su CLAUDE.md. ✅ Infra de Terraform completa (2026-09-12): `infra/` ya tiene VPC, RDS, ECR y ECS Fargate + ALB además de Cognito — `terraform plan` limpio (50 recursos), **sin aplicar** (cuesta dinero, ver "Nota operativa"). ✅ CI/CD (2026-09-12): `test.yml` corre typecheck/lint, unit, e2e del backend contra Postgres real y los tests de contrato; `deploy.yml` construye, sube a ECR y redespliega ECS vía OIDC (sin llaves de larga vida), manual mientras la infra no viva permanentemente. Falta: el primer `terraform apply` y el primer push de imagen.
+5. ⏳ (parcial) Conectar: ✅ swap de datasource mock → HTTP en `customer-app` implementado y verificado (2026-09-12); desde el mismo día esos datasources viven en `@mucho-loco/customer-core/http` y `mobile-app` usa exactamente los mismos, detrás de `EXPO_PUBLIC_DATA_SOURCE=http` — los 8 dominios tienen datasource HTTP detrás de `NEXT_PUBLIC_DATA_SOURCE=http`, con el mock como default; ver "Swap de datasource" en `apps/customer-app/CLAUDE.md`. Los dominios públicos se probaron contra el backend real (tests de integración que comparan mock vs HTTP campo por campo + páginas SSR renderizando dato vivo de Postgres); los de cuenta solo hasta el 401 del guard, porque no hay User Pool vivo. ✅ Docker validado (2026-09-12) — `apps/backend/Dockerfile`, build + contenedor corriendo localmente contra Postgres real, ver su CLAUDE.md. ✅ Infra de Terraform completa (2026-09-12): `infra/` ya tiene VPC, RDS, ECR y ECS Fargate + ALB además de Cognito — `terraform plan` limpio (50 recursos), **sin aplicar** (cuesta dinero, ver "Nota operativa"). ✅ CI/CD (2026-09-12): `test.yml` corre typecheck/lint, unit, e2e del backend contra Postgres real y los tests de contrato; `deploy.yml` construye, sube a ECR y redespliega ECS vía OIDC (sin llaves de larga vida), manual mientras la infra no viva permanentemente. Falta: el primer `terraform apply` y el primer push de imagen.
 6. ⏳ (parcial) Pagos: ✅ Stripe implementado y **probado contra Stripe real** (2026-09-12): sandbox real, token real de Cognito, pago real con tarjeta de prueba en la página hospedada, webhook real verificado y pedido surtido — ver "Pagos con Stripe" en `apps/backend/CLAUDE.md`. ⏳ Falta PayPal, Mercado Pago y la membresía recurrente (que son subscripciones, no pago único).
 7. ✅ `branch-app` y `owner-panel` reusando `apps/backend` (2026-09-12): el backend cubre sus 10 dominios y **los 10 repositorios de los dos apps están migrados** (6 de `branch-app`, 4 de `owner-panel`), detrás de `VITE_DATA_SOURCE=http` con mock de default. Ver "Swap de datasource" en el CLAUDE.md de cada uno. Los tres frontends hablan el mismo contrato; falta desplegarlo.
 
@@ -121,15 +126,17 @@ No hay skill confiable instalable para Mercado Pago, inventario/POS multi-sucurs
 
 Solo `README.md` estaba trackeado en git antes de la migración a monorepo (todo el resto de `apps/customer-app` nunca se hizo `git add`). Revisar `git status` antes del próximo commit para confirmar qué se está agregando.
 
-**Infra destruida (2026-09-12).** `terraform destroy` corrido en `infra/envs/dev` — cero recursos vivos en la cuenta AWS (verificado: `terraform state list` vacío, `list-user-pools` vacío, `describe-repositories` vacío, cero VPCs no-default). El código en `infra/` está completo y con `plan` limpio (50 recursos), solo hace falta aplicarlo.
+**Infra destruida (2026-09-12).** `terraform destroy` corrido en `infra/envs/dev` — cero recursos vivos en la cuenta AWS (verificado: `terraform state list` vacío, `list-user-pools` vacío, `describe-repositories` vacío, cero VPCs no-default). El código en `infra/` está completo y con `plan` limpio (51 recursos desde que existe el app client `mobile`), solo hace falta aplicarlo.
+
+Más tarde ese mismo día se volvió a aplicar solo Cognito (`terraform apply -target=module.cognito`) para probar el login real de mobile-app contra un pool vivo — funcionó, quedó documentado en `apps/mobile-app/CLAUDE.md` — y se destruyó otra vez con `terraform destroy`: **de nuevo cero recursos vivos**. Los `.env`/`.env.local` del backend, customer-app, owner-panel y branch-app quedaron apuntando a ese pool (`us-east-1_b3eTLBZtB`), que ya no existe; el paso 3 de abajo los corrige. mobile-app no tiene `.env.local` (arranca en mock).
 
 Ese mismo día se había aplicado el subconjunto gratuito (Cognito + ECR + red) para probar el flujo real de login y de pago con Stripe — sirvió, quedó documentado en `apps/backend/CLAUDE.md`, y se tiró después. Los `.env.local` de los 3 apps quedaron con IDs de un pool que ya no existe; el paso 3 de abajo los corrige.
 
 Para retomar:
 
 1. **Antes del apply** — crear las apps OAuth reales y llenar `infra/envs/dev/terraform.tfvars` (copiar de `terraform.tfvars.example`, ese archivo no está en git): OAuth client de Google (console.cloud.google.com) y app de Meta for Developers (developers.facebook.com) con producto "Facebook Login". El redirect URI exacto a registrar en ambos está documentado en `terraform.tfvars.example`. Sin esto, `terraform apply` igual funciona pero sin los IdPs de Google/Facebook (quedan vacíos por default, ver `infra/modules/cognito/variables.tf`).
-2. `cd infra/envs/dev && terraform apply` — recrea el User Pool y los 3 App Clients (`web`, `owner_panel`, `branch_app`) con IDs NUEVOS (no van a coincidir con los que están en el historial de este chat).
-3. Actualizar `.env.local` en `apps/customer-app`, `apps/owner-panel` y `apps/branch-app` con los IDs nuevos (`terraform output`) — los `.env.local` viejos van a tener valores obsoletos. `customer-app` además necesita `COGNITO_DOMAIN` (`terraform output cognito_domain`, nuevo desde el login social).
+2. `cd infra/envs/dev && terraform apply` — recrea el User Pool y los 4 App Clients (`web`, `mobile`, `owner_panel`, `branch_app`) con IDs NUEVOS (no van a coincidir con los que están en el historial de este chat).
+3. Actualizar `.env.local` en `apps/customer-app`, `apps/owner-panel` y `apps/branch-app` con los IDs nuevos (`terraform output`) — los `.env.local` viejos van a tener valores obsoletos. `apps/mobile-app` también: `EXPO_PUBLIC_AUTH=cognito`, `EXPO_PUBLIC_COGNITO_CLIENT_ID` (= `mobile_client_id`) y `EXPO_PUBLIC_COGNITO_DOMAIN` (ver su `.env.example`). Y `COGNITO_CLIENT_IDS` en `apps/backend/.env` tiene que incluir el `mobile_client_id`, o el backend le responde 401 a todo lo del móvil. `customer-app` además necesita `COGNITO_DOMAIN` (`terraform output cognito_domain`, nuevo desde el login social).
 4. Recrear los 6 usuarios de prueba reales (`AdminCreateUser` + `AdminSetUserPassword --permanent`, y `AdminAddUserToGroup` para los que tienen rol) — la destrucción del User Pool los borró a todos:
    - `diego@mucholoco.mx` / `valeria@mucholoco.mx` — clientes (customer-app, sin grupo), passwords `Bestia123!`.
    - `rodrigo@mucholoco.mx` — grupo `owner`.

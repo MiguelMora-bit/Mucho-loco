@@ -33,6 +33,11 @@ jobs:
       - run: pnpm --filter customer-app exec tsc --noEmit
       - run: pnpm --filter @mucho-loco/backend exec tsc --noEmit -p tsconfig.json
       - run: pnpm --filter customer-app lint
+      - run: pnpm --filter @mucho-loco/api-client typecheck
+      # customer-core valida en compilación que es.json/en.json cumplan Translations.
+      - run: pnpm --filter @mucho-loco/customer-core typecheck
+      - run: pnpm --filter @mucho-loco/mobile-app typecheck
+      - run: pnpm --filter @mucho-loco/mobile-app lint
 
   unit:
     name: unit tests
