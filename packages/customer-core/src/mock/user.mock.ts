@@ -1,7 +1,7 @@
 import type { UserProfile, MembershipInfo, Visit, Order, OrderItem, NewOrderLine, OnlinePaymentMethod, Lang } from '@mucho-loco/types';
-import type { IUserRepository } from '../../repositories/user.repository';
-import { PRODUCTS } from '../../data';
-import { HOME_SHIPPING_FEE } from '../../pricing';
+import type { IUserRepository } from '../contract';
+import { PRODUCTS } from '../data';
+import { HOME_SHIPPING_FEE } from '../pricing';
 import { delay } from './delay';
 
 interface UserRecord {

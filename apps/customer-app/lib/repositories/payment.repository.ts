@@ -1,30 +1,14 @@
-import type { Lang, NewOrderLine } from '@mucho-loco/types';
-import { PaymentMockDatasource } from '../datasources/mock/payment.mock';
-import { PaymentHttpDatasource } from '../datasources/http/payment.http';
+import type { CheckoutSession, IPaymentRepository } from '@mucho-loco/customer-core/contract';
+import { PaymentHttpDatasource } from '@mucho-loco/customer-core/http';
+import { PaymentMockDatasource } from '@mucho-loco/customer-core/mock';
+import { accountApi } from '../datasources/http/account-client';
 import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
-export interface CheckoutSession {
-  orderId: string;
-  /** A dónde mandar al socio para que pague. */
-  url: string;
-}
-
-export interface IPaymentRepository {
-  /**
-   * Abre un cobro con pasarela. Igual que `createOrder`, NO recibe importes:
-   * el servidor arma el total desde el catálogo y es él quien se lo cobra a
-   * la tarjeta.
-   */
-  createCheckoutSession(
-    email: string,
-    lines: NewOrderLine[],
-    delivery: 'pickup' | 'home',
-    lang: Lang,
-    successUrl: string,
-    cancelUrl: string,
-  ): Promise<CheckoutSession>;
-}
+// El contrato y los datasources viven en @mucho-loco/customer-core (los
+// comparte mobile-app); aquí solo se elige cuál y con qué cliente. Cuenta =
+// `accountApi`: solo servidor, lee la cookie ml_session.
+export type { CheckoutSession, IPaymentRepository };
 
 export const paymentRepository: IPaymentRepository = isHttpDatasourceEnabled()
-  ? new PaymentHttpDatasource()
+  ? new PaymentHttpDatasource(accountApi)
   : new PaymentMockDatasource();

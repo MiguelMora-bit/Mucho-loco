@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import type { Branch, Product } from '@mucho-loco/types';
-import { BranchHttpDatasource } from '../../lib/datasources/http/branch.http';
-import { ProductHttpDatasource } from '../../lib/datasources/http/product.http';
-import { BranchMockDatasource } from '../../lib/datasources/mock/branch.mock';
-import { ProductMockDatasource } from '../../lib/datasources/mock/product.mock';
+import { BranchHttpDatasource, ProductHttpDatasource } from '@mucho-loco/customer-core/http';
+import { publicApi } from '../../lib/datasources/http/client';
+import { BranchMockDatasource } from '@mucho-loco/customer-core/mock';
+import { ProductMockDatasource } from '@mucho-loco/customer-core/mock';
 import { requireBackend } from './api-available';
 
 /**
@@ -17,8 +17,8 @@ import { requireBackend } from './api-available';
  * `branch.promo` y encuentre `null` donde esperaba `undefined`.
  */
 
-const httpBranches = new BranchHttpDatasource();
-const httpProducts = new ProductHttpDatasource();
+const httpBranches = new BranchHttpDatasource(publicApi);
+const httpProducts = new ProductHttpDatasource(publicApi);
 const mockBranches = new BranchMockDatasource();
 const mockProducts = new ProductMockDatasource();
 

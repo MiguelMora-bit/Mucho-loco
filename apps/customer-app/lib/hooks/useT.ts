@@ -19,6 +19,7 @@ export function useT(): Translations {
     footer:      t.raw('footer')      as Translations['footer'],
     product:     t.raw('product')     as Translations['product'],
     common:      t.raw('common')      as Translations['common'],
+    error:       t.raw('error')       as Translations['error'],
     account:     t.raw('account')     as Translations['account'],
     dashboard:   t.raw('dashboard')   as Translations['dashboard'],
     checkout:    t.raw('checkout')    as Translations['checkout'],

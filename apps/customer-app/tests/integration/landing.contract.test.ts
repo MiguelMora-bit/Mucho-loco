@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { AnnouncementHttpDatasource } from '../../lib/datasources/http/announcement.http';
-import { SocialHttpDatasource } from '../../lib/datasources/http/social.http';
-import { MembershipHttpDatasource } from '../../lib/datasources/http/membership.http';
-import { AnnouncementMockDatasource } from '../../lib/datasources/mock/announcement.mock';
-import { SocialMockDatasource } from '../../lib/datasources/mock/social.mock';
-import { MembershipMockDatasource } from '../../lib/datasources/mock/membership.mock';
+import {
+  AnnouncementHttpDatasource,
+  MembershipHttpDatasource,
+  SocialHttpDatasource,
+} from '@mucho-loco/customer-core/http';
+import { publicApi } from '../../lib/datasources/http/client';
+import { AnnouncementMockDatasource } from '@mucho-loco/customer-core/mock';
+import { SocialMockDatasource } from '@mucho-loco/customer-core/mock';
+import { MembershipMockDatasource } from '@mucho-loco/customer-core/mock';
 import { requireBackend } from './api-available';
 
 /** Contenido de landing: los 3 dominios públicos que no son catálogo. */
@@ -13,7 +16,7 @@ beforeAll(requireBackend);
 describe('announcements', () => {
   it('returns the same avisos the mock seeds, field by field', async () => {
     const [http, mock] = await Promise.all([
-      new AnnouncementHttpDatasource().getAll(),
+      new AnnouncementHttpDatasource(publicApi).getAll(),
       new AnnouncementMockDatasource().getAll(),
     ]);
 
@@ -33,14 +36,14 @@ describe('announcements', () => {
    * la solución es una columna explícita de prioridad, no adivinar aquí.
    */
   it('orders by date, deterministically', async () => {
-    const http = await new AnnouncementHttpDatasource().getAll();
+    const http = await new AnnouncementHttpDatasource(publicApi).getAll();
     const dates = http.map((a) => a.date);
 
     expect([...dates].sort()).toEqual(dates);
   });
 
   it('keeps the localized fields as objects, not flattened strings', async () => {
-    const [first] = await new AnnouncementHttpDatasource().getAll();
+    const [first] = await new AnnouncementHttpDatasource(publicApi).getAll();
 
     expect(first.title).toEqual(
       expect.objectContaining({ es: expect.any(String), en: expect.any(String) }),
@@ -51,7 +54,7 @@ describe('announcements', () => {
 describe('social (marketing feed)', () => {
   it('returns the same links as the mock', async () => {
     const [http, mock] = await Promise.all([
-      new SocialHttpDatasource().getLinks(),
+      new SocialHttpDatasource(publicApi).getLinks(),
       new SocialMockDatasource().getLinks(),
     ]);
 
@@ -60,7 +63,7 @@ describe('social (marketing feed)', () => {
 
   it('returns the same feed posts as the mock', async () => {
     const [http, mock] = await Promise.all([
-      new SocialHttpDatasource().getFeed(),
+      new SocialHttpDatasource(publicApi).getFeed(),
       new SocialMockDatasource().getFeed(),
     ]);
 
@@ -72,7 +75,7 @@ describe('social (marketing feed)', () => {
 describe('membership tiers', () => {
   it('returns both tiers with the pricing factors the landing math depends on', async () => {
     const [http, mock] = await Promise.all([
-      new MembershipHttpDatasource().getTiers(),
+      new MembershipHttpDatasource(publicApi).getTiers(),
       new MembershipMockDatasource().getTiers(),
     ]);
 

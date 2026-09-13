@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { communityRepository } from './community.repository';
-import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL } from '../datasources/mock/user.mock';
+import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL } from '@mucho-loco/customer-core/mock';
 
 describe('communityRepository', () => {
   it('getFeed returns the seeded posts, newest first', async () => {

@@ -1,13 +1,13 @@
-import type { SocialLink, FeedPost } from '../types/social';
-import { SocialMockDatasource } from '../datasources/mock/social.mock';
-import { SocialHttpDatasource } from '../datasources/http/social.http';
+import type { ISocialRepository } from '@mucho-loco/customer-core/contract';
+import { SocialHttpDatasource } from '@mucho-loco/customer-core/http';
+import { SocialMockDatasource } from '@mucho-loco/customer-core/mock';
+import { publicApi } from '../datasources/http/client';
 import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
-export interface ISocialRepository {
-  getLinks(): Promise<SocialLink[]>;
-  getFeed(): Promise<FeedPost[]>;
-}
+// El contrato y los datasources viven en @mucho-loco/customer-core (los
+// comparte mobile-app); aquí solo se elige cuál y con qué cliente.
+export type { ISocialRepository };
 
 export const socialRepository: ISocialRepository = isHttpDatasourceEnabled()
-  ? new SocialHttpDatasource()
+  ? new SocialHttpDatasource(publicApi)
   : new SocialMockDatasource();

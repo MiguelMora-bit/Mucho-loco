@@ -1,6 +1,6 @@
 import type { Branch } from '@mucho-loco/types';
-import type { IBranchRepository } from '../../repositories/branch.repository';
-import { BRANCHES } from '../../data';
+import type { IBranchRepository } from '../contract';
+import { BRANCHES } from '../data';
 import { delay } from './delay';
 
 export class BranchMockDatasource implements IBranchRepository {

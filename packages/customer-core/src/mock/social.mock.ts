@@ -1,7 +1,7 @@
-import type { SocialLink, FeedPost } from '../../types/social';
-import { SOCIAL_LINKS, SOCIAL_FEED } from '../../data';
+import type { SocialLink, FeedPost } from '@mucho-loco/types';
+import { SOCIAL_LINKS, SOCIAL_FEED } from '../data';
 import { delay } from './delay';
-import type { ISocialRepository } from '../../repositories/social.repository';
+import type { ISocialRepository } from '../contract';
 
 export class SocialMockDatasource implements ISocialRepository {
   async getLinks(): Promise<SocialLink[]> {

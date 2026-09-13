@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { userRepository } from './user.repository';
-import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL, OrderValidationError } from '../datasources/mock/user.mock';
+import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL, OrderValidationError } from '@mucho-loco/customer-core/mock';
 import { PRODUCTS } from '../data';
 import { HOME_SHIPPING_FEE } from '../pricing';
 

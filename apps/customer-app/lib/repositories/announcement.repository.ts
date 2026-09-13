@@ -1,12 +1,13 @@
-import type { Announcement } from '@mucho-loco/types';
-import { AnnouncementMockDatasource } from '../datasources/mock/announcement.mock';
-import { AnnouncementHttpDatasource } from '../datasources/http/announcement.http';
+import type { IAnnouncementRepository } from '@mucho-loco/customer-core/contract';
+import { AnnouncementHttpDatasource } from '@mucho-loco/customer-core/http';
+import { AnnouncementMockDatasource } from '@mucho-loco/customer-core/mock';
+import { publicApi } from '../datasources/http/client';
 import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
-export interface IAnnouncementRepository {
-  getAll(): Promise<Announcement[]>;
-}
+// El contrato y los datasources viven en @mucho-loco/customer-core (los
+// comparte mobile-app); aquí solo se elige cuál y con qué cliente.
+export type { IAnnouncementRepository };
 
 export const announcementRepository: IAnnouncementRepository = isHttpDatasourceEnabled()
-  ? new AnnouncementHttpDatasource()
+  ? new AnnouncementHttpDatasource(publicApi)
   : new AnnouncementMockDatasource();

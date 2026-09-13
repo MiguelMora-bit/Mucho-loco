@@ -350,6 +350,10 @@ export interface Translations {
     updating: string;
     connectionError: string;
   };
+  error: {
+    title: string;
+    retry: string;
+  };
   account: {
     headlineA: string;
     headlineB: string;

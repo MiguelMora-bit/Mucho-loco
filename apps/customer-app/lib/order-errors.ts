@@ -1,5 +1,5 @@
 import { ApiRequestError } from './datasources/http/client';
-import { OrderValidationError } from './datasources/mock/user.mock';
+import { OrderValidationError } from '@mucho-loco/customer-core/mock';
 
 /**
  * Status HTTP con el que `POST /api/orders` debe responder a un error de

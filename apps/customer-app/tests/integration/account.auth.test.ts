@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { UserHttpDatasource } from '../../lib/datasources/http/user.http';
-import { CommunityHttpDatasource } from '../../lib/datasources/http/community.http';
-import { PerformanceHttpDatasource } from '../../lib/datasources/http/performance.http';
-import { ApiRequestError } from '../../lib/datasources/http/client';
+import {
+  CommunityHttpDatasource,
+  PerformanceHttpDatasource,
+  UserHttpDatasource,
+} from '@mucho-loco/customer-core/http';
+import { ApiRequestError, createCustomerApi } from '../../lib/datasources/http/client';
 import { requireBackend } from './api-available';
 
 /**
@@ -16,7 +18,8 @@ import { requireBackend } from './api-available';
  * `test/app.e2e-spec.ts` de `apps/backend`, que sobreescribe
  * `CognitoVerifierService` y sí ejerce el flujo completo contra Postgres.
  */
-const bogusToken = async () => 'no-es-un-jwt-de-cognito';
+// El mismo cliente que usa el app para cuenta, con un token que no es de Cognito.
+const bogusApi = createCustomerApi({ getToken: async () => 'no-es-un-jwt-de-cognito' });
 
 async function statusOf(call: () => Promise<unknown>): Promise<number> {
   try {
@@ -32,7 +35,7 @@ beforeAll(requireBackend);
 
 describe('account endpoints are really guarded', () => {
   it('rejects every /users/me route with 401 when the token is not a valid Cognito ID token', async () => {
-    const ds = new UserHttpDatasource(bogusToken);
+    const ds = new UserHttpDatasource(bogusApi);
 
     expect(await statusOf(() => ds.getProfile('diego@mucholoco.mx'))).toBe(401);
     expect(await statusOf(() => ds.getMembership('diego@mucholoco.mx'))).toBe(401);
@@ -47,7 +50,7 @@ describe('account endpoints are really guarded', () => {
   });
 
   it('rejects every /community route with 401', async () => {
-    const ds = new CommunityHttpDatasource(bogusToken);
+    const ds = new CommunityHttpDatasource(bogusApi);
 
     expect(await statusOf(() => ds.getFeed('diego@mucholoco.mx'))).toBe(401);
     expect(await statusOf(() => ds.createPost('diego@mucholoco.mx', 'hola'))).toBe(401);
@@ -56,7 +59,7 @@ describe('account endpoints are really guarded', () => {
   });
 
   it('rejects every /performance route with 401', async () => {
-    const ds = new PerformanceHttpDatasource(bogusToken);
+    const ds = new PerformanceHttpDatasource(bogusApi);
 
     expect(await statusOf(() => ds.getStats())).toBe(401);
     expect(await statusOf(() => ds.getPersonalRecords())).toBe(401);
@@ -68,7 +71,7 @@ describe('account endpoints are really guarded', () => {
   // error más fácil de cometer al traducir el contrato mock a URLs, y el que
   // ningún test con `fetch` stubeado puede detectar.
   it('never gets a 404, which would mean the route itself is wrong', async () => {
-    const ds = new UserHttpDatasource(bogusToken);
+    const ds = new UserHttpDatasource(bogusApi);
 
     expect(await statusOf(() => ds.getProfile('x@y.mx'))).not.toBe(404);
   });

@@ -1,6 +1,6 @@
 import type { Product } from '@mucho-loco/types';
-import type { IProductRepository } from '../../repositories/product.repository';
-import { PRODUCTS } from '../../data';
+import type { IProductRepository } from '../contract';
+import { PRODUCTS } from '../data';
 import { delay } from './delay';
 
 export class ProductMockDatasource implements IProductRepository {

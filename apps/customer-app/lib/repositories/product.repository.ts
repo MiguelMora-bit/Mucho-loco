@@ -1,15 +1,13 @@
-import type { Product } from '@mucho-loco/types';
-import { ProductMockDatasource } from '../datasources/mock/product.mock';
-import { ProductHttpDatasource } from '../datasources/http/product.http';
+import type { IProductRepository } from '@mucho-loco/customer-core/contract';
+import { ProductHttpDatasource } from '@mucho-loco/customer-core/http';
+import { ProductMockDatasource } from '@mucho-loco/customer-core/mock';
+import { publicApi } from '../datasources/http/client';
 import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
-export interface IProductRepository {
-  getAll(): Promise<Product[]>;
-  getById(id: string): Promise<Product | null>;
-  getByCategory(cat: string): Promise<Product[]>;
-  getSiblings(id: string, cat: string): Promise<Product[]>;
-}
+// El contrato y los datasources viven en @mucho-loco/customer-core (los
+// comparte mobile-app); aquí solo se elige cuál y con qué cliente.
+export type { IProductRepository };
 
 export const productRepository: IProductRepository = isHttpDatasourceEnabled()
-  ? new ProductHttpDatasource()
+  ? new ProductHttpDatasource(publicApi)
   : new ProductMockDatasource();

@@ -4,6 +4,10 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Paquetes de workspace source-only (TypeScript sin compilar) con código de
+  // runtime — mocks, catálogo, datasources, cliente HTTP. @mucho-loco/types no
+  // lo necesita porque solo exporta tipos, que se borran al compilar.
+  transpilePackages: ['@mucho-loco/customer-core', '@mucho-loco/api-client'],
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'images.unsplash.com' }],
   },

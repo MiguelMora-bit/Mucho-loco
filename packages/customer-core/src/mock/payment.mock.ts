@@ -1,5 +1,5 @@
 import type { Lang, NewOrderLine } from '@mucho-loco/types';
-import type { CheckoutSession, IPaymentRepository } from '../../repositories/payment.repository';
+import type { CheckoutSession, IPaymentRepository } from '../contract';
 import { UserMockDatasource } from './user.mock';
 import { delay } from './delay';
 

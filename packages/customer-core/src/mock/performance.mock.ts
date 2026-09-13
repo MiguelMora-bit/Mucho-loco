@@ -1,6 +1,6 @@
-import type { Workout, PerformanceStat, PersonalRecord, HeatmapLevel } from '../../types/performance';
+import type { Workout, PerformanceStat, PersonalRecord, HeatmapLevel } from '@mucho-loco/types';
 import { delay } from './delay';
-import type { IPerformanceRepository } from '../../repositories/performance.repository';
+import type { IPerformanceRepository } from '../contract';
 
 const MOCK_STATS: PerformanceStat[] = [
   { lbl: { es: 'ENTRENAMIENTOS ESTE MES', en: 'WORKOUTS THIS MONTH' }, num: '18', sub: { es: '+3 vs mes anterior', en: '+3 vs last month' }, color: 'var(--orange)' },

@@ -9,7 +9,7 @@ vi.mock('../../../lib/repositories/user.repository', () => ({
 }));
 
 const { POST } = await import('./route');
-const { OrderValidationError } = await import('../../../lib/datasources/mock/user.mock');
+const { OrderValidationError } = await import('@mucho-loco/customer-core/mock');
 
 function req(body: unknown) {
   return new Request('http://localhost/api/orders', { method: 'POST', body: JSON.stringify(body) });

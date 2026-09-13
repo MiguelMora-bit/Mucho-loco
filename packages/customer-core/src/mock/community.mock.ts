@@ -1,6 +1,6 @@
 import type { CommunityPost } from '@mucho-loco/types';
 import { delay } from './delay';
-import type { ICommunityRepository } from '../../repositories/community.repository';
+import type { ICommunityRepository } from '../contract';
 import { UserMockDatasource } from './user.mock';
 
 // likedBy vive solo del lado del mock (quién le dio like) — nunca se expone
