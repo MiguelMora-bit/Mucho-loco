@@ -114,6 +114,23 @@ export interface MembershipInfo {
   status: AccessStatus;
   /** Deadline to fix a failed payment before access is suspended. Only set (non-null) while status is 'grace'. */
   graceEndsAt: string | null;
+  /**
+   * true = la renueva una suscripción: se cobra sola al vencer, así que no
+   * hay que avisarle "renueva". false = vence y hay que volver a contratar
+   * (se pagó en mostrador, fue una visita, o canceló la suscripción).
+   */
+  autoRenews: boolean;
+}
+
+/**
+ * Lo único que el socio elige al contratar una membresía en línea. Igual que
+ * `NewOrderLine`, NO lleva precio: el importe lo calcula el servidor desde la
+ * sucursal, el tier y el periodo — el cliente nunca decide cuánto se cobra.
+ */
+export interface MembershipPlanChoice {
+  branchId: number;
+  tierKey: TierKey;
+  periodKey: PlanKey;
 }
 
 /**
@@ -245,6 +262,29 @@ export interface Translations {
     quote: string;
     spec: string;
     branch: string;
+  };
+  /** Pantalla para contratar o renovar la membresía (web: /membership; móvil: pantalla `membership`). */
+  membershipCheckout: {
+    eyebrow: string;
+    title: string;
+    sub: string;
+    branchLabel: string;
+    branchNoteSingle: string;
+    branchNoteAll: string;
+    tierLabel: string;
+    periodLabel: string;
+    totalLabel: string;
+    periodSuffix: Record<PlanKey, string>;
+    recurringNote: string;
+    oneTimeNote: string;
+    carryOverPrefix: string;
+    carryOverSuffix: string;
+    pay: string;
+    paying: string;
+    error: string;
+    alreadySubscribed: string;
+    stillActive: string;
+    cancelled: string;
   };
   memberships: {
     eyebrow: string;
@@ -452,6 +492,12 @@ export interface Translations {
       statBranches: string;
       statBranchesDelta: string;
       thisWeek: string;
+      noMembershipTitle: string;
+      noMembershipBody: string;
+      choosePlan: string;
+      paymentProcessingTitle: string;
+      paymentProcessingBody: string;
+      autoRenewsPrefix: string;
     };
     access: {
       expiresLabel: string;
@@ -461,6 +507,7 @@ export interface Translations {
       suspendedNote: string;
       accessHistory: string;
       entryNote: string;
+      noMembershipNote: string;
     };
     orders: {
       ready: string;
@@ -487,6 +534,7 @@ export interface Translations {
       partnersLabel: string;
       notLinked: string;
       renewMembership: string;
+      noMembership: string;
     };
     settings: {
       title: string;

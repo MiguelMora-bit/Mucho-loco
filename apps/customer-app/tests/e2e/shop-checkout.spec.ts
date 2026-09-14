@@ -9,9 +9,26 @@ async function login(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
+/**
+ * "Recoger en gym" (la entrega por defecto del checkout) sale de la sucursal
+ * de la membresía, y una cuenta nueva ya no nace con una. En modo mock la
+ * compra se activa al instante. Si la cuenta ya la tenía de una corrida
+ * anterior (el servidor de dev conserva el estado), el botón está
+ * deshabilitado y no hay nada que hacer.
+ */
+async function ensureMembership(page: import('@playwright/test').Page) {
+  await page.goto('/membership?plan=all&period=monthly&branch=1');
+  const pay = page.getByRole('button', { name: 'IR A PAGAR' });
+  if (await pay.isEnabled()) {
+    await pay.click();
+    await expect(page).toHaveURL(/\/dashboard\?membership=paid$/);
+  }
+}
+
 test.describe('shop -> checkout -> order shows up in dashboard', () => {
   test('adding a product, checking out, and seeing the order in the dashboard', async ({ page }) => {
     await login(page);
+    await ensureMembership(page);
 
     // Add a product to the cart from the shop grid on the home page.
     await page.goto('/');

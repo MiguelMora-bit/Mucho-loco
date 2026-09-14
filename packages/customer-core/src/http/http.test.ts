@@ -141,15 +141,20 @@ describe('UserHttpDatasource', () => {
     await ds.getMembership('ignored@mucholoco.mx');
     await ds.getVisitHistory('ignored@mucholoco.mx');
     await ds.getOrders('ignored@mucholoco.mx');
-    await ds.retryMembershipPayment('ignored@mucholoco.mx');
 
     expect(call(spy, 0).url).toBe('http://api.test/users/me');
     expect(call(spy, 1).url).toBe('http://api.test/users/me/membership');
     expect(call(spy, 2).url).toBe('http://api.test/users/me/visits');
     expect(call(spy, 3).url).toBe('http://api.test/users/me/orders');
-    expect(call(spy, 4).url).toBe('http://api.test/users/me/membership/retry-payment');
-    expect(call(spy, 4).init.method).toBe('POST');
     expect(spy.mock.calls.every((_, i) => call(spy, i).auth === 'Bearer id-token')).toBe(true);
+  });
+
+  // Un socio nuevo nace sin membresía y el backend responde 404: eso es "no
+  // ha contratado", no un error de conexión en el panel.
+  it('reads a 404 membership as "not a member yet"', async () => {
+    stubFetch({ message: 'Membership not found for user' }, 404);
+
+    expect(await new UserHttpDatasource(client().api).getMembership('x@y.mx')).toBeNull();
   });
 
   // La identidad del mock era un parámetro; la del backend es el ID token. Si
@@ -245,6 +250,41 @@ describe('PerformanceHttpDatasource', () => {
     expect(call(spy, 2).url).toBe('http://api.test/performance/workouts');
     expect(call(spy, 3).url).toBe('http://api.test/performance/heatmap');
     expect(call(spy, 3).auth).toBe('Bearer id-token');
+  });
+});
+
+describe('PaymentHttpDatasource — membresía', () => {
+  it('sends only the plan choice and return urls — never an amount', async () => {
+    const spy = stubFetch({ url: 'https://checkout.stripe.com/x' });
+    await new PaymentHttpDatasource(client().api).createMembershipCheckout(
+      'diego@mucholoco.mx',
+      { branchId: 3, tierKey: 'single', periodKey: 'quarterly' },
+      'es',
+      'https://mucholoco.mx/es/dashboard?membership=paid',
+      'https://mucholoco.mx/es/membership',
+    );
+
+    const { url, init, auth } = call(spy);
+    expect(url).toBe('http://api.test/payments/membership-checkout-sessions');
+    expect(init.method).toBe('POST');
+    expect(auth).toBe('Bearer id-token');
+    expect(JSON.parse(String(init.body))).toEqual({
+      branchId: 3,
+      tierKey: 'single',
+      periodKey: 'quarterly',
+      lang: 'es',
+      successUrl: 'https://mucholoco.mx/es/dashboard?membership=paid',
+      cancelUrl: 'https://mucholoco.mx/es/membership',
+    });
+  });
+
+  it('asks for the pending invoice without sending the email or the return url', async () => {
+    const spy = stubFetch({ url: 'https://invoice.stripe.com/i/x' });
+    await new PaymentHttpDatasource(client().api).openMembershipInvoice('otro@mucholoco.mx', 'https://x/dashboard');
+
+    const { url, init } = call(spy);
+    expect(url).toBe('http://api.test/payments/membership-invoice');
+    expect(String(init.body)).not.toContain('otro@mucholoco.mx');
   });
 });
 

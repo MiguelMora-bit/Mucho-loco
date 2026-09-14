@@ -1,4 +1,5 @@
 import type { Lang, MembershipInfo, Translations, UserProfile, Visit } from '@mucho-loco/types';
+import { Link } from '@/i18n/routing';
 import { formatDate, formatDayOfMonth, formatDuration, formatMonthShort } from '../../lib/dates';
 
 interface AccessPaneProps {
@@ -6,16 +7,33 @@ interface AccessPaneProps {
   lang: Lang;
   active: boolean;
   profile: UserProfile;
-  membership: MembershipInfo;
+  /** null = todavía no contrata: no hay QR que mostrar. */
+  membership: MembershipInfo | null;
+  planHref: string;
   history: Visit[];
   onShowQr: () => void;
 }
 
-export function AccessPane({ t, lang, active, profile, membership, history, onShowQr }: AccessPaneProps) {
+export function AccessPane({ t, lang, active, profile, membership, planHref, history, onShowQr }: AccessPaneProps) {
   return (
     <div className={'pane' + (active ? ' active' : '')}>
       <div className="grid grid-cols-[460px_1fr] gap-6 items-start">
         <div>
+          {!membership && (
+            <div className="card-pass">
+              <div className="font-display text-[32px] leading-none mb-4">{profile.name}</div>
+              <div className="px-3 py-2 mb-3 text-center text-xs font-mono uppercase tracking-wide-xl text-ml-cream-dim border border-ml-border">
+                {t.dashboard.access.noMembershipNote}
+              </div>
+              <Link
+                href={planHref}
+                className="block w-full mt-4.5 p-4 text-center bg-ml-red text-ml-cream font-display text-22 tracking-[0.04em]"
+              >
+                {t.dashboard.home.choosePlan}
+              </Link>
+            </div>
+          )}
+          {membership && (
           <div className="card-pass">
             <div className="absolute left-0 right-0 h-px border-t-2 border-dashed border-[rgba(255,255,255,0.18)]" style={{ top: '70%' }} />
             <div className="flex items-center justify-between mb-5">
@@ -42,6 +60,7 @@ export function AccessPane({ t, lang, active, profile, membership, history, onSh
               {membership.status === 'expired' ? t.dashboard.access.suspendedNote : t.dashboard.access.showQr}
             </button>
           </div>
+          )}
         </div>
         <div>
           <div className="font-display text-22 mb-3.5">{t.dashboard.access.accessHistory}</div>

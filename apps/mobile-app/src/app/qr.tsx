@@ -49,6 +49,10 @@ export default function QrScreen() {
           <Body style={styles.center}>{t.dashboard.qr.sub}</Body>
         </View>
       )}
+      {/* Sin membresía no hay QR: el código nace con la primera compra. */}
+      {state.status === 'ready' && !state.data && (
+        <Body style={styles.center}>{t.dashboard.access.noMembershipNote}</Body>
+      )}
       <Button title={t.dashboard.qr.close} variant="outline" onPress={() => router.back()} style={styles.close} />
     </SafeAreaView>
   );

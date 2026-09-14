@@ -80,6 +80,7 @@ export default function RootLayout() {
         <Stack.Screen name="order/[id]" options={{ title: t.dashboard.nav.orders, presentation: 'modal' }} />
         <Stack.Screen name="community" options={{ title: t.dashboard.community.title }} />
         <Stack.Screen name="performance" options={{ title: t.dashboard.nav.performance }} />
+        <Stack.Screen name="membership" options={{ title: t.membershipCheckout.eyebrow }} />
       </Stack>
     </ThemeProvider>
   );

@@ -171,6 +171,7 @@ model Branch {
   counterSales       CounterSale[]
   shifts             CashRegisterShift[]
   membershipPayments MembershipPayment[]
+  membershipPurchases MembershipPurchase[]
   attendance         AttendanceEntry[]
   transfersOut       InventoryTransfer[] @relation("transfersFrom")
   transfersIn        InventoryTransfer[] @relation("transfersTo")
@@ -235,11 +236,16 @@ model User {
   /// customer-app ya marcó este campo fuera de alcance de su migración a
   /// fechas ISO (ver su CLAUDE.md), así que el backend no le adelanta.
   birthdate  String  @default("")
+  /// Cliente de Stripe. Se guarda en la primera compra de membresía para que
+  /// las siguientes reusen el mismo cliente (y su tarjeta) en vez de crear uno
+  /// nuevo cada vez.
+  stripeCustomerId String? @unique
   createdAt  DateTime @default(now())
 
-  membership Membership?
-  visits     Visit[]
-  orders     Order[]
+  membership          Membership?
+  membershipPurchases MembershipPurchase[]
+  visits              Visit[]
+  orders              Order[]
 
   notifications     Notification[]
   communityPosts    CommunityPost[]
@@ -271,6 +277,11 @@ model Membership {
   /// El registro SIEMPRE conserva accessCode — la huella es un credencial
   /// adicional para validar acceso, no un reemplazo de la identidad.
   fingerprintId String?    @unique
+  /// Suscripción de Stripe que la renueva sola. null = no se renueva: se pagó
+  /// en mostrador, fue una visita, o la suscripción se canceló. Con
+  /// suscripción, el estado lo decide Stripe (ver MembershipBillingService);
+  /// sin ella, vence sola al pasar `expiresAt` (ver membership-status.ts).
+  stripeSubscriptionId String? @unique
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -744,6 +755,37 @@ model Payment {
 
   @@index([orderId])
   @@map("payments")
+}
+
+/// Compra de membresía en línea — lo que el socio eligió y pagó en Stripe.
+/// Hermana de `Payment` (que es de pedidos de la tienda) y de
+/// `MembershipPayment` (cobros de mostrador). Existe por dos razones: congelar
+/// sucursal/tier/periodo/importe del momento de la compra, y hacer idempotente
+/// el webhook — Stripe reentrega eventos, y una visita cobrada una vez no
+/// puede extender la membresía dos.
+model MembershipPurchase {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  branchId  Int
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  tierKey   TierKey
+  periodKey PlanKey
+  amount    Int
+  currency  String   @default("mxn")
+  provider  PaymentProvider
+  status    PaymentStatus @default(pending)
+
+  /// Id de la sesión de Checkout — el webhook llega por sesión.
+  providerSessionId      String  @unique
+  /// Solo en planes recurrentes; se llena cuando la sesión se completa.
+  providerSubscriptionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("membership_purchases")
 }
 
 

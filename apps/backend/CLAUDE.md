@@ -6,7 +6,7 @@ Visión de negocio completa y estructura del monorepo: ver [`CLAUDE.md`](../../C
 
 API REST que reemplaza, dominio por dominio, los repositorios mock de `customer-app` — contract-first: cada método de `I*Repository` en `customer-app/lib/repositories/*.ts` es el contrato que un endpoint de aquí tiene que cumplir. Cuando un dominio esté migrado, `customer-app` solo cambia el datasource (mock → HTTP), nunca el resto del app (componentes, stores, tipos).
 
-**Estado (2026-09-12): 8 dominios migrados.** `branches`, `products`, `membership-tiers` (catálogo) y `users/me/*` (perfil, membresía + retry-payment, visitas, pedidos) — los 4 que el CLAUDE.md raíz nombraba explícitamente para el primer corte ("branches, products, orders, memberships"). Más `announcements`, `social` (links + feed de marketing), `performance` (stats/records/workouts/heatmap) y `community` (feed interno entre socios) — la segunda pasada, ver detalle de cada uno abajo ("Segunda pasada: community/announcements/social/performance"). `customer-app` sigue usando sus datasources mock para TODO — el swap real (Fase 5 de la metodología) todavía no se hizo, este backend hoy corre standalone, verificado con tests y curl, no conectado a ningún frontend.
+**Estado (2026-09-12): 8 dominios migrados.** `branches`, `products`, `membership-tiers` (catálogo) y `users/me/*` (perfil, membresía, visitas, pedidos) — los 4 que el CLAUDE.md raíz nombraba explícitamente para el primer corte ("branches, products, orders, memberships"). Más `announcements`, `social` (links + feed de marketing), `performance` (stats/records/workouts/heatmap) y `community` (feed interno entre socios) — la segunda pasada, ver detalle de cada uno abajo ("Segunda pasada: community/announcements/social/performance"). `customer-app` sigue usando sus datasources mock para TODO — el swap real (Fase 5 de la metodología) todavía no se hizo, este backend hoy corre standalone, verificado con tests y curl, no conectado a ningún frontend.
 
 ### Segunda pasada: community/announcements/social/performance (2026-09-12)
 
@@ -121,8 +121,64 @@ Sin esas dos variables el resto del backend funciona igual; solo `/payments/*` f
 
 - **El registro web no pide teléfono.** mobile-app sí (desde 2026-09-12): lo manda como `phone_number` y `findOrCreateByCognito` lo guarda (ver "Auth" abajo). Falta lo mismo en `SignupForm` de customer-app — que además pide cumpleaños y nunca lo manda a Cognito.
 - **PayPal y Mercado Pago.** El modelo `Payment` ya tiene `provider`, así que agregarlos es un módulo más, no un rediseño. Hay skill oficial de PayPal instalada; para Mercado Pago no hay y se diseña directo con el usuario.
-- **Membresía recurrente.** El CLAUDE.md raíz pide cobro recurrente con periodo de gracia. Eso son subscripciones (Billing API), no Checkout de pago único — otro conjunto de webhooks (`invoice.payment_failed`, `customer.subscription.updated`) y el que de verdad cierra la regla de negocio de la membresía.
+- ~~**Membresía recurrente.**~~ ✅ Hecho (2026-09-13) — ver "Membresías con Stripe Billing" abajo.
 - **Reembolsos.** `providerPaymentIntentId` se guarda justo para eso, pero no hay endpoint todavía (y la política de devoluciones sigue sin decidirse — ver "Pendiente de decidir" en el CLAUDE.md raíz).
+
+## Membresías con Stripe Billing (2026-09-13)
+
+Antes: todo socio nuevo nacía con una mensual de 15 sucursales **regalada**, `retry-payment` "cobraba" sin tocar pasarela, y nada pasaba una membresía a `grace`/`expired` — una vencida abría la puerta para siempre. Ahora la membresía existe desde su primer cobro confirmado.
+
+| Ruta | Qué hace |
+|---|---|
+| `POST /payments/membership-checkout-sessions` | Contratar o renovar. Body = sucursal + tier + periodo (+ `lang` y URLs), **nunca importe**. Visita = `mode: 'payment'`; semanal/mensual/trimestral/anual = `mode: 'subscription'`. |
+| `POST /payments/membership-invoice` | En gracia: la `hosted_invoice_url` de la factura que falló, para pagarla con otra tarjeta. |
+| `GET /users/me/membership` | 404 = todavía no contrata (el cliente HTTP lo lee como `null`, `getOrNull`). |
+
+Se quitó `POST /users/me/membership/retry-payment`. Código: `payments/membership-billing.service.ts` (Stripe) y `memberships/` (dominio: `grant`, `enterGrace`, `detachSubscription`, `expireLapsed`).
+
+### Reglas
+
+- **El estado lo decide Stripe.** Ningún evento se aplica tal cual llega: `syncSubscription` vuelve a leer la suscripción y copia su estado — `active`/`trialing` → activa hasta el fin del periodo; `past_due` → gracia de 7 días (`GRACE_DAYS`); `canceled`/`unpaid` → se desliga y vale hasta `expiresAt`. Stripe no garantiza el orden de los eventos (la factura pagada puede llegar antes que la sesión completada); leer el estado fresco hace que no importe y que reprocesar no cambie nada. Con API `dahlia` el periodo vive en `items.data[].current_period_end` y la factura liga su suscripción en `parent.subscription_details`.
+- **De quién es** viaja en `subscription_data.metadata` (userId, branchId, tierKey, periodKey): los eventos de renovación de meses después solo traen la suscripción.
+- **Vencimiento en un solo lugar**: `memberships/membership-status.ts` (`effectiveStatus`). Se aplica al LEER (panel del socio y check-in de sucursal, así una membresía deja de abrir la puerta al momento en que vence) y un cron cada hora (`expireLapsed`) lo persiste para reportes y avisos. Con suscripción se toleran 3 días de retraso del webhook de renovación.
+- **Precio del servidor**: `calculateMembershipPrice(branch.price, tier, periodo)` — `membership-plans.ts` se movió de `counter-memberships/` a `memberships/`. Un Product de Stripe por tier con id fijo (`ml_membership_single`/`ml_membership_all`, se crea solo la primera vez); el precio va en `price_data` de cada sesión porque depende de la sucursal.
+- **No cobrar dos veces**: 409 `ALREADY_SUBSCRIBED` con una suscripción viva. Si contrata desde gracia o suspendido, la suscripción vieja se cancela ANTES de ligar la nueva. Visita encima de una membresía vigente → 409 `MEMBERSHIP_STILL_ACTIVE`.
+- **Renovar antes no pierde lo pagado**: si le quedan más de 3 días (pagados en mostrador, por ejemplo), `trial_end` = ese día y el primer cobro cae ahí.
+- **Visita idempotente**: la tabla nueva `MembershipPurchase` se marca pagada y la membresía se da en UNA transacción — un evento reentregado no suma otro día.
+- Tras el primer cobro se fija `payment_settings.save_default_payment_method: 'on_subscription'`: la tarjeta con la que se paga una factura atrasada queda para las renovaciones.
+- Los avisos de WhatsApp "por vencer" ya no se mandan a quien tiene suscripción (Stripe le cobra solo).
+- "Recoger en gym" sin membresía → 400 `PICKUP_REQUIRES_MEMBERSHIP` (antes funcionaba solo porque todos tenían la regalada). Comunidad sí deja publicar sin membresía (el post sale sin sucursal).
+
+### Configurar en Stripe antes de probarlo de verdad
+
+- El webhook (o `stripe listen`, que sin `--events` reenvía todo) necesita: `checkout.session.completed`, `checkout.session.async_payment_succeeded`/`_failed`, `checkout.session.expired`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.created`/`updated`/`deleted`.
+- Billing → recuperación de ingresos: Smart Retries y qué hacer al agotar reintentos (recomendado: cancelar la suscripción). Nuestra gracia de 7 días es independiente: si Stripe logra cobrar después, `invoice.paid` la reactiva.
+
+### Probado
+
+Unit (`membership-billing.service.spec.ts`, `membership-status.spec.ts`, `memberships.service.spec.ts`) y e2e contra Postgres real con Stripe sobreescrito — `test/membership-billing.e2e-spec.ts` recorre el ciclo completo: sin membresía → contrata → activa → falla la renovación → gracia → paga la factura → activa → un evento viejo reentregado no la regresa → cancela → vence → compra una visita.
+
+### Probado contra el sandbox de Stripe (2026-09-13) ✅
+
+Backend local + `stripe listen` + Postgres dev. Sin User Pool vivo no hay token para el endpoint, así que el checkout se abrió con el `MembershipBillingService` real desde un script en contexto de Nest, y se pagó en la página hospedada de Stripe con `4242…` manejando el navegador con Playwright.
+
+1. **Visita (15 sucursales)**: Stripe aceptó el checkout en `mode: 'payment'` (`customer_creation`, `payment_intent_data`, producto con id fijo). `checkout.session.completed` → activa 24 h, `autoRenews: false`, compra `paid` por $200, cliente de Stripe guardado.
+2. **Mensual (1 sucursal)**: suscripción real con la metadata del socio, `ml_membership_single`, 109000 centavos/mes y `save_default_payment_method: on_subscription`. `expiresAt` = el fin de periodo de Stripe, exacto.
+3. **Renovación que falla**: tarjeta `pm_card_chargeCustomerFail` como default + subida de precio con `proration_behavior: always_invoice` → factura `subscription_update` rechazada → `past_due` → `invoice.payment_failed` → gracia de 7 días.
+4. **Pagar el atraso**: `openPendingInvoice` devolvió la página de la factura abierta. Pagarla ahí con Playwright no se pudo (la página de facturas trae hCaptcha y Link, y en headless el clic no llega a procesarse), así que se pagó por API con una tarjeta nueva → `invoice.paid` → activa, gracia borrada, y Stripe dejó la tarjeta NUEVA como la de renovaciones.
+5. Segunda contratación con la suscripción viva → 409 `ALREADY_SUBSCRIBED`.
+6. **Cancelar** en Stripe → `customer.subscription.deleted` → sin suscripción, activa hasta el fin del periodo pagado, `autoRenews: false`.
+
+46 eventos reenviados, los 46 respondidos 200, sin warnings. Clientes y socios de prueba borrados; los Products `ml_membership_single`/`ml_membership_all` se quedan en el sandbox (el código los reusa).
+
+**Lo que no se pudo probar**: la renovación natural al terminar el periodo. La llave de `.env` es de un sandbox **reclamable**, con permisos limitados, y no puede crear test clocks (ni con la CLI, que usa la misma llave). Para probarla: "Claim sandbox" en el dashboard de Stripe → llave completa → test clocks.
+
+### Pendiente
+
+- **Portal de cliente de Stripe** (cambiar plan, actualizar tarjeta, cancelar): hoy el socio no puede cancelar desde la app.
+- `branch-app` renovando en mostrador a un socio con suscripción viva le cobraría dos veces — el mostrador no sabe de la suscripción.
+- Los reportes de `owner-panel` no suman las membresías cobradas en línea (solo `MembershipPayment` de mostrador).
+- Al recrear el User Pool, diego/valeria entran SIN membresía (el seed no crea membresías): se contrata con la tarjeta `4242…`.
 
 ## Notificaciones por WhatsApp (2026-09-12)
 

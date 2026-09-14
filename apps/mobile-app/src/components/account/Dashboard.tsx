@@ -1,4 +1,6 @@
+import * as Linking from 'expo-linking';
 import { useFocusEffect, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { OrderStatus } from '@mucho-loco/types';
@@ -7,7 +9,7 @@ import { orderStatusLabel } from '@mucho-loco/customer-core/order-status';
 import { formatPrice } from '@mucho-loco/customer-core/pricing';
 import { Body, Button, Card, Chip, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
 import { useLangStore, useT } from '@/lib/i18n';
-import { userRepository } from '@/lib/repositories';
+import { paymentRepository, userRepository } from '@/lib/repositories';
 import { useSessionStore } from '@/lib/stores/session.store';
 import { useResource } from '@/lib/use-resource';
 import { colors, space } from '@/theme';
@@ -58,11 +60,17 @@ export function Dashboard({ email }: { email: string }) {
   const [retrying, setRetrying] = useState(false);
   const [retryFailed, setRetryFailed] = useState(false);
 
-  async function retryPayment() {
+  // Periodo de gracia: se paga la factura que falló en la página de Stripe.
+  // Esa página no regresa sola; al cerrarla el panel recarga, y la membresía
+  // vuelve a activa cuando el backend recibe invoice.paid.
+  async function payPendingInvoice() {
     setRetrying(true);
     setRetryFailed(false);
     try {
-      await userRepository.retryMembershipPayment(email);
+      const returnUrl = Linking.createURL('/account');
+      const { url } = await paymentRepository.openMembershipInvoice(email, returnUrl);
+      // El mock "paga" al instante y responde con returnUrl: no hay página que abrir.
+      if (!url.startsWith(returnUrl)) await WebBrowser.openBrowserAsync(url);
       reload();
     } catch {
       setRetryFailed(true);
@@ -96,19 +104,28 @@ export function Dashboard({ email }: { email: string }) {
         <Display>{home.welcomePrefix}</Display>
         <Display style={styles.red}>{profile.name.split(' ')[0]}</Display>
       </View>
-      <Body>
-        {home.branchLabel} {membership.branch} · {home.planLabel} {membership.plan}
-      </Body>
+      {membership && (
+        <Body>
+          {home.branchLabel} {membership.branch} · {home.planLabel} {membership.plan}
+        </Body>
+      )}
 
-      {membership.status === 'expired' && (
+      {/* Un socio nuevo nace sin membresía: la activa su primera compra. */}
+      {!membership && (
+        <Card style={styles.banner}>
+          <Heading>🏋️ {home.noMembershipTitle}</Heading>
+          <Body>{home.noMembershipBody}</Body>
+          <Button title={home.choosePlan} onPress={() => router.push('/membership')} />
+        </Card>
+      )}
+      {membership?.status === 'expired' && (
         <Card style={styles.banner}>
           <Heading>🚫 {home.suspendedTitle}</Heading>
           <Body>{home.suspendedBody}</Body>
-          {retryFailed && <Body style={styles.error}>{home.retryPaymentError}</Body>}
-          <Button title={retrying ? t.common.updating : home.reactivate} onPress={retryPayment} loading={retrying} />
+          <Button title={home.reactivate} onPress={() => router.push('/membership')} />
         </Card>
       )}
-      {membership.status === 'grace' && (
+      {membership?.status === 'grace' && (
         <Card style={styles.banner}>
           <Heading>💳 {home.paymentFailedTitle}</Heading>
           <Body>
@@ -116,10 +133,11 @@ export function Dashboard({ email }: { email: string }) {
             {membership.graceEndsAt ? formatDate(membership.graceEndsAt, lang) : ''}.
           </Body>
           {retryFailed && <Body style={styles.error}>{home.retryPaymentError}</Body>}
-          <Button title={retrying ? t.common.updating : home.retryPayment} onPress={retryPayment} loading={retrying} />
+          <Button title={retrying ? t.common.updating : home.retryPayment} onPress={payPendingInvoice} loading={retrying} />
         </Card>
       )}
-      {membership.status === 'active' && membership.daysLeft <= 15 && (
+      {/* Con suscripción no hay nada que renovar: Stripe cobra solo. */}
+      {membership?.status === 'active' && !membership.autoRenews && membership.daysLeft <= 15 && (
         <Card style={styles.banner}>
           <Heading>
             ⚠️ {home.membershipExpiringPrefix} {membership.daysLeft} {home.membershipExpiringSuffix}
@@ -127,37 +145,45 @@ export function Dashboard({ email }: { email: string }) {
           <Body>
             {home.renewNotePrefix} {membership.streak} {home.renewNoteSuffix}
           </Body>
+          <Button title={home.renew} onPress={() => router.push('/membership')} />
+        </Card>
+      )}
+      {membership?.status === 'active' && membership.autoRenews && (
+        <Body>
+          {home.autoRenewsPrefix} {formatDate(membership.expiresAt, lang)}.
+        </Body>
+      )}
+
+      {membership && (
+        <Card style={styles.pass}>
+          <Heading>{profile.name}</Heading>
+          <Mono>{membership.plan}</Mono>
+          <View style={styles.passGrid}>
+            <View style={styles.passCell}>
+              <Mono>{t.dashboard.access.expiresLabel}</Mono>
+              <Heading>{formatDate(membership.expiresAt, lang)}</Heading>
+            </View>
+            <View style={styles.passCell}>
+              <Mono>{t.dashboard.access.branchLabel}</Mono>
+              <Heading>{membership.tierKey === 'all' ? t.dashboard.access.allGyms : membership.branch}</Heading>
+            </View>
+          </View>
+          {membership.status !== 'active' && (
+            <Mono style={styles.error}>{t.dashboard.membershipStatus[membership.status]}</Mono>
+          )}
+          <Button
+            title={membership.status === 'expired' ? t.dashboard.access.suspendedNote : t.dashboard.access.showQr}
+            disabled={membership.status === 'expired'}
+            onPress={() => router.push('/qr')}
+          />
         </Card>
       )}
 
-      <Card style={styles.pass}>
-        <Heading>{profile.name}</Heading>
-        <Mono>{membership.plan}</Mono>
-        <View style={styles.passGrid}>
-          <View style={styles.passCell}>
-            <Mono>{t.dashboard.access.expiresLabel}</Mono>
-            <Heading>{formatDate(membership.expiresAt, lang)}</Heading>
-          </View>
-          <View style={styles.passCell}>
-            <Mono>{t.dashboard.access.branchLabel}</Mono>
-            <Heading>{membership.tierKey === 'all' ? t.dashboard.access.allGyms : membership.branch}</Heading>
-          </View>
-        </View>
-        {membership.status !== 'active' && (
-          <Mono style={styles.error}>{t.dashboard.membershipStatus[membership.status]}</Mono>
-        )}
-        <Button
-          title={membership.status === 'expired' ? t.dashboard.access.suspendedNote : t.dashboard.access.showQr}
-          disabled={membership.status === 'expired'}
-          onPress={() => router.push('/qr')}
-        />
-      </Card>
-
       <View style={styles.stats}>
         {[
-          { label: home.statVisits, value: membership.visits },
-          { label: home.statStreak, value: membership.streak },
-          { label: home.statDaysLeft, value: membership.daysLeft },
+          { label: home.statVisits, value: membership?.visits ?? 0 },
+          { label: home.statStreak, value: membership?.streak ?? 0 },
+          { label: home.statDaysLeft, value: membership?.daysLeft ?? 0 },
         ].map((s) => (
           <Card key={s.label} style={styles.stat}>
             <Display style={styles.statNum}>{s.value}</Display>

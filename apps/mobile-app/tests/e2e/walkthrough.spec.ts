@@ -232,5 +232,22 @@ test('un socio nuevo se registra con teléfono, confirma el código y entra', as
     await expect(page.getByText('NUEVA', { exact: true }).first()).toBeVisible();
   });
 
+  // Antes una cuenta nueva nacía con una mensual de regalo. Ahora no tiene
+  // membresía (ni QR) hasta que la compra.
+  await test.step('una cuenta nueva no tiene membresía hasta comprarla', async () => {
+    await expect(page.getByText(/AÚN NO TIENES MEMBRESÍA/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /MOSTRAR QR DE ACCESO/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'ELEGIR PLAN' }).click();
+    await expect(page.getByText('ELIGE TU PLAN')).toBeVisible();
+  });
+
+  await test.step('elige plan y paga (mock): vuelve al panel con su QR y se renueva sola', async () => {
+    await page.getByRole('button', { name: 'Trimestral', exact: true }).click();
+    await expect(page.getByText(/MXN \/ trimestre/)).toBeVisible();
+    await page.getByRole('button', { name: 'IR A PAGAR' }).click();
+    await expect(page.getByRole('button', { name: /MOSTRAR QR DE ACCESO/ })).toBeVisible();
+    await expect(page.getByText(/Se renueva sola el/)).toBeVisible();
+  });
+
   expect(browserErrors).toEqual([]);
 });

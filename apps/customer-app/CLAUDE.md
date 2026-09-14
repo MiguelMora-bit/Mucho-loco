@@ -94,13 +94,24 @@ O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 
 - `README.md` de este app menciona "CSS puro (sin Tailwind)" — desactualizado, el proyecto ya usa Tailwind v3. Pendiente de actualizar.
 - **Decidido (2026-08-30): no hay formulario de contacto.** WhatsApp gana para este mercado — más natural que un form y ya es el tono de marca. El link `wa.me` en `Contact` (componente `MuchoLoco.tsx`) ya es funcional. Las claves `contact.name/email/branch/message/send` en `messages/*.json` quedan sin usar; no se borran todavía por si más adelante se justifica un form real con lead-capture. Notificaciones automáticas (avisos de vencimiento, pedido listo) van por WhatsApp Business Platform cuando exista backend — ver `CLAUDE.md` root.
-- Rutas en inglés (`/account`, `/dashboard`, `/performance`, `/product/[id]`, `/checkout`) por preferencia explícita del usuario (2026-08-30) — el copy/contenido del sitio se queda en español.
+- Rutas en inglés (`/account`, `/dashboard`, `/performance`, `/product/[id]`, `/checkout`, `/membership`) por preferencia explícita del usuario (2026-08-30) — el copy/contenido del sitio se queda en español.
 - **Resuelto (2026-08-30):** checkout ya crea un pedido real vía `POST /api/orders` (server-side) que `userRepository.getOrders()` refleja — por eso un pedido nuevo SÍ aparece en el dashboard. `product/[id]` y `performance` siguen sin persistir nada (no hay acción de usuario ahí que debiera hacerlo).
 - **Resuelto (2026-09-02):** `next-intl` antes solo cubría landing + product — Account/Dashboard/Checkout/Performance estaban 100% hardcodeados en español sin pasar por `useT()`. Ya están completos, siguiendo el mismo patrón (`useT()` una vez en la raíz del subtree, `t` como prop hacia abajo). `Product.name`/`.flav` y `FeedPost.cap` pasaron de `string` a `LocalizedString` (mismo patrón que `Announcement`/`MembershipTier`) para que el catálogo también cambie de idioma; `OrderItem.name`/`.flav` se quedan `string` a propósito (un pedido es un recibo congelado en el idioma de compra, no se retraduce). Fechas (`Order.date`, `PersonalRecord.date`, `Workout.date`) pasaron de string pre-formateado en español a ISO + `lib/dates.ts` (`Intl.DateTimeFormat`) para que sí cambien con el locale. Pendiente, fuera de este alcance: `Visit.day`/`.month` y `MOCK_PROFILE.birthdate` tienen el mismo defecto latente pero no se tocaron (los datos semilla actuales no lo evidencian).
 
 ## Patrón: página server component + client component
 
 `dashboard` (`DashboardClient`), `product/[id]` (`ProductClient`) y `performance` (`PerformanceClient`) siguen el mismo patrón: el `page.tsx` es un Server Component async que llama al repository correspondiente y pasa los datos como props; el componente en `components/` es `'use client'` y solo maneja estado de interacción (tabs, cantidad, modales). Nuevas páginas con datos + interactividad deberían seguir esta misma división — así el swap de mock a API real (Fase 5 de la metodología) solo toca el `page.tsx`, nunca el componente cliente.
+
+## Membresía: contratar y pagar (2026-09-13)
+
+Un socio nuevo ya no nace con membresía: `getMembership()` devuelve `null` hasta su primer cobro (mismo contrato en mock y HTTP — el backend responde 404). Detalle del cobro en "Membresías con Stripe Billing" de `apps/backend/CLAUDE.md`.
+
+- **`/membership`** (protegida, `app/[locale]/(account)/membership/` + `components/MembershipCheckoutClient.tsx`): sucursal, tier y periodo → `POST /api/membership/checkout` → Stripe. El landing manda aquí con `?plan=&period=&branch=`, y el middleware ahora conserva la query en `next`, así el plan elegido sobrevive al login. El precio que se ve es vista previa (`PERIOD_MULTIPLIERS` de customer-core); el que se cobra lo calcula el backend.
+- **Panel**: sin membresía → "ELEGIR PLAN"; `?membership=paid` sin membresía activa → "confirmando tu pago" (volver de Stripe no activa nada, lo activa el webhook); gracia → `POST /api/membership/invoice` abre la factura pendiente en Stripe (reemplaza al `retry-payment` falso); suspendida → `/membership`; con suscripción → "se renueva sola el …" y sin banner de renovar.
+- Las reglas de contratación (qué rechazaría el backend, desde cuándo respetar lo ya pagado) viven en `@mucho-loco/customer-core/membership-rules`, compartidas con el móvil y el mock. `renewalStartsOn()` lee el reloj, así que se llama en el Server Component: el lint de React prohíbe `Date.now()` durante el render de un componente.
+- Los rechazos (`ALREADY_SUBSCRIBED`, `MEMBERSHIP_STILL_ACTIVE`, `NOTHING_TO_PAY`) se leen igual en mock y HTTP con `membershipErrorCode()` de `@mucho-loco/customer-core/membership-errors`; los route handlers responden 409 con `{ error: code }`.
+- "Recoger en gym" exige membresía (sale de su sucursal). Por eso `tests/e2e/shop-checkout.spec.ts` contrata una (mock) antes de comprar.
+- **Sin verificar en navegador**: el panel y `/membership` solo pasaron typecheck, lint y unit tests — sin User Pool vivo no hay sesión para abrirlos. El mismo flujo en el móvil sí se recorrió en Playwright (modo mock).
 
 ## Patrón: contenido de landing vía store (announcements, membership tiers, social)
 

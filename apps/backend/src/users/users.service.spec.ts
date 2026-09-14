@@ -5,7 +5,6 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { MembershipsService } from '../memberships/memberships.service';
 import type { CreateOrderDto } from './dto/create-order.dto';
 
 describe('UsersService', () => {
@@ -17,13 +16,11 @@ describe('UsersService', () => {
       create: jest.Mock;
       update: jest.Mock;
     };
-    membership: { findUniqueOrThrow: jest.Mock };
+    membership: { findUnique: jest.Mock };
     visit: { findMany: jest.Mock };
     order: { findMany: jest.Mock; create: jest.Mock };
     product: { findMany: jest.Mock };
-    $transaction: jest.Mock;
   };
-  let memberships: { createDefaultForUser: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -33,22 +30,15 @@ describe('UsersService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
-      membership: { findUniqueOrThrow: jest.fn() },
+      membership: { findUnique: jest.fn() },
       visit: { findMany: jest.fn() },
       order: { findMany: jest.fn(), create: jest.fn() },
       product: { findMany: jest.fn() },
-      $transaction: jest.fn(),
     };
-    // La transacción corre el callback con el mismo mock como `tx`.
-    prisma.$transaction.mockImplementation(
-      (fn: (tx: typeof prisma) => unknown) => fn(prisma),
-    );
-    memberships = { createDefaultForUser: jest.fn() };
     const module = await Test.createTestingModule({
       providers: [
         UsersService,
         { provide: PrismaService, useValue: prisma },
-        { provide: MembershipsService, useValue: memberships },
       ],
     }).compile();
     service = module.get(UsersService);
@@ -69,10 +59,12 @@ describe('UsersService', () => {
 
       expect(user.id).toBe('u1');
       expect(prisma.user.create).not.toHaveBeenCalled();
-      expect(memberships.createDefaultForUser).not.toHaveBeenCalled();
     });
 
-    it('auto-provisions a new user and a default membership on first sight', async () => {
+    // Antes nacía con una mensual de 15 sucursales regalada. Ahora la
+    // membresía existe desde el primer cobro (MembershipBillingService), así
+    // que aquí solo se crea el socio.
+    it('auto-provisions a new user on first sight, without a membership', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue({
         id: 'new-1',
@@ -94,12 +86,6 @@ describe('UsersService', () => {
             phone: '',
           }),
         }),
-      );
-      // Misma transacción: la membresía se crea con el `tx`, no con el cliente suelto.
-      expect(prisma.$transaction).toHaveBeenCalled();
-      expect(memberships.createDefaultForUser).toHaveBeenCalledWith(
-        'new-1',
-        prisma,
       );
     });
 
@@ -128,8 +114,6 @@ describe('UsersService', () => {
         where: { id: 'counter-1' },
         data: { cognitoSub: 'sub-3', name: 'SOCIO DE MOSTRADOR' },
       });
-      // Ya tenía membresía: darle otra sería duplicarla.
-      expect(memberships.createDefaultForUser).not.toHaveBeenCalled();
       expect(prisma.user.create).not.toHaveBeenCalled();
     });
 
@@ -258,7 +242,7 @@ describe('UsersService', () => {
     // los demás chocan con el índice único y leen al ganador.
     it('returns the winner when a parallel first request already created the member', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
-      prisma.$transaction.mockRejectedValueOnce(
+      prisma.user.create.mockRejectedValueOnce(
         new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
           code: 'P2002',
           clientVersion: 'test',
@@ -280,7 +264,7 @@ describe('UsersService', () => {
 
     it('does not swallow errors that are not a unique violation', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
-      prisma.$transaction.mockRejectedValueOnce(new Error('connection lost'));
+      prisma.user.create.mockRejectedValueOnce(new Error('connection lost'));
 
       await expect(
         service.findOrCreateByCognito({
@@ -328,8 +312,19 @@ describe('UsersService', () => {
       expect(order.total).toBe(1679);
     });
 
+    // "Recoger en gym" sale de la sucursal de la membresía. Un socio recién
+    // registrado ya no nace con una, así que ese caso tiene que dar un 400
+    // explicado, no un 500 de Prisma.
+    it('rejects a pickup order from a member without a membership', async () => {
+      prisma.membership.findUnique.mockResolvedValue(null);
+      await expect(
+        service.createOrder('user-1', dto({ delivery: 'pickup' })),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
     it('does not charge shipping for pickup', async () => {
-      prisma.membership.findUniqueOrThrow.mockResolvedValue({ branchId: 1 });
+      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
       const order = await service.createOrder(
         'user-1',
         dto({ delivery: 'pickup' }),
@@ -361,7 +356,7 @@ describe('UsersService', () => {
     });
 
     it('allows cash payment for pickup, but leaves it pending payment until collected in person', async () => {
-      prisma.membership.findUniqueOrThrow.mockResolvedValue({ branchId: 1 });
+      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
       const order = await service.createOrder(
         'user-1',
         dto({ paymentMethod: 'cash', delivery: 'pickup' }),
@@ -370,7 +365,7 @@ describe('UsersService', () => {
     });
 
     it('marks non-cash orders ready immediately, since they were already charged online', async () => {
-      prisma.membership.findUniqueOrThrow.mockResolvedValue({ branchId: 1 });
+      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
       const order = await service.createOrder(
         'user-1',
         dto({ paymentMethod: 'card', delivery: 'pickup' }),

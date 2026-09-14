@@ -11,7 +11,8 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import type { Branch, Membership, User } from '@prisma/client';
 import { RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dto';
-import { PERIOD_DAYS, addDays, calculateMembershipPrice } from './membership-plans';
+import { PERIOD_DAYS, addDays, calculateMembershipPrice } from '../memberships/membership-plans';
+import { effectiveStatus } from '../memberships/membership-status';
 import { memberNotFound } from '../common/error-codes';
 
 type MembershipWithOwner = Membership & { user: User; branch: Branch };
@@ -25,7 +26,9 @@ function toAccessRecord(m: MembershipWithOwner): MemberAccessRecord {
   return {
     qrCode: m.accessCode,
     memberName: m.user.name,
-    status: m.status,
+    // El estado al momento del check-in, no el guardado: una membresía que
+    // venció hace una hora ya no abre la puerta aunque el cron no haya pasado.
+    status: effectiveStatus(m),
     expiresAt: m.expiresAt.toISOString(),
     tierKey: m.tierKey,
     homeBranchId: m.branchId,

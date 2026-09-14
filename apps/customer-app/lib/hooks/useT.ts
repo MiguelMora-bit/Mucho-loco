@@ -12,6 +12,7 @@ export function useT(): Translations {
     branches:    t.raw('branches')    as Translations['branches'],
     coaches:     t.raw('coaches')     as Translations['coaches'],
     memberships: t.raw('memberships') as Translations['memberships'],
+    membershipCheckout: t.raw('membershipCheckout') as Translations['membershipCheckout'],
     shop:        t.raw('shop')        as Translations['shop'],
     cart:        t.raw('cart')        as Translations['cart'],
     contact:     t.raw('contact')     as Translations['contact'],

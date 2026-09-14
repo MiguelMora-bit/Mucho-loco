@@ -10,6 +10,7 @@ import { redirect } from '@/i18n/routing';
 
 interface Props {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ membership?: string }>;
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
@@ -42,10 +43,15 @@ export default async function DashboardPage(props: Props) {
     communityRepository.getFeed(email),
   ]);
 
+  // Regreso desde Stripe tras contratar. No significa "pagado": la membresía
+  // la activa el webhook, y el panel lo dice mientras tanto.
+  const justPaid = (await props.searchParams).membership === 'paid';
+
   return (
     <DashboardClient
       profile={profile}
       membership={membership}
+      justPaid={justPaid}
       history={history}
       orders={orders}
       feed={feed}

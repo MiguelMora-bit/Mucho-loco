@@ -51,6 +51,34 @@
     "spec": "Specialty",
     "branch": "Location"
   },
+  "membershipCheckout": {
+    "eyebrow": "Your membership",
+    "title": "PICK YOUR PLAN",
+    "sub": "Price depends on the location. You pay with Stripe and your QR turns on once the charge is confirmed.",
+    "branchLabel": "Location",
+    "branchNoteSingle": "You'll only get in at this location.",
+    "branchNoteAll": "You get into all 15 locations; this one becomes your home location.",
+    "tierLabel": "Access",
+    "periodLabel": "Length",
+    "totalLabel": "Total",
+    "periodSuffix": {
+      "visit": "one-time",
+      "weekly": "/ week",
+      "monthly": "/ month",
+      "quarterly": "/ quarter",
+      "annual": "/ year"
+    },
+    "recurringNote": "Charged automatically every period until you cancel. If a charge fails you get 7 days of grace to pay it.",
+    "oneTimeNote": "One-time payment. Gets you in for 24 hours from confirmation.",
+    "carryOverPrefix": "Your current membership runs until",
+    "carryOverSuffix": "— the new plan's first charge is that day.",
+    "pay": "GO TO PAYMENT",
+    "paying": "OPENING PAYMENT…",
+    "error": "We couldn't open the payment. Try again.",
+    "alreadySubscribed": "You already have a membership that renews itself.",
+    "stillActive": "Your membership is still valid; a day pass adds nothing.",
+    "cancelled": "You cancelled the payment. You weren't charged."
+  },
   "memberships": {
     "eyebrow": "No fine print",
     "titleA": "MEMBERSHIPS",
@@ -263,7 +291,13 @@
       "statDaysLeftDelta": "All Gyms Plan · Monthly",
       "statBranches": "BRANCHES VISITED",
       "statBranchesDelta": "This month",
-      "thisWeek": "THIS WEEK"
+      "thisWeek": "THIS WEEK",
+      "noMembershipTitle": "NO MEMBERSHIP YET",
+      "noMembershipBody": "Pick a location and a plan to get your access QR.",
+      "choosePlan": "CHOOSE A PLAN",
+      "paymentProcessingTitle": "CONFIRMING YOUR PAYMENT",
+      "paymentProcessingBody": "Your membership turns on as soon as Stripe confirms the charge. Reload the page in a moment.",
+      "autoRenewsPrefix": "Renews automatically on"
     },
     "access": {
       "expiresLabel": "EXPIRES",
@@ -272,7 +306,8 @@
       "showQr": "📲 SHOW ACCESS QR",
       "suspendedNote": "ACCESS SUSPENDED · FIX YOUR PAYMENT",
       "accessHistory": "ACCESS HISTORY",
-      "entryNote": "Entry logged · QR valid"
+      "entryNote": "Entry logged · QR valid",
+      "noMembershipNote": "NO MEMBERSHIP · PICK A PLAN"
     },
     "orders": {
       "ready": "READY FOR PICKUP",
@@ -298,7 +333,8 @@
       "statusLabel": "Status",
       "partnersLabel": "TotalPass / Wellhub",
       "notLinked": "NOT LINKED",
-      "renewMembership": "RENEW MEMBERSHIP"
+      "renewMembership": "RENEW MEMBERSHIP",
+      "noMembership": "No membership"
     },
     "settings": {
       "title": "SETTINGS",

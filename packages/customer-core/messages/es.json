@@ -51,6 +51,34 @@
     "spec": "Especialidad",
     "branch": "Sucursal"
   },
+  "membershipCheckout": {
+    "eyebrow": "Tu membresía",
+    "title": "ELIGE TU PLAN",
+    "sub": "El precio depende de la sucursal. Pagas con Stripe y tu QR se activa en cuanto se confirma el cobro.",
+    "branchLabel": "Sucursal",
+    "branchNoteSingle": "Solo podrás entrar a esta sucursal.",
+    "branchNoteAll": "Entras a las 15 sucursales; esta queda como tu sucursal principal.",
+    "tierLabel": "Acceso",
+    "periodLabel": "Duración",
+    "totalLabel": "Total",
+    "periodSuffix": {
+      "visit": "pago único",
+      "weekly": "/ semana",
+      "monthly": "/ mes",
+      "quarterly": "/ trimestre",
+      "annual": "/ año"
+    },
+    "recurringNote": "Se cobra solo cada periodo hasta que lo canceles. Si un cobro falla tienes 7 días de gracia para pagarlo.",
+    "oneTimeNote": "Pago único. Te da acceso por 24 horas desde que se confirma.",
+    "carryOverPrefix": "Tu membresía actual sigue hasta el",
+    "carryOverSuffix": "— el primer cobro del plan nuevo es ese día.",
+    "pay": "IR A PAGAR",
+    "paying": "ABRIENDO PAGO…",
+    "error": "No pudimos abrir el pago. Intenta de nuevo.",
+    "alreadySubscribed": "Ya tienes una membresía que se renueva sola.",
+    "stillActive": "Tu membresía sigue vigente; una visita no le agrega nada.",
+    "cancelled": "Cancelaste el pago. No se te cobró nada."
+  },
   "memberships": {
     "eyebrow": "Sin letra chica",
     "titleA": "MEMBRESÍAS",
@@ -263,7 +291,13 @@
       "statDaysLeftDelta": "Plan All Gyms · Mensual",
       "statBranches": "SUCURSALES VISITADAS",
       "statBranchesDelta": "Este mes",
-      "thisWeek": "ESTA SEMANA"
+      "thisWeek": "ESTA SEMANA",
+      "noMembershipTitle": "AÚN NO TIENES MEMBRESÍA",
+      "noMembershipBody": "Elige sucursal y plan para sacar tu QR de acceso.",
+      "choosePlan": "ELEGIR PLAN",
+      "paymentProcessingTitle": "ESTAMOS CONFIRMANDO TU PAGO",
+      "paymentProcessingBody": "Tu membresía se activa en cuanto Stripe nos confirme el cobro. Recarga la página en un momento.",
+      "autoRenewsPrefix": "Se renueva sola el"
     },
     "access": {
       "expiresLabel": "VENCE",
@@ -272,7 +306,8 @@
       "showQr": "📲 MOSTRAR QR DE ACCESO",
       "suspendedNote": "ACCESO SUSPENDIDO · REACTIVA TU PAGO",
       "accessHistory": "HISTORIAL DE ACCESOS",
-      "entryNote": "Entrada registrada · QR válido"
+      "entryNote": "Entrada registrada · QR válido",
+      "noMembershipNote": "SIN MEMBRESÍA · ELIGE UN PLAN"
     },
     "orders": {
       "ready": "LISTO PARA RETIRO",
@@ -298,7 +333,8 @@
       "statusLabel": "Estado",
       "partnersLabel": "TotalPass / Wellhub",
       "notLinked": "NO VINCULADO",
-      "renewMembership": "RENOVAR MEMBRESÍA"
+      "renewMembership": "RENOVAR MEMBRESÍA",
+      "noMembership": "Sin membresía"
     },
     "settings": {
       "title": "CONFIGURACIÓN",

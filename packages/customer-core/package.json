@@ -13,6 +13,8 @@
     "./order-status": "./src/orderStatus.ts",
     "./translations": "./src/translations.ts",
     "./cognito-errors": "./src/cognito-errors.ts",
+    "./membership-errors": "./src/membership-errors.ts",
+    "./membership-rules": "./src/membership-rules.ts",
     "./messages/*": "./messages/*"
   },
   "scripts": {

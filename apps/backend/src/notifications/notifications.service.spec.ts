@@ -150,6 +150,18 @@ describe('NotificationsService', () => {
       }
     });
 
+    // Con suscripción, Stripe cobra solo al vencer: "renueva o pierdes el
+    // acceso" sería falso y podría hacerlo pagar dos veces.
+    it('does not warn a member whose subscription renews itself', async () => {
+      prisma.membership.findMany.mockResolvedValue([
+        member({ expiresAt: daysFromNow(3), stripeSubscriptionId: 'sub_1' }),
+      ]);
+
+      await service.runMembershipSweep();
+
+      expect(whatsapp.sendTemplate).not.toHaveBeenCalled();
+    });
+
     // La llave es la FECHA de vencimiento, no "quedan N días": así los tres
     // avisos comparten llave y el socio recibe uno solo por ciclo. Si renueva,
     // la fecha cambia y el siguiente ciclo vuelve a avisar.

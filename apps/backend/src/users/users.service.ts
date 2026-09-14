@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import type { Order, UserProfile, Visit } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
-import { MembershipsService } from '../memberships/memberships.service';
 import type { CreateOrderDto } from './dto/create-order.dto';
 import { Prisma } from '@prisma/client';
 import type {
@@ -19,6 +18,7 @@ import type {
 import {
   cashRequiresPickup,
   emailAlreadyLinked,
+  pickupRequiresMembership,
   productNotFound,
 } from '../common/error-codes';
 
@@ -76,15 +76,8 @@ function toOrder(
 
 @Injectable()
 export class UsersService {
-  constructor(
-    private prisma: PrismaService,
-    private memberships: MembershipsService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
-  /** Primera vez que se ve este sub de Cognito: crea el perfil + membresía
-   *  default (tier 'all', Roma Sur, activa 30 días) — mismo comportamiento
-   *  que fallbackRecord() en user.mock.ts para una cuenta real sin dato
-   *  curado. Cognito ya garantiza que el sub es válido (pasó CognitoAuthGuard). */
   /**
    * El socio detrás de un ID token, creándolo la primera vez que se le ve.
    *
@@ -136,28 +129,25 @@ export class UsersService {
       });
     }
 
-    // Socio y membresía en UNA transacción, y el choque de índice único
-    // tratado como "ya lo creó otro". El panel del móvil pide perfil,
-    // membresía, visitas y pedidos a la vez: con un socio nuevo, las cuatro
-    // requests llegan aquí antes de que exista. Gana un insert; los demás
-    // esperan a que ese commit termine, chocan con el índice de `cognitoSub`
-    // y leen al ganador — ya con su membresía, porque nacieron juntos. Sin la
-    // transacción, un perdedor podía encontrar al socio pero no su membresía.
+    // El choque de índice único se trata como "ya lo creó otro". El panel del
+    // móvil pide perfil, membresía, visitas y pedidos a la vez: con un socio
+    // nuevo, las cuatro requests llegan aquí antes de que exista. Gana un
+    // insert; los demás chocan con el índice de `cognitoSub` y leen al ganador.
+    //
+    // Nace SIN membresía: existe desde su primer cobro confirmado (ver
+    // MembershipBillingService). Antes se le regalaba una mensual de 15
+    // sucursales al registrarse, sin cobrarle nada.
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        const user = await tx.user.create({
-          // `email || null` y no `email`: un token sin correo guardaría la cadena
-          // vacía, y como la columna es UNIQUE el segundo caso así reventaría.
-          // "Sin correo" es null, que Postgres sí permite repetir.
-          data: {
-            cognitoSub: sub,
-            email: email || null,
-            name: displayName,
-            phone: phone ?? '',
-          },
-        });
-        await this.memberships.createDefaultForUser(user.id, tx);
-        return user;
+      return await this.prisma.user.create({
+        // `email || null` y no `email`: un token sin correo guardaría la cadena
+        // vacía, y como la columna es UNIQUE el segundo caso así reventaría.
+        // "Sin correo" es null, que Postgres sí permite repetir.
+        data: {
+          cognitoSub: sub,
+          email: email || null,
+          name: displayName,
+          phone: phone ?? '',
+        },
       });
     } catch (err) {
       if (isUniqueViolation(err)) {
@@ -184,7 +174,7 @@ export class UsersService {
 
   async getProfile(identity: CognitoIdentity): Promise<UserProfile> {
     const user = await this.findOrCreateByCognito(identity);
-    const membership = await this.prisma.membership.findUniqueOrThrow({
+    const membership = await this.prisma.membership.findUnique({
       where: { userId: user.id },
       include: { branch: true },
     });
@@ -193,7 +183,7 @@ export class UsersService {
       name: user.name,
       phone: user.phone,
       birthdate: user.birthdate,
-      branch: membership.branch.name,
+      branch: membership?.branch.name ?? '',
     };
   }
 
@@ -247,9 +237,10 @@ export class UsersService {
 
     let branchId: number | null = null;
     if (dto.delivery === 'pickup') {
-      const membership = await this.prisma.membership.findUniqueOrThrow({
+      const membership = await this.prisma.membership.findUnique({
         where: { userId },
       });
+      if (!membership) throw new BadRequestException(pickupRequiresMembership());
       branchId = membership.branchId;
     }
 

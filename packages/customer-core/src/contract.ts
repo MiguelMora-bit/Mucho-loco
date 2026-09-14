@@ -19,6 +19,7 @@ import type {
   HeatmapLevel,
   Lang,
   MembershipInfo,
+  MembershipPlanChoice,
   MembershipTier,
   NewOrderLine,
   OnlinePaymentMethod,
@@ -60,10 +61,13 @@ export interface IMembershipRepository {
   getTiers(): Promise<MembershipTier[]>;
 }
 
-export interface CheckoutSession {
-  orderId: string;
-  /** A dónde mandar al socio para que pague. */
+/** Una página de la pasarela a la que hay que mandar al socio. */
+export interface RedirectSession {
   url: string;
+}
+
+export interface CheckoutSession extends RedirectSession {
+  orderId: string;
 }
 
 export interface IPaymentRepository {
@@ -80,6 +84,32 @@ export interface IPaymentRepository {
     successUrl: string,
     cancelUrl: string,
   ): Promise<CheckoutSession>;
+
+  /**
+   * Contratar o renovar la membresía. Visita = pago único; el resto =
+   * suscripción que se cobra sola. Tampoco recibe importe: el precio sale de
+   * la sucursal, el tier y el periodo, del lado del servidor. La membresía se
+   * activa cuando el backend recibe el webhook, NO al volver a `successUrl`.
+   *
+   * Rechaza con 'ALREADY_SUBSCRIBED' (ya tiene una suscripción viva) o
+   * 'MEMBERSHIP_STILL_ACTIVE' (visita sobre una membresía vigente) — leerlo
+   * con `membershipErrorCode` de `./membership-errors`, igual en mock y HTTP.
+   */
+  createMembershipCheckout(
+    email: string,
+    plan: MembershipPlanChoice,
+    lang: Lang,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<RedirectSession>;
+
+  /**
+   * Periodo de gracia: la página de Stripe con la factura que no se pudo
+   * cobrar, para pagarla con otra tarjeta. Stripe no regresa de esa página;
+   * `returnUrl` solo lo usa el mock, que "paga" al instante y regresa ahí.
+   * Falla con 'NOTHING_TO_PAY' si no hay factura pendiente.
+   */
+  openMembershipInvoice(email: string, returnUrl: string): Promise<RedirectSession>;
 }
 
 export interface IPerformanceRepository {
@@ -103,8 +133,11 @@ export interface ISocialRepository {
 
 export interface IUserRepository {
   getProfile(email: string): Promise<UserProfile>;
-  getMembership(email: string): Promise<MembershipInfo>;
-  retryMembershipPayment(email: string): Promise<MembershipInfo>;
+  /**
+   * `null` = nunca ha contratado. Un socio nuevo nace sin membresía: existe
+   * desde su primer cobro confirmado (en línea o en mostrador).
+   */
+  getMembership(email: string): Promise<MembershipInfo | null>;
   getVisitHistory(email: string): Promise<Visit[]>;
   getOrders(email: string): Promise<Order[]>;
   /**

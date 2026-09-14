@@ -92,8 +92,8 @@ describe('userRepository', () => {
 
   it('gives the single-gym test user a membership scoped to one branch', async () => {
     const membership = await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL);
-    expect(membership.tierKey).toBe('single');
-    expect(membership.branch).toBe('Condesa');
+    expect(membership?.tierKey).toBe('single');
+    expect(membership?.branch).toBe('Condesa');
 
     const history = await userRepository.getVisitHistory(SINGLE_GYM_TEST_EMAIL);
     expect(history.every((v) => v.branch === 'Condesa')).toBe(true);
@@ -115,45 +115,36 @@ describe('userRepository', () => {
   });
 
   it('exposes membership dates as ISO, the same shape the backend returns', async () => {
-    const membership = await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL);
+    const membership = (await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL))!;
 
     expect(membership.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
     expect(Number.isNaN(Date.parse(membership.expiresAt))).toBe(false);
     expect(membership.graceEndsAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
   });
 
-  it('keeps membership dates ISO after a payment retry extends them', async () => {
-    const updated = await userRepository.retryMembershipPayment(ALL_GYMS_TEST_EMAIL);
-
-    expect(updated.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
-    expect(updated.graceEndsAt).toBeNull();
+  // Antes una cuenta nueva recibía una mensual de regalo. Ahora nace sin
+  // membresía, igual que en el backend (404 → null): la activa su compra.
+  it('starts an unknown account with no membership — it has to buy one', async () => {
+    expect(await userRepository.getMembership('desconocido@mucholoco.mx')).toBeNull();
   });
 
-  it('gives an unknown account a real expiry date instead of a placeholder', async () => {
-    const membership = await userRepository.getMembership('desconocido@mucholoco.mx');
-
-    expect(Number.isNaN(Date.parse(membership.expiresAt))).toBe(false);
+  // "Recoger en gym" sale de la sucursal de la membresía: sin ella no hay
+  // dónde. El backend responde 400 (PICKUP_REQUIRES_MEMBERSHIP).
+  it('rejects a pickup order from an account without a membership', async () => {
+    await expect(
+      userRepository.createOrder('sin-membresia@mucholoco.mx', [{ productId: WHEY.id, qty: 1 }], 'card', 'pickup', 'es'),
+    ).rejects.toBeInstanceOf(OrderValidationError);
   });
 
   it('gives the all-gyms test user a membership scoped to every branch', async () => {
     const membership = await userRepository.getMembership(ALL_GYMS_TEST_EMAIL);
-    expect(membership.tierKey).toBe('all');
+    expect(membership?.tierKey).toBe('all');
   });
 
   it('seeds the single-gym test user in a failed-payment grace period', async () => {
     const membership = await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL);
-    expect(membership.status).toBe('grace');
-    expect(membership.graceEndsAt).toBeTruthy();
-  });
-
-  it('retryMembershipPayment clears grace/expired status and extends access', async () => {
-    const updated = await userRepository.retryMembershipPayment(SINGLE_GYM_TEST_EMAIL);
-    expect(updated.status).toBe('active');
-    expect(updated.graceEndsAt).toBeNull();
-    expect(updated.daysLeft).toBe(30);
-
-    const persisted = await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL);
-    expect(persisted.status).toBe('active');
+    expect(membership?.status).toBe('grace');
+    expect(membership?.graceEndsAt).toBeTruthy();
   });
 
   // El QR de acceso es un código fijo que NO rota (ver CLAUDE.md raíz,
@@ -164,12 +155,12 @@ describe('userRepository', () => {
   it('keeps the same accessCode across repeated reads (QR does not rotate)', async () => {
     const first = await userRepository.getMembership(ALL_GYMS_TEST_EMAIL);
     const second = await userRepository.getMembership(ALL_GYMS_TEST_EMAIL);
-    expect(second.accessCode).toBe(first.accessCode);
+    expect(second?.accessCode).toBe(first?.accessCode);
 
     // Sobrevive también a una acción no relacionada sobre el mismo usuario.
     await userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [], 'card', 'pickup', 'es');
     const afterUnrelatedAction = await userRepository.getMembership(ALL_GYMS_TEST_EMAIL);
-    expect(afterUnrelatedAction.accessCode).toBe(first.accessCode);
+    expect(afterUnrelatedAction?.accessCode).toBe(first?.accessCode);
   });
 
   // branch-app valida el QR real contra sus propios MEMBER_ACCESS_RECORDS
@@ -181,9 +172,9 @@ describe('userRepository', () => {
   // mocks se desincronizaron si alguien cambia uno sin el otro.
   it('keeps the curated test users\' accessCode in sync with the codes branch-app expects', async () => {
     const allGyms = await userRepository.getMembership(ALL_GYMS_TEST_EMAIL);
-    expect(allGyms.accessCode).toBe('ML-DIEGO-2026-ALLGYMS');
+    expect(allGyms?.accessCode).toBe('ML-DIEGO-2026-ALLGYMS');
 
     const singleGym = await userRepository.getMembership(SINGLE_GYM_TEST_EMAIL);
-    expect(singleGym.accessCode).toBe('ML-VALERIA-2026-CONDESA');
+    expect(singleGym?.accessCode).toBe('ML-VALERIA-2026-CONDESA');
   });
 });

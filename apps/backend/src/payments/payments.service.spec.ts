@@ -4,6 +4,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type Stripe from 'stripe';
 import { PaymentsService } from './payments.service';
 import { StripeService } from './stripe.provider';
+import { MembershipBillingService } from './membership-billing.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -64,6 +65,8 @@ describe('PaymentsService', () => {
           useValue: { stripe: { checkout: { sessions: { create: sessionsCreate } } } },
         },
         { provide: NotificationsService, useValue: { notifyPaymentConfirmed } },
+        // Ningún evento de estos tests es de membresías: todos siguen a la tienda.
+        { provide: MembershipBillingService, useValue: { handleEvent: jest.fn().mockResolvedValue(false) } },
       ],
     }).compile();
     service = module.get(PaymentsService);

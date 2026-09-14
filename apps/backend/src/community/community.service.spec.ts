@@ -19,7 +19,7 @@ describe('CommunityService', () => {
     };
     communityComment: { create: jest.Mock };
     user: { findUniqueOrThrow: jest.Mock };
-    membership: { findUniqueOrThrow: jest.Mock };
+    membership: { findUnique: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -36,7 +36,7 @@ describe('CommunityService', () => {
       },
       communityComment: { create: jest.fn() },
       user: { findUniqueOrThrow: jest.fn() },
-      membership: { findUniqueOrThrow: jest.fn() },
+      membership: { findUnique: jest.fn() },
     };
     const module = await Test.createTestingModule({
       providers: [
@@ -90,7 +90,7 @@ describe('CommunityService', () => {
         id: 'u1',
         name: 'DIEGO',
       });
-      prisma.membership.findUniqueOrThrow.mockResolvedValue({
+      prisma.membership.findUnique.mockResolvedValue({
         branch: { name: 'ROMA SUR' },
       });
       prisma.communityPost.create.mockResolvedValue({

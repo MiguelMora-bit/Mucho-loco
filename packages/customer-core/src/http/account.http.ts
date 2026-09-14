@@ -4,6 +4,7 @@ import type {
   HeatmapLevel,
   Lang,
   MembershipInfo,
+  MembershipPlanChoice,
   NewOrderLine,
   OnlinePaymentMethod,
   Order,
@@ -19,6 +20,7 @@ import type {
   IPaymentRepository,
   IPerformanceRepository,
   IUserRepository,
+  RedirectSession,
 } from '../contract';
 
 // Dominios de cuenta, detrás de `CognitoAuthGuard`. Todos van con
@@ -43,12 +45,9 @@ export class UserHttpDatasource implements IUserRepository {
     return this.api.get<UserProfile>('/users/me', ACCOUNT);
   }
 
-  getMembership(_email: string): Promise<MembershipInfo> {
-    return this.api.get<MembershipInfo>('/users/me/membership', ACCOUNT);
-  }
-
-  retryMembershipPayment(_email: string): Promise<MembershipInfo> {
-    return this.api.post<MembershipInfo>('/users/me/membership/retry-payment', {}, ACCOUNT);
+  /** 404 = todavía no contrata (un socio nuevo nace sin membresía). */
+  getMembership(_email: string): Promise<MembershipInfo | null> {
+    return this.api.getOrNull<MembershipInfo>('/users/me/membership', ACCOUNT);
   }
 
   getVisitHistory(_email: string): Promise<Visit[]> {
@@ -150,5 +149,25 @@ export class PaymentHttpDatasource implements IPaymentRepository {
       { items: lines, delivery, lang, successUrl, cancelUrl },
       ACCOUNT,
     );
+  }
+
+  /** `POST /payments/membership-checkout-sessions` — solo lo elegido; el precio lo pone el servidor. */
+  createMembershipCheckout(
+    _email: string,
+    plan: MembershipPlanChoice,
+    lang: Lang,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<RedirectSession> {
+    return this.api.post<RedirectSession>(
+      '/payments/membership-checkout-sessions',
+      { branchId: plan.branchId, tierKey: plan.tierKey, periodKey: plan.periodKey, lang, successUrl, cancelUrl },
+      ACCOUNT,
+    );
+  }
+
+  /** `POST /payments/membership-invoice`. Stripe no regresa de esa página: `returnUrl` no viaja. */
+  openMembershipInvoice(_email: string, _returnUrl: string): Promise<RedirectSession> {
+    return this.api.post<RedirectSession>('/payments/membership-invoice', {}, ACCOUNT);
   }
 }

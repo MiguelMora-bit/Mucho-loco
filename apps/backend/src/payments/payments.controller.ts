@@ -9,8 +9,10 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { PaymentsService, type CheckoutSessionResult } from './payments.service';
+import { MembershipBillingService } from './membership-billing.service';
 import { StripeService } from './stripe.provider';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
+import { CreateMembershipCheckoutDto } from './dto/create-membership-checkout.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { IdTokenClaims } from '../auth/cognito';
 import { UsersService } from '../users/users.service';
@@ -20,9 +22,30 @@ import { Public } from '../auth/public.decorator';
 export class PaymentsController {
   constructor(
     private payments: PaymentsService,
+    private membershipBilling: MembershipBillingService,
     private stripe: StripeService,
     private users: UsersService,
   ) {}
+
+  /**
+   * Contratar o renovar la membresía. Devuelve la URL de Stripe; la membresía
+   * se activa cuando llega el webhook, nunca al volver el socio.
+   */
+  @Post('membership-checkout-sessions')
+  async createMembershipCheckout(
+    @CurrentUser() user: IdTokenClaims,
+    @Body() dto: CreateMembershipCheckoutDto,
+  ): Promise<{ url: string }> {
+    const dbUser = await this.users.findOrCreateByCognito(user);
+    return this.membershipBilling.createCheckout(dbUser.id, dto);
+  }
+
+  /** Periodo de gracia: la factura que falló, para pagarla con otra tarjeta. */
+  @Post('membership-invoice')
+  async openMembershipInvoice(@CurrentUser() user: IdTokenClaims): Promise<{ url: string }> {
+    const dbUser = await this.users.findOrCreateByCognito(user);
+    return this.membershipBilling.openPendingInvoice(dbUser.id);
+  }
 
   /** El pedido se crea aquí, a nombre del socio del token — nunca de un email del body. */
   @Post('checkout-sessions')

@@ -61,6 +61,27 @@ describe('Payments (e2e)', () => {
     );
     await app.init();
     prisma = app.get(PrismaService);
+
+    // "Recoger en gym" sale de la sucursal de la membresía, y un socio nuevo
+    // ya no nace con una: este ya pagó la suya. Mismo `sub` que arma el
+    // verificador falso de arriba, así la auto-provisión lo encuentra.
+    const user = await prisma.user.upsert({
+      where: { email: CUSTOMER },
+      create: { email: CUSTOMER, cognitoSub: `sub-${CUSTOMER}`, name: 'PAGOS-E2E' },
+      update: {},
+    });
+    await prisma.membership.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        branchId: 1,
+        tierKey: 'all',
+        periodKey: 'monthly',
+        expiresAt: new Date(Date.now() + 30 * 86_400_000),
+        accessCode: 'ML-PAGOS-E2E',
+      },
+      update: {},
+    });
   });
 
   afterAll(async () => {

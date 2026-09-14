@@ -34,14 +34,6 @@ export class UsersController {
     return this.memberships.getForUser(dbUser.id);
   }
 
-  @Post('membership/retry-payment')
-  async retryPayment(
-    @CurrentUser() user: IdTokenClaims,
-  ): Promise<MembershipInfo> {
-    const dbUser = await this.users.findOrCreateByCognito(user);
-    return this.memberships.retryPayment(dbUser.id);
-  }
-
   @Get('visits')
   async getVisitHistory(@CurrentUser() user: IdTokenClaims): Promise<Visit[]> {
     const dbUser = await this.users.findOrCreateByCognito(user);

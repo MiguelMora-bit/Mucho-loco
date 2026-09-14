@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import type {
   LocalizedString,
   MembershipInfo,
@@ -6,23 +7,19 @@ import type {
   PlanKey,
   TierKey,
 } from '@mucho-loco/types';
-import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import type {
   Branch,
   Membership,
   MembershipTier as MembershipTierRow,
-  Prisma,
 } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  effectiveStatus,
+  graceDeadline,
+  RENEWAL_TOLERANCE_DAYS,
+} from './membership-status';
 
-// Roma Sur — mismo default que fallbackRecord() en customer-app/lib/datasources/mock/user.mock.ts.
-const DEFAULT_BRANCH_ID = 1;
-const PERIOD_DAYS: Record<PlanKey, number> = {
-  visit: 1,
-  weekly: 7,
-  monthly: 30,
-  quarterly: 90,
-  annual: 365,
-};
 // Mismo texto que ya usa el mock (ALL GYMS/1 GYM, sin traducir) — no es un
 // contrato localizado hoy, y no es este backend quien debería arreglarlo
 // (ver "Pendiente" en el CLAUDE.md de customer-app sobre Visit.day/.month,
@@ -39,6 +36,8 @@ const PERIOD_LABEL: Record<PlanKey, string> = {
   annual: 'ANUAL',
 };
 
+const DAY_MS = 86_400_000;
+
 type MembershipWithBranch = Membership & { branch: Branch };
 
 function toMembershipTier(row: MembershipTierRow): MembershipTier {
@@ -52,20 +51,37 @@ function toMembershipTier(row: MembershipTierRow): MembershipTier {
   };
 }
 
-function addDays(base: Date, days: number): Date {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-/** Determinístico a partir del id del usuario — así retryPayment/lecturas
- *  repetidas no generan un accessCode nuevo cada vez. */
+/** Determinístico a partir del id del usuario — así una renovación o
+ *  lecturas repetidas no generan un accessCode nuevo: el QR no rota. */
 function accessCodeFor(userId: string): string {
   return `ML-${userId.replace(/-/g, '').slice(0, 12).toUpperCase()}`;
 }
 
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+  );
+}
+
+/** Lo que un cobro confirmado le da al socio. */
+export interface MembershipGrant {
+  userId: string;
+  branchId: number;
+  tierKey: TierKey;
+  periodKey: PlanKey;
+  /** Hasta cuándo queda pagada. */
+  paidThrough: Date;
+  /**
+   * La suscripción que la va a renovar. `undefined` = no tocar la que ya
+   * tenga: una visita suelta no cancela ni desliga nada.
+   */
+  stripeSubscriptionId?: string | null;
+}
+
 @Injectable()
 export class MembershipsService {
+  private readonly logger = new Logger(MembershipsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async getTiers(): Promise<MembershipTier[]> {
@@ -73,24 +89,11 @@ export class MembershipsService {
     return rows.map(toMembershipTier);
   }
 
-  /** `db` = la transacción del caller, para que el socio y su membresía nazcan juntos (ver findOrCreateByCognito). */
-  async createDefaultForUser(
-    userId: string,
-    db: Prisma.TransactionClient = this.prisma,
-  ): Promise<void> {
-    await db.membership.create({
-      data: {
-        userId,
-        branchId: DEFAULT_BRANCH_ID,
-        tierKey: 'all',
-        periodKey: 'monthly',
-        expiresAt: addDays(new Date(), PERIOD_DAYS.monthly),
-        status: 'active',
-        accessCode: accessCodeFor(userId),
-      },
-    });
-  }
-
+  /**
+   * 404 si el socio nunca ha contratado. Un socio nuevo ya NO nace con
+   * membresía (antes se le regalaba una mensual de 15 sucursales al
+   * registrarse): la membresía existe desde su primer cobro confirmado.
+   */
   async getForUser(userId: string): Promise<MembershipInfo> {
     const membership = await this.prisma.membership.findUnique({
       where: { userId },
@@ -101,33 +104,143 @@ export class MembershipsService {
     return toMembershipInfo(membership);
   }
 
-  /** Simula la pasarela de pago cobrando de nuevo — siempre tiene éxito (no
-   *  hay pasarela real todavía, mismo criterio que retryMembershipPayment()
-   *  en el mock de customer-app). Extiende un mes desde hoy sin importar
-   *  cuánto llevaba vencida. */
-  async retryPayment(userId: string): Promise<MembershipInfo> {
-    const exists = await this.prisma.membership.findUnique({
-      where: { userId },
-    });
-    if (!exists) throw new NotFoundException('Membership not found for user');
+  findByUser(userId: string): Promise<Membership | null> {
+    return this.prisma.membership.findUnique({ where: { userId } });
+  }
 
-    const membership = await this.prisma.membership.update({
-      where: { userId },
-      data: {
-        status: 'active',
-        graceEndsAt: null,
-        expiresAt: addDays(new Date(), PERIOD_DAYS.monthly),
-      },
-      include: { branch: true },
+  /**
+   * Activa o renueva una membresía tras un cobro confirmado; la crea la
+   * primera vez. Nunca acorta: si la membresía ya estaba pagada más allá de
+   * `paidThrough` (renovó antes de tiempo, o vuelve a llegar un webhook viejo),
+   * se queda con la fecha mayor.
+   *
+   * `db` = la transacción del caller, cuando el cobro y la membresía tienen que
+   * escribirse juntos (ver MembershipBillingService, visitas).
+   */
+  async grant(
+    grant: MembershipGrant,
+    db: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    try {
+      await this.upsertGrant(grant, db);
+    } catch (err) {
+      // Dos webhooks del mismo cobro (invoice.paid y checkout.session.completed)
+      // pueden llegar a la vez con un socio sin fila: gana un insert y el otro
+      // choca con `userId @unique`. Reintentar cae en el update. Dentro de una
+      // transacción no se puede (Postgres la aborta), así que ahí sube el error.
+      if (db !== this.prisma || !isUniqueViolation(err)) throw err;
+      await this.upsertGrant(grant, db);
+    }
+  }
+
+  private async upsertGrant(
+    grant: MembershipGrant,
+    db: Prisma.TransactionClient,
+  ): Promise<void> {
+    const existing = await db.membership.findUnique({
+      where: { userId: grant.userId },
     });
-    return toMembershipInfo(membership);
+    const expiresAt =
+      existing && existing.expiresAt > grant.paidThrough
+        ? existing.expiresAt
+        : grant.paidThrough;
+    const data = {
+      branchId: grant.branchId,
+      tierKey: grant.tierKey,
+      periodKey: grant.periodKey,
+      expiresAt,
+      status: 'active' as const,
+      graceEndsAt: null,
+      ...(grant.stripeSubscriptionId !== undefined
+        ? { stripeSubscriptionId: grant.stripeSubscriptionId }
+        : {}),
+    };
+    await db.membership.upsert({
+      where: { userId: grant.userId },
+      create: {
+        userId: grant.userId,
+        accessCode: accessCodeFor(grant.userId),
+        ...data,
+      },
+      update: data,
+    });
+  }
+
+  /**
+   * Falló el cobro de una renovación: acceso con aviso hasta `GRACE_DAYS`.
+   * Solo pasa de `active` a `grace` — un evento reentregado no alarga la
+   * gracia, y una membresía ya suspendida no revive por un aviso de fallo.
+   */
+  async enterGrace(
+    stripeSubscriptionId: string,
+    now: Date = new Date(),
+  ): Promise<void> {
+    await this.prisma.membership.updateMany({
+      where: { stripeSubscriptionId, status: 'active' },
+      data: { status: 'grace', graceEndsAt: graceDeadline(now) },
+    });
+  }
+
+  /**
+   * La suscripción terminó (cancelada, o Stripe se rindió de cobrarla). Lo ya
+   * pagado se respeta: la membresía sigue hasta `expiresAt` y ahí vence sola,
+   * porque ya nada la renueva.
+   */
+  async detachSubscription(stripeSubscriptionId: string): Promise<void> {
+    await this.prisma.membership.updateMany({
+      where: { stripeSubscriptionId },
+      data: { stripeSubscriptionId: null },
+    });
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async sweepLapsed(): Promise<void> {
+    const expired = await this.expireLapsed();
+    if (expired > 0)
+      this.logger.log(`${expired} membresías pasaron a vencidas`);
+  }
+
+  /**
+   * Guarda en la base lo que `effectiveStatus` ya calcula al leer — las MISMAS
+   * tres reglas, en SQL. Al socio y a la sucursal no les hace falta (ellos
+   * leen el estado efectivo al momento), pero los reportes ("clientes activos
+   * por sucursal") y el barrido de avisos cuentan `status` directo.
+   */
+  async expireLapsed(now: Date = new Date()): Promise<number> {
+    const renewalDeadline = new Date(
+      now.getTime() - RENEWAL_TOLERANCE_DAYS * DAY_MS,
+    );
+    const results = await this.prisma.$transaction([
+      this.prisma.membership.updateMany({
+        where: { status: 'grace', graceEndsAt: { lte: now } },
+        data: { status: 'expired' },
+      }),
+      this.prisma.membership.updateMany({
+        where: {
+          status: 'active',
+          stripeSubscriptionId: null,
+          expiresAt: { lte: now },
+        },
+        data: { status: 'expired' },
+      }),
+      this.prisma.membership.updateMany({
+        where: {
+          status: 'active',
+          stripeSubscriptionId: { not: null },
+          expiresAt: { lte: renewalDeadline },
+        },
+        data: { status: 'expired' },
+      }),
+    ]);
+    return results.reduce((sum, r) => sum + r.count, 0);
   }
 }
 
 function toMembershipInfo(membership: MembershipWithBranch): MembershipInfo {
+  const status = effectiveStatus(membership);
   const daysLeft = Math.max(
     0,
-    Math.ceil((membership.expiresAt.getTime() - Date.now()) / 86_400_000),
+    Math.ceil((membership.expiresAt.getTime() - Date.now()) / DAY_MS),
   );
   return {
     plan: `${TIER_LABEL[membership.tierKey]} · ${PERIOD_LABEL[membership.periodKey]}`,
@@ -138,7 +251,12 @@ function toMembershipInfo(membership: MembershipWithBranch): MembershipInfo {
     streak: membership.streak,
     daysLeft,
     accessCode: membership.accessCode,
-    status: membership.status,
-    graceEndsAt: membership.graceEndsAt?.toISOString() ?? null,
+    status,
+    graceEndsAt:
+      status === 'grace'
+        ? (membership.graceEndsAt?.toISOString() ?? null)
+        : null,
+    autoRenews:
+      membership.stripeSubscriptionId !== null && status !== 'expired',
   };
 }

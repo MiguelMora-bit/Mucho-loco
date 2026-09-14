@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import {
   CommunityHttpDatasource,
+  PaymentHttpDatasource,
   PerformanceHttpDatasource,
   UserHttpDatasource,
 } from '@mucho-loco/customer-core/http';
@@ -41,7 +42,19 @@ describe('account endpoints are really guarded', () => {
     expect(await statusOf(() => ds.getMembership('diego@mucholoco.mx'))).toBe(401);
     expect(await statusOf(() => ds.getVisitHistory('diego@mucholoco.mx'))).toBe(401);
     expect(await statusOf(() => ds.getOrders('diego@mucholoco.mx'))).toBe(401);
-    expect(await statusOf(() => ds.retryMembershipPayment('diego@mucholoco.mx'))).toBe(401);
+    const payments = new PaymentHttpDatasource(bogusApi);
+    expect(
+      await statusOf(() =>
+        payments.createMembershipCheckout(
+          'diego@mucholoco.mx',
+          { branchId: 1, tierKey: 'all', periodKey: 'monthly' },
+          'es',
+          'http://x',
+          'http://y',
+        ),
+      ),
+    ).toBe(401);
+    expect(await statusOf(() => payments.openMembershipInvoice('diego@mucholoco.mx', 'http://x'))).toBe(401);
     expect(
       await statusOf(() =>
         ds.createOrder('diego@mucholoco.mx', [{ productId: 'p1', qty: 1 }], 'card', 'pickup', 'es'),

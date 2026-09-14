@@ -4,7 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 import type { MemberAccessRecord } from '@mucho-loco/types';
 import { CounterMembershipsService, evaluateAccess } from './counter-memberships.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { calculateMembershipPrice } from './membership-plans';
+import { calculateMembershipPrice } from '../memberships/membership-plans';
 
 const ROMA_SUR = 1;
 const CONDESA = 3;
@@ -70,7 +70,7 @@ describe('CounterMembershipsService', () => {
     id: 'm1',
     accessCode: 'ML-DIEGO-2026-ALLGYMS',
     status: 'active',
-    expiresAt: new Date('2026-07-20'),
+    expiresAt: new Date('2030-07-20'), // a futuro: una fecha pasada ya cuenta como vencida (membership-status.ts)
     tierKey: 'all',
     branchId: ROMA_SUR,
     fingerprintId: null,

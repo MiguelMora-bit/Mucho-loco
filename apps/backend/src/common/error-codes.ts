@@ -26,7 +26,12 @@ export type ApiErrorCode =
   | 'ORDER_ALREADY_DELIVERED'
   | 'NOT_A_PICKUP_ORDER'
   | 'CASH_REQUIRES_PICKUP'
-  | 'EMAIL_ALREADY_LINKED';
+  | 'EMAIL_ALREADY_LINKED'
+  | 'BRANCH_NOT_FOUND'
+  | 'ALREADY_SUBSCRIBED'
+  | 'MEMBERSHIP_STILL_ACTIVE'
+  | 'NOTHING_TO_PAY'
+  | 'PICKUP_REQUIRES_MEMBERSHIP';
 
 export interface ApiErrorBody {
   code: ApiErrorCode;
@@ -130,4 +135,33 @@ export const emailAlreadyLinked = (email: string): ApiErrorBody => ({
   code: 'EMAIL_ALREADY_LINKED',
   message: `Ya existe un socio con el correo ${email} ligado a otra cuenta de acceso`,
   email,
+});
+
+export const branchNotFound = (branchId: number): ApiErrorBody => ({
+  code: 'BRANCH_NOT_FOUND',
+  message: `Branch not found: ${branchId}`,
+  branchId,
+});
+
+/** Contratar otra vez encima de una suscripción viva cobraría dos veces. */
+export const alreadySubscribed = (): ApiErrorBody => ({
+  code: 'ALREADY_SUBSCRIBED',
+  message: 'Ya tienes una membresía que se renueva sola',
+});
+
+/** Una visita encima de una membresía vigente no le suma nada al socio. */
+export const membershipStillActive = (): ApiErrorBody => ({
+  code: 'MEMBERSHIP_STILL_ACTIVE',
+  message: 'Tu membresía sigue vigente; una visita no le agrega nada',
+});
+
+export const nothingToPay = (): ApiErrorBody => ({
+  code: 'NOTHING_TO_PAY',
+  message: 'No hay ningún cobro pendiente de tu membresía',
+});
+
+/** "Recoger en gym" hoy sale de la sucursal de la membresía; sin membresía no hay dónde. */
+export const pickupRequiresMembership = (): ApiErrorBody => ({
+  code: 'PICKUP_REQUIRES_MEMBERSHIP',
+  message: 'Sin membresía no hay sucursal donde recoger',
 });

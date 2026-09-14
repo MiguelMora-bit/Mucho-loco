@@ -680,6 +680,26 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         .set(...auth('staff'))
         .expect(200);
       branchShift = body<CashRegisterShift>(res);
+
+      // "Recoger en gym" sale de la sucursal de la membresía, y un socio
+      // nuevo ya no nace con una: este ya pagó la suya, en Roma Sur.
+      await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer :${CUSTOMER}`)
+        .expect(200);
+      const member = await prisma.user.findUniqueOrThrow({ where: { email: CUSTOMER } });
+      await prisma.membership.upsert({
+        where: { userId: member.id },
+        create: {
+          userId: member.id,
+          branchId: 1,
+          tierKey: 'all',
+          periodKey: 'monthly',
+          expiresAt: new Date(Date.now() + 30 * 86_400_000),
+          accessCode: 'ML-PICKUP-E2E',
+        },
+        update: {},
+      });
     });
 
     it('an order placed by a member in the store shows up in their branch queue', async () => {
@@ -695,7 +715,7 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         .expect(201);
       orderId = body<Order>(placed).id;
 
-      // La auto-provisión da de alta al socio en Roma Sur (ver UsersService).
+      // Su membresía es de Roma Sur (ver el beforeAll).
       const res = await request(app.getHttpServer())
         .get('/branches/1/pickup-orders')
         .set(...auth('staff'))

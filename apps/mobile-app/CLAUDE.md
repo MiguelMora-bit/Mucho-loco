@@ -29,6 +29,7 @@ src/
     order/[id].tsx        # detalle de pedido (modal) con QR de retiro = id del pedido
     community.tsx         # feed interno entre socios: publicar, like, comentar
     performance.tsx       # resumen, entrenamientos y heatmap
+    membership.tsx        # contratar/renovar la membresía (sucursal, tier, periodo → Stripe)
     auth/callback.tsx     # regreso del login social (mucholoco://auth/callback)
   components/             # ui.tsx (Display/Heading/Body/Mono/Button/Card/Screen…), ProductCard, auth/AuthPanel (login/registro/código), account/Dashboard
   lib/
@@ -99,6 +100,10 @@ EXPO_PUBLIC_COGNITO_DOMAIN=<terraform output cognito_domain>    # solo login soc
   - código incorrecto → `CodeMismatchException` mapeado; login de una cuenta sin confirmar → reenvía el código y vuelve a esa pantalla.
 
   Además `cognito.test.ts` fija la forma exacta de cada request. **Sin probar**: confirmar con un código real (el registro de prueba usó `@example.com` para no mandarle correo a nadie), Google/Facebook (sin apps OAuth ni build de desarrollo) y el app nativo en un teléfono.
+
+## Membresía (2026-09-13)
+
+Un socio nuevo nace **sin membresía** (`getMembership()` → `null`) hasta su primer cobro — antes el mock y el backend le regalaban una. El panel lo dice y lleva a la pantalla `membership`: sucursal, tier y periodo → `paymentRepository.createMembershipCheckout` → Stripe con `WebBrowser.openAuthSessionAsync` y regreso por deep link (`mucholoco://membership?paid=1`), el mismo patrón del checkout. En gracia, "REINTENTAR PAGO" abre la factura pendiente de Stripe (`openMembershipInvoice`) con `WebBrowser.openBrowserAsync`. Las reglas (qué rechazaría el backend, respetar lo ya pagado) salen de `@mucho-loco/customer-core/membership-rules`, las mismas que la web; `renewalStartsOn()` se llama al cargar datos, no al pintar (el lint prohíbe `Date.now()` en el render). Detalle del cobro en "Membresías con Stripe Billing" de `apps/backend/CLAUDE.md`. El walkthrough de Playwright cubre la compra: cuenta nueva sin membresía → elige plan → paga (mock) → vuelve con QR y "se renueva sola".
 
 ## Decisiones
 

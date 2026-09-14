@@ -1,14 +1,45 @@
-import type { UserProfile, MembershipInfo, Visit, Order, OrderItem, NewOrderLine, OnlinePaymentMethod, Lang } from '@mucho-loco/types';
+import type {
+  UserProfile,
+  MembershipInfo,
+  MembershipPlanChoice,
+  Visit,
+  Order,
+  OrderItem,
+  NewOrderLine,
+  OnlinePaymentMethod,
+  Lang,
+  PlanKey,
+  TierKey,
+} from '@mucho-loco/types';
 import type { IUserRepository } from '../contract';
-import { PRODUCTS } from '../data';
+import { BRANCHES, PRODUCTS } from '../data';
 import { HOME_SHIPPING_FEE } from '../pricing';
+import { MembershipError } from '../membership-errors';
+import { purchaseBlock, renewalStartsOn } from '../membership-rules';
 import { delay } from './delay';
 
 interface UserRecord {
   profile: UserProfile;
-  membership: MembershipInfo;
+  /** null = nunca ha contratado, igual que el 404 del backend. */
+  membership: MembershipInfo | null;
   history: Visit[];
   orders: Order[];
+}
+
+// Mismas etiquetas y días que MembershipsService/membership-plans del backend.
+const TIER_LABEL: Record<TierKey, string> = { single: '1 GYM', all: 'ALL GYMS' };
+const PERIOD_LABEL: Record<PlanKey, string> = {
+  visit: 'VISITA',
+  weekly: 'SEMANAL',
+  monthly: 'MENSUAL',
+  quarterly: 'TRIMESTRAL',
+  annual: 'ANUAL',
+};
+const PERIOD_DAYS: Record<PlanKey, number> = { visit: 1, weekly: 7, monthly: 30, quarterly: 90, annual: 365 };
+const DAY_MS = 86_400_000;
+
+function daysUntil(iso: string): number {
+  return Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / DAY_MS));
 }
 
 // Dos usuarios de prueba a propósito distintos: uno con tier 'all' (acceso a
@@ -65,6 +96,7 @@ function seedRecords(): Record<string, UserRecord> {
       accessCode: 'ML-DIEGO-2026-ALLGYMS',
       status: 'active',
       graceEndsAt: null,
+      autoRenews: true,
     },
     history: [
       { visitedAt: '2026-06-18T07:30:00.000Z', branch: 'Roma Sur',   durationMinutes: 84 },
@@ -123,6 +155,8 @@ function seedRecords(): Record<string, UserRecord> {
       // gyms'. Ver AccessStatus en @mucho-loco/types.
       status: 'grace',
       graceEndsAt: '2026-06-22',
+      // Gracia solo existe con suscripción: es un cobro automático que falló.
+      autoRenews: true,
     },
     // Todas las visitas en Condesa a propósito — su membresía no da acceso a
     // otra sucursal (ver CLAUDE.md raíz, "Membresía y alcance de acceso").
@@ -150,23 +184,16 @@ function seedRecords(): Record<string, UserRecord> {
 
 const RECORDS: Record<string, UserRecord> = globalThis.__mlUserRecords ?? (globalThis.__mlUserRecords = seedRecords());
 
-/** Cuenta real (self-signup) sin dato curado — perfil genérico pero con la identidad real, no "Diego" para todo el mundo. */
+/**
+ * Cuenta real (self-signup) sin dato curado — perfil genérico pero con la
+ * identidad real, no "Diego" para todo el mundo. Nace SIN membresía, igual que
+ * en el backend: la activa su primera compra (ver PaymentMockDatasource).
+ */
 function fallbackRecord(email: string): UserRecord {
   const displayName = email.split('@')[0].toUpperCase();
   return {
-    profile: { email, name: displayName, phone: '', birthdate: '', branch: 'Roma Sur' },
-    membership: {
-      plan: 'ALL GYMS · MENSUAL',
-      branch: 'Roma Sur',
-      tierKey: 'all',
-      expiresAt: isoDate(addDays(new Date(), 30)),
-      visits: 0,
-      streak: 0,
-      daysLeft: 30,
-      accessCode: `ML-${displayName}-2026`,
-      status: 'active',
-      graceEndsAt: null,
-    },
+    profile: { email, name: displayName, phone: '', birthdate: '', branch: '' },
+    membership: null,
     history: [],
     orders: [],
   };
@@ -195,26 +222,57 @@ export class UserMockDatasource implements IUserRepository {
     return getRecord(email).profile;
   }
 
-  async getMembership(email: string): Promise<MembershipInfo> {
+  async getMembership(email: string): Promise<MembershipInfo | null> {
     await delay(150);
     return getRecord(email).membership;
   }
 
-  /** Simula la pasarela de pago cobrando de nuevo la tarjeta en archivo —
-   *  siempre tiene éxito (no hay pasarela real todavía). Saca al socio de
-   *  'grace'/'expired' y extiende su vigencia un mes desde hoy, sin importar
-   *  cuánto llevaba vencida (mismo criterio que branch-app al renovar en
-   *  mostrador). */
-  async retryMembershipPayment(email: string): Promise<MembershipInfo> {
-    await delay(400);
+  /**
+   * Lo que en el backend hace el webhook de una compra confirmada. No es parte
+   * del contrato: lo llama `PaymentMockDatasource`, que en modo mock "cobra"
+   * al instante. Mismas reglas que `MembershipBillingService.createCheckout`.
+   */
+  activateMembership(email: string, plan: MembershipPlanChoice): MembershipInfo {
     const record = getRecord(email);
+    const current = record.membership;
+    const blocked = purchaseBlock(current, plan.periodKey);
+    if (blocked) throw new MembershipError(blocked);
+    const branch = BRANCHES.find((b) => b.id === plan.branchId);
+    if (!branch) throw new MembershipError('BRANCH_NOT_FOUND');
+
+    // Renovar antes de tiempo no le quita al socio lo que ya pagó.
+    const startsOn = plan.periodKey === 'visit' ? null : renewalStartsOn(current);
+    const start = startsOn ? new Date(startsOn) : new Date();
+    const expiresAt = isoDate(addDays(start, PERIOD_DAYS[plan.periodKey]));
+
     record.membership = {
-      ...record.membership,
+      plan: `${TIER_LABEL[plan.tierKey]} · ${PERIOD_LABEL[plan.periodKey]}`,
+      branch: branch.name,
+      tierKey: plan.tierKey,
+      expiresAt,
+      visits: current?.visits ?? 0,
+      streak: current?.streak ?? 0,
+      daysLeft: daysUntil(expiresAt),
+      // El QR no rota: quien ya tenía uno lo conserva.
+      accessCode: current?.accessCode ?? `ML-${record.profile.name.replace(/\W+/g, '')}-2026`,
       status: 'active',
       graceEndsAt: null,
-      expiresAt: isoDate(addDays(new Date(), 30)),
-      daysLeft: 30,
+      autoRenews: plan.periodKey !== 'visit',
     };
+    record.profile.branch = branch.name;
+    return record.membership;
+  }
+
+  /**
+   * Lo que en el backend es pagar la factura atrasada en la página de Stripe:
+   * sale de gracia y la suscripción sigue. Solo aplica en gracia.
+   */
+  settleMembershipInvoice(email: string): MembershipInfo {
+    const record = getRecord(email);
+    const current = record.membership;
+    if (!current || current.status !== 'grace') throw new MembershipError('NOTHING_TO_PAY');
+    const expiresAt = isoDate(addDays(new Date(), 30));
+    record.membership = { ...current, status: 'active', graceEndsAt: null, expiresAt, daysLeft: 30 };
     return record.membership;
   }
 
@@ -257,6 +315,11 @@ export class UserMockDatasource implements IUserRepository {
     }
 
     const record = getRecord(email);
+    // "Recoger en gym" sale de la sucursal de la membresía: sin ella no hay
+    // dónde. Mismo 400 que el backend (PICKUP_REQUIRES_MEMBERSHIP).
+    if (delivery === 'pickup' && !record.membership) {
+      throw new OrderValidationError('pickup requires a membership');
+    }
     // Efectivo solo aplica con "recoger en gym" (ver CLAUDE.md raíz, "Pagos en
     // línea") — el pedido queda pendiente de pago hasta que se cobra en
     // mostrador, no "listo para retiro" como si ya estuviera pagado.
@@ -269,7 +332,7 @@ export class UserMockDatasource implements IUserRepository {
       total: subtotal + (delivery === 'home' ? HOME_SHIPPING_FEE : 0),
       paymentMethod,
       delivery,
-      branch: delivery === 'pickup' ? record.profile.branch : undefined,
+      branch: delivery === 'pickup' ? record.membership?.branch : undefined,
     };
     record.orders = [order, ...record.orders];
     return order;

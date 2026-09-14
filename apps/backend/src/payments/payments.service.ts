@@ -5,7 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from './stripe.provider';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
-import { productNotFound } from '../common/error-codes';
+import { MembershipBillingService } from './membership-billing.service';
+import { pickupRequiresMembership, productNotFound } from '../common/error-codes';
 
 /** Mismo cargo que aplica UsersService.createOrder — el envío no deja de cobrarse por pagar con tarjeta. */
 const HOME_SHIPPING_FEE = 99;
@@ -38,6 +39,7 @@ export class PaymentsService {
     private prisma: PrismaService,
     private stripe: StripeService,
     private notifications: NotificationsService,
+    private membershipBilling: MembershipBillingService,
   ) {}
 
   /**
@@ -75,9 +77,7 @@ export class PaymentsService {
     let branchId: number | null = null;
     if (dto.delivery === 'pickup') {
       const membership = await this.prisma.membership.findUnique({ where: { userId } });
-      if (!membership) {
-        throw new BadRequestException('Sin membresía no hay sucursal donde recoger');
-      }
+      if (!membership) throw new BadRequestException(pickupRequiresMembership());
       branchId = membership.branchId;
     }
 
@@ -171,6 +171,10 @@ export class PaymentsService {
    * y no se surtirían los que sí terminan bien.
    */
   async handleEvent(event: Stripe.Event): Promise<void> {
+    // Un solo webhook para tienda y membresías: primero se ofrece a
+    // membresías, y lo que no es suyo sigue aquí como pedido.
+    if (await this.membershipBilling.handleEvent(event)) return;
+
     switch (event.type) {
       case 'checkout.session.completed':
       case 'checkout.session.async_payment_succeeded': {
