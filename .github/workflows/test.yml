@@ -97,9 +97,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
+      # `pnpm install` no genera el cliente de Prisma (pnpm no corre los
+      # postinstall de dependencias): sin esto el seed truena con
+      # "@prisma/client did not initialize yet".
       - name: Migrar y sembrar la base de test
         working-directory: apps/backend
         run: |
+          npx prisma generate
           npx prisma migrate deploy
           npx prisma db seed
 
@@ -144,6 +148,7 @@ jobs:
       - name: Migrar y sembrar
         working-directory: apps/backend
         run: |
+          npx prisma generate
           npx prisma migrate deploy
           npx prisma db seed
 
