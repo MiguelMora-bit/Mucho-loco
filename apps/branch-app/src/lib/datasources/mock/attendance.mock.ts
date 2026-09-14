@@ -2,12 +2,13 @@ import type { AttendanceEntry } from '@mucho-loco/types';
 import { ATTENDANCE_ENTRIES } from '../../data';
 import { delay } from './delay';
 import { AlreadyClockedInError, NoOpenEntryError } from '../../repositories/attendance.errors';
+import type { IAttendanceRepository } from '../../repositories/attendance.repository';
 
 function findOpenEntry(staffEmail: string): AttendanceEntry | undefined {
   return ATTENDANCE_ENTRIES.find((e) => e.staffEmail === staffEmail && e.clockOut === null);
 }
 
-export class AttendanceMockDatasource {
+export class AttendanceMockDatasource implements IAttendanceRepository {
   async getOpenEntry(staffEmail: string): Promise<AttendanceEntry | null> {
     await delay(120);
     return findOpenEntry(staffEmail) ?? null;

@@ -5,24 +5,183 @@ on:
     branches: [main]
   pull_request:
 
+# Un push encima de otro cancela la corrida anterior de la misma rama: nadie
+# necesita el resultado de un commit que ya quedó atrás.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  unit-tests:
+  # Rápido y sin servicios: si el tipado o el lint truenan, no vale la pena
+  # levantar Postgres en los otros jobs.
+  static:
+    name: typecheck + lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
 
-      # Unit tests only (Vitest en los 3 SPA/Next.js + Jest en el backend con
-      # Prisma mockeado, sin DB real) — ninguno necesita Postgres ni un User
-      # Pool de Cognito vivo. Los e2e (Playwright/Jest contra DB real) quedan
-      # fuera de CI mientras la infra de AWS esté destruida (ver "Nota
-      # operativa" en el CLAUDE.md raíz) y no corren aquí todavía.
+      # El cliente de Prisma es código generado: sin esto, tsc no encuentra
+      # @prisma/client y el backend no compila.
+      - run: pnpm --filter @mucho-loco/backend exec prisma generate
+
+      - run: pnpm --filter customer-app exec tsc --noEmit
+      - run: pnpm --filter @mucho-loco/backend exec tsc --noEmit -p tsconfig.json
+      - run: pnpm --filter customer-app lint
+      - run: pnpm --filter @mucho-loco/api-client typecheck
+      # customer-core valida en compilación que es.json/en.json cumplan Translations.
+      - run: pnpm --filter @mucho-loco/customer-core typecheck
+      - run: pnpm --filter @mucho-loco/mobile-app typecheck
+      - run: pnpm --filter @mucho-loco/mobile-app lint
+
+  unit:
+    name: unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mucho-loco/backend exec prisma generate
+
+      # Vitest en los 3 SPA/Next.js + Jest en el backend con Prisma mockeado.
+      # Ninguno necesita base ni un User Pool vivo.
       - run: pnpm test
+
+  # Los e2e del backend SÍ corren contra Postgres real. Antes quedaban fuera de
+  # CI "mientras la infra estuviera destruida", pero nunca dependieron de AWS:
+  # el verifier de Cognito se sobreescribe en los tests y Postgres lo da un
+  # service container. Lo único que faltaba era levantarlo.
+  backend-e2e:
+    name: backend e2e (Postgres real)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mucholoco
+          POSTGRES_PASSWORD: mucholoco
+          POSTGRES_DB: mucho_loco_test
+        ports: ['5432:5432']
+        # Sin el health check, los pasos pueden arrancar antes de que Postgres
+        # acepte conexiones y fallar por una carrera, no por el código.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://mucholoco:mucholoco@localhost:5432/mucho_loco_test?schema=public
+      # Cualquier valor no vacío: el verifier real nunca corre en estos tests.
+      COGNITO_CLIENT_IDS: ci-placeholder
+      # La lógica de asistencia y reportes depende de qué día es "hoy" en la
+      # sucursal; el runner corre en UTC (ver el Dockerfile del backend).
+      TZ: America/Mexico_City
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # `pnpm install` no genera el cliente de Prisma (pnpm no corre los
+      # postinstall de dependencias): sin esto el seed truena con
+      # "@prisma/client did not initialize yet".
+      - name: Migrar y sembrar la base de test
+        working-directory: apps/backend
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+          npx prisma db seed
+
+      - run: pnpm --filter @mucho-loco/backend test:e2e
+
+  # Verifica la promesa del diseño contract-first: que el datasource HTTP de
+  # customer-app y su mock devuelvan LO MISMO. Necesita el backend vivo, así
+  # que se levanta aquí — es el único job que ejerce los dos lados a la vez.
+  contract:
+    name: contract (customer-app ↔ backend)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mucholoco
+          POSTGRES_PASSWORD: mucholoco
+          POSTGRES_DB: mucho_loco_dev
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://mucholoco:mucholoco@localhost:5432/mucho_loco_dev?schema=public
+      COGNITO_CLIENT_IDS: ci-placeholder
+      PORT: '3001'
+      TZ: America/Mexico_City
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Migrar y sembrar
+        working-directory: apps/backend
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+          npx prisma db seed
+
+      - name: Levantar el backend
+        run: |
+          pnpm --filter @mucho-loco/backend build
+          node apps/backend/dist/src/main.js &
+          # Esperar al health check en vez de dormir un rato fijo: más rápido
+          # cuando arranca bien, y con un error claro cuando no arranca.
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3001/health > /dev/null && exit 0
+            sleep 1
+          done
+          echo "El backend no respondió en 30s"
+          exit 1
+
+      - run: pnpm --filter customer-app test:integration
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mucho-loco/backend exec prisma generate
+
+      # Con los mocks (el default): probar que clonar el repo y construir
+      # funciona sin backend ni base, que es la promesa de NEXT_PUBLIC_DATA_SOURCE.
+      - run: pnpm build

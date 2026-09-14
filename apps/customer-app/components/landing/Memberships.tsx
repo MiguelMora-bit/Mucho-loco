@@ -96,7 +96,7 @@ export function Memberships({ t, branches, branch, setBranchId, mult, label, lan
               <ul>
                 {tier.perks.map((perk) => <li key={perk}>{perk}</li>)}
               </ul>
-              <Link href={`/account?plan=${tier.key}&period=${cur}`} className="select-btn block text-center">
+              <Link href={`/membership?plan=${tier.key}&period=${cur}&branch=${branch.id}`} className="select-btn block text-center">
                 {t.memberships.select} · {curName} →
               </Link>
             </div>

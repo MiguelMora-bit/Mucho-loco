@@ -54,7 +54,7 @@
   "payroll": {
     "title": "Nómina",
     "subtitle": "Calcula la nómina de cada quincena a partir de la asistencia registrada.",
-    "disclaimer": "Los montos de ISR e IMSS son un cálculo simplificado con fines de demostración — no son las tablas reales del SAT ni las cuotas reales del IMSS. No usar estas cifras para nómina real. Además, la asistencia mostrada es un dato de ejemplo fijo: todavía no está conectada a la asistencia real que capturan las sucursales.",
+    "disclaimer": "Los montos de ISR e IMSS son un cálculo simplificado con fines de demostración — no son las tablas reales del SAT ni las cuotas reales del IMSS. No usar estas cifras para nómina real. Los días trabajados salen de la asistencia que capturan las sucursales (o de datos de ejemplo, si este panel corre con mocks).",
     "periodLabel": "Quincena",
     "statusOpen": "Abierta",
     "statusClosed": "Cerrada",
@@ -109,7 +109,7 @@
   },
   "dashboard": {
     "title": "Resumen de la cadena",
-    "readOnlyNote": "Solo lectura — corte de caja llega con la Fase 2 de sucursal.",
+    "readOnlyNote": "Vista de solo lectura de toda la cadena. El corte de caja se hace en cada sucursal, desde la app de sucursal.",
     "totalRevenue": "Ingresos totales",
     "activeCustomers": "Clientes activos",
     "byBranch": "Ventas y clientes activos por sucursal",

@@ -1,12 +1,14 @@
-import type { CommunityPost } from '@mucho-loco/types';
-import { CommunityMockDatasource } from '../datasources/mock/community.mock';
+import type { ICommunityRepository } from '@mucho-loco/customer-core/contract';
+import { CommunityHttpDatasource } from '@mucho-loco/customer-core/http';
+import { CommunityMockDatasource } from '@mucho-loco/customer-core/mock';
+import { accountApi } from '../datasources/http/account-client';
+import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
-export interface ICommunityRepository {
-  getFeed(email: string): Promise<CommunityPost[]>;
-  createPost(email: string, authorName: string, authorBranch: string, body: string): Promise<CommunityPost>;
-  toggleLike(email: string, postId: string): Promise<CommunityPost>;
-  addComment(email: string, authorName: string, postId: string, body: string): Promise<CommunityPost>;
-}
+// El contrato y los datasources viven en @mucho-loco/customer-core (los
+// comparte mobile-app); aquí solo se elige cuál y con qué cliente. Cuenta =
+// `accountApi`: solo servidor, lee la cookie ml_session.
+export type { ICommunityRepository };
 
-// Swap this line to plug in a real API datasource
-export const communityRepository: ICommunityRepository = new CommunityMockDatasource();
+export const communityRepository: ICommunityRepository = isHttpDatasourceEnabled()
+  ? new CommunityHttpDatasource(accountApi)
+  : new CommunityMockDatasource();

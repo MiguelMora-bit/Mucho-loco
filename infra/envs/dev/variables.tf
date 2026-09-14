@@ -53,3 +53,30 @@ variable "facebook_app_secret" {
   default     = ""
   sensitive   = true
 }
+
+variable "container_port" {
+  description = "Puerto del backend NestJS dentro del contenedor."
+  type        = number
+  default     = 3000
+}
+
+variable "image_tag" {
+  description = <<-EOT
+    Tag de la imagen a correr. 'latest' mientras no haya CI; cuando lo haya,
+    conviene el SHA del commit para que un rollback sea cambiar este valor.
+  EOT
+  type        = string
+  default     = "latest"
+}
+
+variable "cors_origins" {
+  description = "Orígenes que pueden llamar al API. Agregar el dominio de Vercel cuando exista."
+  type        = list(string)
+  default     = ["http://localhost:3000", "http://localhost:5173"]
+}
+
+variable "github_repository" {
+  description = "owner/repo autorizado a desplegar vía OIDC. Solo este repositorio puede asumir el rol."
+  type        = string
+  default     = "MiguelMora-bit/Mucho-loco"
+}

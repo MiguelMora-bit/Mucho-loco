@@ -1,12 +1,3 @@
-import type { OrderStatus, Translations } from '@mucho-loco/types';
-
-export function orderStatusLabel(status: OrderStatus, t: Translations): string {
-  switch (status) {
-    case 'pending_payment':
-      return t.dashboard.orders.pendingPayment;
-    case 'ready':
-      return t.dashboard.orders.ready;
-    case 'done':
-      return t.dashboard.orders.delivered;
-  }
-}
+// Movido a @mucho-loco/customer-core (lo comparte mobile-app). Re-export para
+// no tocar a sus importadores — mismo criterio que lib/types/social.ts.
+export * from '@mucho-loco/customer-core/order-status';

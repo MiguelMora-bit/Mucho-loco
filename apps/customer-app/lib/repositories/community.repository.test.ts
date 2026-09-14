@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { communityRepository } from './community.repository';
-import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL } from '../datasources/mock/user.mock';
+import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL } from '@mucho-loco/customer-core/mock';
 
 describe('communityRepository', () => {
   it('getFeed returns the seeded posts, newest first', async () => {
@@ -21,8 +21,12 @@ describe('communityRepository', () => {
   });
 
   it('createPost adds a post that then shows up in getFeed', async () => {
-    const created = await communityRepository.createPost(SINGLE_GYM_TEST_EMAIL, 'Valeria Torres', 'Condesa', 'Hola mundo');
+    const created = await communityRepository.createPost(SINGLE_GYM_TEST_EMAIL, 'Hola mundo');
     expect(created.body).toBe('Hola mundo');
+    // El autor sale del perfil del socio, no de lo que mande el caller — un
+    // cliente no puede firmar un post con el nombre de alguien más.
+    expect(created.authorName).toBe('VALERIA TORRES');
+    expect(created.authorBranch).toBe('Condesa');
     expect(created.likeCount).toBe(0);
     expect(created.comments).toEqual([]);
 
@@ -31,7 +35,7 @@ describe('communityRepository', () => {
   });
 
   it('toggleLike flips likedByMe and likeCount for that viewer only', async () => {
-    const created = await communityRepository.createPost(ALL_GYMS_TEST_EMAIL, 'Diego Ramírez', 'Roma Sur', 'Post de prueba');
+    const created = await communityRepository.createPost(ALL_GYMS_TEST_EMAIL, 'Post de prueba');
 
     const liked = await communityRepository.toggleLike(SINGLE_GYM_TEST_EMAIL, created.id);
     expect(liked.likedByMe).toBe(true);
@@ -43,11 +47,12 @@ describe('communityRepository', () => {
   });
 
   it('addComment appends a comment visible to every viewer', async () => {
-    const created = await communityRepository.createPost(ALL_GYMS_TEST_EMAIL, 'Diego Ramírez', 'Roma Sur', 'Otro post de prueba');
+    const created = await communityRepository.createPost(ALL_GYMS_TEST_EMAIL, 'Otro post de prueba');
 
-    const updated = await communityRepository.addComment(SINGLE_GYM_TEST_EMAIL, 'Valeria Torres', created.id, 'Buen post');
+    const updated = await communityRepository.addComment(SINGLE_GYM_TEST_EMAIL, created.id, 'Buen post');
     expect(updated.comments).toHaveLength(1);
     expect(updated.comments[0].body).toBe('Buen post');
+    expect(updated.comments[0].authorName).toBe('VALERIA TORRES');
 
     const feed = await communityRepository.getFeed(ALL_GYMS_TEST_EMAIL);
     expect(feed.find((p) => p.id === created.id)?.comments).toHaveLength(1);

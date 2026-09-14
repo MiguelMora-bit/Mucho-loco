@@ -8,7 +8,7 @@ function record(overrides: Partial<MemberAccessRecord> = {}): MemberAccessRecord
     qrCode: 'ML-QR-TEST',
     memberName: 'Test Member',
     status: 'active',
-    expiresAt: '01 ENE 2030',
+    expiresAt: '2030-01-01',
     tierKey: 'all',
     homeBranchId: 1,
     homeBranchName: 'Roma Sur',

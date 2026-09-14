@@ -181,6 +181,73 @@ function heatmapLevel(week: number, day: number): 'none' | 'l1' | 'l2' | 'l3' {
   return 'l3';
 }
 
+
+// --- Operación de sucursal y HQ (2026-09-12) ---------------------------------
+// Los mocks de branch-app y owner-panel tenían CADA UNO su propio
+// BRANCH_INVENTORY con cantidades distintas para la misma (sucursal, producto)
+// — eran islas, nadie las cuadraba. Aquí hay un solo número: se toma el de
+// owner-panel donde ambos listaban el SKU (es la vista de la cadena completa)
+// y se agregan los SKUs que solo branch-app tenía en Roma Sur.
+const branchInventory = [
+  { branchId: 1, productId: 'p1', qty: 30 },
+  { branchId: 1, productId: 'p7', qty: 50 },
+  { branchId: 1, productId: 'p9', qty: 200 },
+  { branchId: 1, productId: 'p11', qty: 0 },
+  { branchId: 1, productId: 'p13', qty: 25 },
+  { branchId: 1, productId: 'p18', qty: 120 },
+
+  { branchId: 2, productId: 'p1', qty: 20 },
+  { branchId: 2, productId: 'p7', qty: 40 },
+  { branchId: 2, productId: 'p9', qty: 150 },
+  { branchId: 2, productId: 'p18', qty: 80 },
+
+  // Condesa todavía no maneja 'p1' — la fila se abre sola cuando una
+  // transferencia le lleve stock, en vez de listar todo el catálogo en las 15.
+  { branchId: 3, productId: 'p7', qty: 26 },
+  { branchId: 3, productId: 'p9', qty: 112 },
+  { branchId: 3, productId: 'p18', qty: 60 },
+
+  { branchId: 5, productId: 'p1', qty: 20 },
+  { branchId: 5, productId: 'p7', qty: 40 },
+  { branchId: 5, productId: 'p9', qty: 150 },
+  { branchId: 5, productId: 'p18', qty: 80 },
+];
+
+// Mismos empleados que EMPLOYEES en owner-panel, con el email que la nómina
+// necesita para cruzarse con la asistencia que captura branch-app. Los dos
+// primeros son los usuarios de prueba reales de Cognito (ana = manager,
+// luis = staff, ver staffDirectory.ts de branch-app y la "Nota operativa" del
+// CLAUDE.md raíz) — así fichar entrada con la cuenta de prueba SÍ suma días a
+// un empleado real de la nómina, que es justo lo que los mocks no podían.
+const employees = [
+  { id: 'emp-1', branchId: 1, name: 'Ana Sofía Martínez', email: 'ana@mucholoco.mx', role: 'manager' as const, dailyRate: 850, hireDate: new Date('2021-03-15'), active: true },
+  { id: 'emp-2', branchId: 1, name: 'Luis Ángel Ortega', email: 'luis@mucholoco.mx', role: 'counter' as const, dailyRate: 500, hireDate: new Date('2023-06-01'), active: true },
+  { id: 'emp-3', branchId: 2, name: 'Rodrigo Beltrán', email: 'rodrigo.beltran@mucholoco.mx', role: 'manager' as const, dailyRate: 850, hireDate: new Date('2020-11-10'), active: true },
+  { id: 'emp-4', branchId: 2, name: 'Paulina Cortés', email: 'paulina.cortes@mucholoco.mx', role: 'counter' as const, dailyRate: 500, hireDate: new Date('2024-02-20'), active: true },
+  { id: 'emp-5', branchId: 3, name: 'Mauricio Villalobos', email: 'mauricio.villalobos@mucholoco.mx', role: 'manager' as const, dailyRate: 850, hireDate: new Date('2022-01-05'), active: true },
+  { id: 'emp-6', branchId: 3, name: 'Ximena Rosales', email: 'ximena.rosales@mucholoco.mx', role: 'counter' as const, dailyRate: 500, hireDate: new Date('2023-09-18'), active: true },
+  { id: 'emp-7', branchId: 5, name: 'Alejandro Zúñiga', email: 'alejandro.zuniga@mucholoco.mx', role: 'manager' as const, dailyRate: 850, hireDate: new Date('2019-07-22'), active: true },
+  { id: 'emp-8', branchId: 5, name: 'Renata Ibarra', email: 'renata.ibarra@mucholoco.mx', role: 'counter' as const, dailyRate: 500, hireDate: new Date('2024-08-12'), active: true },
+  { id: 'emp-9', branchId: 5, name: 'Gael Contreras', email: 'gael.contreras@mucholoco.mx', role: 'coach' as const, dailyRate: 700, hireDate: new Date('2022-05-30'), active: true },
+];
+
+const expenses = [
+  { id: 'exp-1', branchId: 1, category: 'rent' as const, description: 'Renta local Roma Sur', amount: 45000, date: new Date('2026-08-01') },
+  { id: 'exp-2', branchId: 1, category: 'utilities' as const, description: 'CFE + agua Roma Sur', amount: 8200, date: new Date('2026-08-03') },
+  { id: 'exp-3', branchId: 2, category: 'rent' as const, description: 'Renta local Roma Norte', amount: 38000, date: new Date('2026-08-01') },
+  { id: 'exp-4', branchId: 3, category: 'maintenance' as const, description: 'Mantenimiento de equipo de cardio', amount: 12500, date: new Date('2026-08-05') },
+  { id: 'exp-5', branchId: 5, category: 'supplies' as const, description: 'Papelería y artículos de limpieza', amount: 3100, date: new Date('2026-08-06') },
+  { id: 'exp-6', branchId: null, category: 'marketing' as const, description: 'Campaña de redes sociales nacional', amount: 22000, date: new Date('2026-08-02') },
+  { id: 'exp-7', branchId: null, category: 'other' as const, description: 'Nómina de oficina corporativa', amount: 65000, date: new Date('2026-08-01') },
+];
+
+// Quincenas. La primera va cerrada (ya se corrió su nómina en el mock) y la
+// segunda abierta, para que el panel del dueño tenga algo que correr.
+const payrollPeriods = [
+  { id: 'period-1', startDate: new Date('2026-08-01'), endDate: new Date('2026-08-15'), totalDays: 15, status: 'closed' as const },
+  { id: 'period-2', startDate: new Date('2026-08-16'), endDate: new Date('2026-08-31'), totalDays: 16, status: 'open' as const },
+];
+
 async function main() {
   for (const branch of branches) {
     // Prisma exige el sentinel Prisma.JsonNull para "esta columna JSON es
@@ -233,10 +300,28 @@ async function main() {
     }
   }
 
+  for (const level of branchInventory) {
+    await prisma.branchInventory.upsert({
+      where: { branchId_productId: { branchId: level.branchId, productId: level.productId } },
+      create: level,
+      update: { qty: level.qty },
+    });
+  }
+  for (const employee of employees) {
+    await prisma.employee.upsert({ where: { id: employee.id }, create: employee, update: employee });
+  }
+  for (const expense of expenses) {
+    await prisma.expense.upsert({ where: { id: expense.id }, create: expense, update: expense });
+  }
+  for (const period of payrollPeriods) {
+    await prisma.payrollPeriod.upsert({ where: { id: period.id }, create: period, update: period });
+  }
+
   console.log(
     `Seeded ${branches.length} branches, ${products.length} products, ${membershipTiers.length} membership tiers, ` +
       `${announcements.length} announcements, ${socialLinks.length} social links, ${socialFeedPosts.length} social feed posts, ` +
-      `${performanceStats.length} performance stats, ${personalRecords.length} personal records, ${workouts.length} workouts, 364 heatmap cells.`,
+      `${performanceStats.length} performance stats, ${personalRecords.length} personal records, ${workouts.length} workouts, 364 heatmap cells, ` +
+      `${branchInventory.length} inventory levels, ${employees.length} employees, ${expenses.length} expenses, ${payrollPeriods.length} payroll periods.`,
   );
 }
 

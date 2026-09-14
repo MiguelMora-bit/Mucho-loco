@@ -6,6 +6,7 @@ import { CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS, TIER_FACTORS } from '../../li
 import { calculateMembershipPrice } from '../../lib/pricing';
 import { captureFingerprint } from '../../lib/fingerprintScanner';
 import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import { formatDate, langOf } from '../../lib/dates';
 
 type EnrollMethod = 'qr' | 'fingerprint';
 
@@ -163,7 +164,7 @@ function PlanPicker({
 }
 
 export function MembershipTab() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [mode, setMode] = useState<'new' | 'renew'>('new');
   const [tierKey, setTierKey] = useState<TierKey>('single');
   const [periodKey, setPeriodKey] = useState<PlanKey>('monthly');
@@ -332,7 +333,7 @@ export function MembershipTab() {
                   >
                     {foundMember.status}
                   </span>
-                  · {t('counter.membership.expiresLabel')} {foundMember.expiresAt}
+                  · {t('counter.membership.expiresLabel')} {formatDate(foundMember.expiresAt, langOf(i18n.language))}
                 </div>
               </div>
             )}

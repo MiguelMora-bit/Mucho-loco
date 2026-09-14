@@ -1,0 +1,32 @@
+{
+  "name": "@mucho-loco/customer-core",
+  "version": "0.0.0",
+  "private": true,
+  "sideEffects": false,
+  "exports": {
+    "./contract": "./src/contract.ts",
+    "./mock": "./src/mock/index.ts",
+    "./http": "./src/http/index.ts",
+    "./data": "./src/data.ts",
+    "./pricing": "./src/pricing.ts",
+    "./dates": "./src/dates.ts",
+    "./order-status": "./src/orderStatus.ts",
+    "./translations": "./src/translations.ts",
+    "./cognito-errors": "./src/cognito-errors.ts",
+    "./membership-errors": "./src/membership-errors.ts",
+    "./membership-rules": "./src/membership-rules.ts",
+    "./messages/*": "./messages/*"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mucho-loco/api-client": "workspace:*",
+    "@mucho-loco/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

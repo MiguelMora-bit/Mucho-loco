@@ -4,6 +4,12 @@ export interface IdTokenClaims {
   sub: string;
   email: string;
   name: string;
+  /**
+   * `phone_number` en E.164, cuando el socio lo dio al registrarse (hoy solo
+   * mobile-app lo pide). Opcional: los tokens de staff y los de la web no lo
+   * traen. Es lo que hace posibles los avisos de WhatsApp.
+   */
+  phone?: string;
   /** Grupos de Cognito (staff/manager/owner) — su ausencia implica rol customer, ver CLAUDE.md raíz. */
   groups: string[];
 }
@@ -58,6 +64,10 @@ export async function verifyIdToken(idToken: string): Promise<IdTokenClaims> {
     sub: String(payload.sub),
     email: typeof payload.email === 'string' ? payload.email : '',
     name: typeof payload.name === 'string' ? payload.name : '',
+    phone:
+      typeof payload.phone_number === 'string' && payload.phone_number
+        ? payload.phone_number
+        : undefined,
     groups: Array.isArray(payload['cognito:groups'])
       ? (payload['cognito:groups'] as string[])
       : [],

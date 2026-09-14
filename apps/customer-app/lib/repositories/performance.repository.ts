@@ -1,11 +1,14 @@
-import type { Workout, PerformanceStat, PersonalRecord, HeatmapLevel } from '../types/performance';
-import { PerformanceMockDatasource } from '../datasources/mock/performance.mock';
+import type { IPerformanceRepository } from '@mucho-loco/customer-core/contract';
+import { PerformanceHttpDatasource } from '@mucho-loco/customer-core/http';
+import { PerformanceMockDatasource } from '@mucho-loco/customer-core/mock';
+import { accountApi } from '../datasources/http/account-client';
+import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
-export interface IPerformanceRepository {
-  getStats(): Promise<PerformanceStat[]>;
-  getPersonalRecords(): Promise<PersonalRecord[]>;
-  getWorkouts(): Promise<Workout[]>;
-  getHeatmap(): Promise<HeatmapLevel[][]>;
-}
+// El contrato y los datasources viven en @mucho-loco/customer-core (los
+// comparte mobile-app); aquí solo se elige cuál y con qué cliente. Cuenta =
+// `accountApi`: solo servidor, lee la cookie ml_session.
+export type { IPerformanceRepository };
 
-export const performanceRepository: IPerformanceRepository = new PerformanceMockDatasource();
+export const performanceRepository: IPerformanceRepository = isHttpDatasourceEnabled()
+  ? new PerformanceHttpDatasource(accountApi)
+  : new PerformanceMockDatasource();

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { LuDumbbell, LuTruck } from 'react-icons/lu';
 import { Link } from '@/i18n/routing';
 import { useCartStore, selectSubtotal } from '../../lib/stores/cart.store';
-import { formatPrice } from '../../lib/pricing';
+import { formatPrice, HOME_SHIPPING_FEE } from '../../lib/pricing';
 import type { Lang, Translations } from '@mucho-loco/types';
 
 interface CartStepProps {
@@ -19,7 +19,7 @@ export function CartStep({ t, lang, delivery, setDelivery, onContinue }: CartSte
   const cart = useCartStore((s) => s.items);
   const updateQty = useCartStore((s) => s.updateQty);
   const subtotal = useCartStore(selectSubtotal);
-  const shipping = delivery === 'home' ? 99 : 0;
+  const shipping = delivery === 'home' ? HOME_SHIPPING_FEE : 0;
   const total = subtotal + shipping;
 
   return (
@@ -78,7 +78,7 @@ export function CartStep({ t, lang, delivery, setDelivery, onContinue }: CartSte
                 </div>
               </div>
             </div>
-            {delivery === 'home' && <div className="row mt-2"><span>{t.checkout.cart.shippingLabel}</span><span>$99</span></div>}
+            {delivery === 'home' && <div className="row mt-2"><span>{t.checkout.cart.shippingLabel}</span><span>{formatPrice(HOME_SHIPPING_FEE)}</span></div>}
             <div className="row total"><span>{t.checkout.cart.total}</span><span>{formatPrice(total)}</span></div>
             <button className="next-btn" onClick={onContinue}>{t.checkout.cart.continueToPayment} →</button>
           </div>

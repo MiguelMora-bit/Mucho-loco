@@ -23,7 +23,9 @@ export function middleware(request: NextRequest) {
     if (!request.cookies.get(SESSION_COOKIE)) {
       const url = request.nextUrl.clone();
       url.pathname = `${getLocalePrefix(pathname)}/account`;
-      url.searchParams.set(NEXT_PARAM, pathname);
+      // Con la query: el landing manda a /membership?plan=all&period=monthly,
+      // y el plan que eligió no se tiene que perder por pasar por el login.
+      url.searchParams.set(NEXT_PARAM, pathname + request.nextUrl.search);
       return NextResponse.redirect(url);
     }
   }

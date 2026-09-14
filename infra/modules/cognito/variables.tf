@@ -23,6 +23,22 @@ variable "logout_urls" {
   type        = list(string)
 }
 
+variable "mobile_callback_urls" {
+  description = <<-EOT
+    Redirects del app client `mobile` tras el login social. El deep link del
+    app instalado y la versión web de desarrollo (Expo en :8081). Expo Go no
+    puede usarse para OAuth: su scheme es exp:// y no se puede registrar aquí.
+  EOT
+  type        = list(string)
+  default     = ["mucholoco://auth/callback", "http://localhost:8081/auth/callback"]
+}
+
+variable "mobile_logout_urls" {
+  description = "Redirects del app client `mobile` tras logout vía Hosted UI."
+  type        = list(string)
+  default     = ["mucholoco://account"]
+}
+
 variable "google_client_id" {
   description = "OAuth Client ID de Google Cloud Console. Vacío = el IdP de Google no se crea."
   type        = string

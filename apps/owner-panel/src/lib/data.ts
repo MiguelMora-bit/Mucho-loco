@@ -40,18 +40,18 @@ export const INVENTORY_TRANSFERS: InventoryTransfer[] = [
 ];
 
 export const EMPLOYEES: Employee[] = [
-  { id: 'emp-1', branchId: 1, name: 'Fernando Osorio', role: 'manager', dailyRate: 850, hireDate: '2021-03-15', active: true },
-  { id: 'emp-2', branchId: 1, name: 'Itzel Navarro', role: 'counter', dailyRate: 500, hireDate: '2023-06-01', active: true },
-  { id: 'emp-3', branchId: 2, name: 'Rodrigo Beltrán', role: 'manager', dailyRate: 850, hireDate: '2020-11-10', active: true },
-  { id: 'emp-4', branchId: 2, name: 'Paulina Cortés', role: 'counter', dailyRate: 500, hireDate: '2024-02-20', active: true },
-  { id: 'emp-5', branchId: 3, name: 'Mauricio Villalobos', role: 'manager', dailyRate: 850, hireDate: '2022-01-05', active: true },
-  { id: 'emp-6', branchId: 3, name: 'Ximena Rosales', role: 'counter', dailyRate: 500, hireDate: '2023-09-18', active: true },
-  { id: 'emp-7', branchId: 5, name: 'Alejandro Zúñiga', role: 'manager', dailyRate: 850, hireDate: '2019-07-22', active: true },
-  { id: 'emp-8', branchId: 5, name: 'Renata Ibarra', role: 'counter', dailyRate: 500, hireDate: '2024-08-12', active: true },
+  { id: 'emp-1', branchId: 1, name: 'Fernando Osorio', email: 'fernando.osorio@mucholoco.mx', role: 'manager', dailyRate: 850, hireDate: '2021-03-15', active: true },
+  { id: 'emp-2', branchId: 1, name: 'Itzel Navarro', email: 'itzel.navarro@mucholoco.mx', role: 'counter', dailyRate: 500, hireDate: '2023-06-01', active: true },
+  { id: 'emp-3', branchId: 2, name: 'Rodrigo Beltrán', email: 'rodrigo.beltran@mucholoco.mx', role: 'manager', dailyRate: 850, hireDate: '2020-11-10', active: true },
+  { id: 'emp-4', branchId: 2, name: 'Paulina Cortés', email: 'paulina.cortes@mucholoco.mx', role: 'counter', dailyRate: 500, hireDate: '2024-02-20', active: true },
+  { id: 'emp-5', branchId: 3, name: 'Mauricio Villalobos', email: 'mauricio.villalobos@mucholoco.mx', role: 'manager', dailyRate: 850, hireDate: '2022-01-05', active: true },
+  { id: 'emp-6', branchId: 3, name: 'Ximena Rosales', email: 'ximena.rosales@mucholoco.mx', role: 'counter', dailyRate: 500, hireDate: '2023-09-18', active: true },
+  { id: 'emp-7', branchId: 5, name: 'Alejandro Zúñiga', email: 'alejandro.zuniga@mucholoco.mx', role: 'manager', dailyRate: 850, hireDate: '2019-07-22', active: true },
+  { id: 'emp-8', branchId: 5, name: 'Renata Ibarra', email: 'renata.ibarra@mucholoco.mx', role: 'counter', dailyRate: 500, hireDate: '2024-08-12', active: true },
   // `active` isn't read by today's payroll calculation (attendance rows are
   // the only thing runPayroll looks at) — it's reserved for a future
   // manage-employees screen.
-  { id: 'emp-9', branchId: 5, name: 'Gael Contreras', role: 'coach', dailyRate: 700, hireDate: '2022-05-30', active: true },
+  { id: 'emp-9', branchId: 5, name: 'Gael Contreras', email: 'gael.contreras@mucholoco.mx', role: 'coach', dailyRate: 700, hireDate: '2022-05-30', active: true },
 ];
 
 // Two quincenas: period-1 is already processed (closed), period-2 has

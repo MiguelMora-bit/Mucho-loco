@@ -13,5 +13,3 @@ export class FingerprintAccessMethod implements AccessMethod {
   }
 }
 
-// Swap this line to plug in a real API datasource
-export const fingerprintAccessMethod: AccessMethod = new FingerprintAccessMethod();

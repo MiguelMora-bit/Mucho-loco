@@ -28,5 +28,3 @@ export class NameAccessMethod implements AccessMethod {
   }
 }
 
-// Swap this line to plug in a real API datasource
-export const nameAccessMethod: AccessMethod = new NameAccessMethod();

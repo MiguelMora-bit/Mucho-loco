@@ -1,0 +1,160 @@
+/**
+ * Contrato de datos del lado del socio.
+ *
+ * Es lo que piden los dos clientes del socio (`apps/customer-app` en web y
+ * `apps/mobile-app` en iOS/Android) y lo que tienen que cumplir por igual los
+ * mocks de `./mock` y los datasources HTTP de cada app contra `apps/backend`.
+ * Cada implementación hace `implements IXRepository`: si una se desvía del
+ * contrato, no compila — en ninguno de los dos apps.
+ *
+ * Qué datasource se usa (mock o HTTP) lo decide cada app, no este paquete:
+ * la política cambia por plataforma (cookie httpOnly en Next, SecureStore en
+ * el móvil) y el contrato no.
+ */
+import type {
+  Announcement,
+  Branch,
+  CommunityPost,
+  FeedPost,
+  HeatmapLevel,
+  Lang,
+  MembershipInfo,
+  MembershipPlanChoice,
+  MembershipTier,
+  NewOrderLine,
+  OnlinePaymentMethod,
+  Order,
+  PerformanceStat,
+  PersonalRecord,
+  Product,
+  SocialLink,
+  UserProfile,
+  Visit,
+  Workout,
+} from '@mucho-loco/types';
+
+export interface IAnnouncementRepository {
+  getAll(): Promise<Announcement[]>;
+}
+
+export interface IBranchRepository {
+  getAll(): Promise<Branch[]>;
+  getById(id: number): Promise<Branch | null>;
+  getFeatured(): Promise<Branch[]>;
+}
+
+export interface ICommunityRepository {
+  getFeed(email: string): Promise<CommunityPost[]>;
+  /**
+   * El autor (nombre y sucursal) NO es un parámetro: lo resuelve quien
+   * implementa este contrato a partir de la identidad del socio — el mock
+   * desde su propio registro, el datasource HTTP desde el ID token que
+   * verifica el backend. Antes venía del caller, y eso dejaba firmar un post
+   * con el nombre de otra persona (ver CommunityController).
+   */
+  createPost(email: string, body: string): Promise<CommunityPost>;
+  toggleLike(email: string, postId: string): Promise<CommunityPost>;
+  addComment(email: string, postId: string, body: string): Promise<CommunityPost>;
+}
+
+export interface IMembershipRepository {
+  getTiers(): Promise<MembershipTier[]>;
+}
+
+/** Una página de la pasarela a la que hay que mandar al socio. */
+export interface RedirectSession {
+  url: string;
+}
+
+export interface CheckoutSession extends RedirectSession {
+  orderId: string;
+}
+
+export interface IPaymentRepository {
+  /**
+   * Abre un cobro con pasarela. Igual que `createOrder`, NO recibe importes:
+   * el servidor arma el total desde el catálogo y es él quien se lo cobra a
+   * la tarjeta.
+   */
+  createCheckoutSession(
+    email: string,
+    lines: NewOrderLine[],
+    delivery: 'pickup' | 'home',
+    lang: Lang,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<CheckoutSession>;
+
+  /**
+   * Contratar o renovar la membresía. Visita = pago único; el resto =
+   * suscripción que se cobra sola. Tampoco recibe importe: el precio sale de
+   * la sucursal, el tier y el periodo, del lado del servidor. La membresía se
+   * activa cuando el backend recibe el webhook, NO al volver a `successUrl`.
+   *
+   * Rechaza con 'ALREADY_SUBSCRIBED' (ya tiene una suscripción viva) o
+   * 'MEMBERSHIP_STILL_ACTIVE' (visita sobre una membresía vigente) — leerlo
+   * con `membershipErrorCode` de `./membership-errors`, igual en mock y HTTP.
+   */
+  createMembershipCheckout(
+    email: string,
+    plan: MembershipPlanChoice,
+    lang: Lang,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<RedirectSession>;
+
+  /**
+   * Periodo de gracia: la página de Stripe con la factura que no se pudo
+   * cobrar, para pagarla con otra tarjeta. Stripe no regresa de esa página;
+   * `returnUrl` solo lo usa el mock, que "paga" al instante y regresa ahí.
+   * Falla con 'NOTHING_TO_PAY' si no hay factura pendiente.
+   */
+  openMembershipInvoice(email: string, returnUrl: string): Promise<RedirectSession>;
+}
+
+export interface IPerformanceRepository {
+  getStats(): Promise<PerformanceStat[]>;
+  getPersonalRecords(): Promise<PersonalRecord[]>;
+  getWorkouts(): Promise<Workout[]>;
+  getHeatmap(): Promise<HeatmapLevel[][]>;
+}
+
+export interface IProductRepository {
+  getAll(): Promise<Product[]>;
+  getById(id: string): Promise<Product | null>;
+  getByCategory(cat: string): Promise<Product[]>;
+  getSiblings(id: string, cat: string): Promise<Product[]>;
+}
+
+export interface ISocialRepository {
+  getLinks(): Promise<SocialLink[]>;
+  getFeed(): Promise<FeedPost[]>;
+}
+
+export interface IUserRepository {
+  getProfile(email: string): Promise<UserProfile>;
+  /**
+   * `null` = nunca ha contratado. Un socio nuevo nace sin membresía: existe
+   * desde su primer cobro confirmado (en línea o en mostrador).
+   */
+  getMembership(email: string): Promise<MembershipInfo | null>;
+  getVisitHistory(email: string): Promise<Visit[]>;
+  getOrders(email: string): Promise<Order[]>;
+  /**
+   * `lines` es solo `{ productId, qty }` y NO se manda un total: precio,
+   * nombre, sabor, imagen y suma los resuelve el servidor desde el catálogo
+   * (ver "Seguridad" en apps/backend/CLAUDE.md). `lang` dice en qué idioma
+   * congelar el recibo — un pedido no se retraduce después.
+   *
+   * `email` sigue en la firma porque el mock lo necesita para saber de quién
+   * es el pedido; los datasources HTTP lo ignoran y mandan el ID token de la
+   * sesión, que es la única identidad en la que el backend confía.
+   */
+  createOrder(
+    email: string,
+    lines: NewOrderLine[],
+    paymentMethod: OnlinePaymentMethod,
+    delivery: 'pickup' | 'home',
+    lang: Lang,
+  ): Promise<Order>;
+}

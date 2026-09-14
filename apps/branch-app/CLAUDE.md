@@ -70,6 +70,71 @@ Datos demo en `lib/data.ts`: Rosa Jiménez (`FP-DEMO-ROSA`, tier `all`, Roma Sur
 
 Mismo patrón mock-first que `customer-app`: `datasources/mock/` (datos + delay simulado) → `repositories/` (`I*Repository` + instancia singleton, con el comentario "Swap this line..." marcando la costura hacia el backend real) → `stores/` (Zustand, un store por recurso vía `createAsyncResource`). Cada repository tiene su test de Vitest.
 
+## Swap de datasource: mock ↔ backend NestJS (2026-09-12, parcial)
+
+Igual que hizo `customer-app` — misma variable, mismo patrón, mismo default: **sin configurar nada, este app sigue en mocks** y arranca sin Postgres ni backend.
+
+```bash
+# .env.local (o inline)
+VITE_DATA_SOURCE=http          # cualquier otro valor / ausente = mock
+VITE_API_URL=http://localhost:3001
+```
+
+**Los 6 repositorios están migrados** (2026-09-12): `counterSale`, `pickupOrder`, `cashRegisterShift`, `attendance`, `reports` y `membership` — **y también los 3 métodos de acceso** (`lib/access/methods/`), que NO eran repositorios: leían `MEMBER_ACCESS_RECORDS` directo del mock. Se les pasó por alto en la primera pasada y el QR de un socio real devolvía "NO ENCONTRADO"; `httpAccessMethod.ts` los conecta a `GET /branches/:id/member-access`, donde el servidor evalúa la regla.
+
+### El cliente
+
+`src/lib/datasources/http/client.ts` ya no implementa nada: crea uno de `@mucho-loco/api-client` (paquete compartido con `owner-panel`) inyectándole la política de este app:
+
+- **El token sale del store de auth** (`useAuthStore`, localStorage), no de una cookie httpOnly — este app no tiene servidor propio donde leerla.
+- **`?lang=` en TODA request.** El backend aplana `LocalizedString` a texto en inventario y tickets; los endpoints que no lo usan lo ignoran, y es más simple que recordar en cuáles sí.
+
+`customer-app` sigue con el suyo: lee `next/headers` en el servidor y pasa opciones de caché de Next, así que migrarlo es un cambio aparte.
+
+### Errores tipados: por qué el backend ahora manda códigos
+
+`counterSale.errors.ts` siempre dijo que un datasource real debe rechazar con los MISMOS tipos de error "so the UI layer never has to read a raw error message". Para poder cumplirlo, el backend dejó de mandar solo prosa en español y ahora incluye un código de máquina en el cuerpo del 4xx (`apps/backend/src/common/error-codes.ts`):
+
+| Código del backend | Error del contrato |
+|---|---|
+| `INSUFFICIENT_STOCK` | `InsufficientStockError` (con `productName`, que la UI muestra) |
+| `PRODUCT_NOT_FOUND` | `ProductNotFoundError` |
+| `BRANCH_DOES_NOT_STOCK_PRODUCT` | `ProductNotFoundError` — para quien cobra es lo mismo: no se puede vender aquí |
+| `SHIFT_NOT_FOUND` / `SHIFT_ALREADY_CLOSED` | `ShiftNotFoundError` / `ShiftAlreadyClosedError` |
+| `ALREADY_CLOCKED_IN` / `NO_OPEN_ENTRY` | `AlreadyClockedInError` / `NoOpenEntryError` |
+
+Cualquier otro fallo (500, red caída) se deja pasar tal cual: un backend muerto no es un error de negocio y disfrazarlo de "sin stock" sería mentirle a mostrador.
+
+### Fechas: ISO en el contrato, formato al pintar
+
+`MemberAccessRecord.expiresAt` **y `PickupOrder.placedAt`** venían del mock como texto (`'20 JUL 2026'`, `'19 JUN 2026'`) y el backend los manda en ISO. Prender el flag habría puesto un timestamp crudo en el validador de QR y en la pestaña de membresías — el mismo bug que apareció en `customer-app`. Ahora el mock también manda ISO y las pantallas formatean con `lib/dates.ts`. Dos helpers, no uno, y la diferencia importa:
+
+- `formatDate(iso, lang)` — fechas SIN hora (`'2026-08-01'`), con `timeZone: 'UTC'` fijado, porque se parsean como medianoche UTC y en México imprimirían el día anterior.
+- `formatDateTime(iso, lang)` — instantes reales (cuándo entró un pedido, cuándo se abrió la caja), en hora LOCAL: ahí lo que quiere ver mostrador es la hora de la sucursal.
+
+De paso, `CashRegisterPage` tenía su propio formateador clavado a `es-MX`, así que el corte de caja ignoraba el toggle de idioma. Ahora usa el compartido.
+
+### Otro cambio en el mock, para que el swap no se note
+
+`BRANCH_INVENTORY` escribía `productName` a mano y a veces se saltaba el sabor (`'Shaker Loco'` vs `'Whey Protein 5LBS · Strawberry'`). El backend lo arma siempre igual (`nombre · sabor`), así que prender el flag cambiaba el texto en pantalla. El mock ya está alineado — el swap no debería verse.
+
+### Testing
+
+- **Unit** (`pnpm test`, sin red): `counterSale.http.test.ts` y `branchOps.http.test.ts` — cada método a su ruta, el token, `?lang=`, las traducciones de error (y las que NO se traducen), el cuerpo vacío que significa `null`, y que el nombre de sucursal nunca viaje en una renovación.
+- **Integración** (`pnpm test:integration`, contra el backend real en `:3001`, fuera de CI): las **14 llamadas** verifican que la ruta existe y que el guard la protege. Un error de dedo en la URL pasa todos los unitarios —afirman contra la misma URL equivocada— y solo se cae en producción; aquí se cae como un 404. La respuesta autenticada campo por campo la cubre `test/branch-ops.e2e-spec.ts` del backend, que sí puede sobreescribir el verifier.
+
+### Verificado en navegador real (2026-09-12) ✅
+
+Se levantó el User Pool un momento (`terraform apply -target=module.cognito`, gratis), se dio de alta a Luis con grupo `staff`, y se manejó Chromium con Playwright:
+
+1. Login real contra Cognito → `/counter`.
+2. El inventario que pintó la pantalla salió de Postgres: `Stock: 200` para el Energy, `AGOTADO` con el `+` deshabilitado para el BCAA (que está en 0 en la base), y los nombres armados por el backend (`Shaker Loco · 700ml`, no `Shaker Loco`).
+3. Se vendieron 2 → **"✓ Venta confirmada por $90"** (45 × 2, precio puesto por el servidor).
+4. En Postgres: `branch_inventory` de Roma Sur bajó 200 → 198, se creó la fila en `counter_sales` con su ítem, y **las otras 3 sucursales quedaron intactas** — el stock es local, como manda la regla de negocio.
+5. Cero errores de consola.
+
+Después se restauró el seed y se destruyó el pool. Para repetirlo hace falta volver a levantar Cognito.
+
 ## Comandos
 
 ```bash
@@ -89,3 +154,18 @@ pnpm --filter branch-app test:e2e   # Playwright (agregado 2026-09-10) — login
 - ✅ Fase 2, corte de caja + primer permiso real por rol (2026-09-11): `/cash-register`, solo `manager` (nav item oculto para `staff` en `AppShell`, y la ruta va detrás de `RequireManager.tsx` — autorización, no autenticación, `ProtectedRoute` se queda role-agnostic a propósito). `cashRegisterShiftRepository` sigue el mismo patrón open/closed que `owner-panel/payroll.repository.ts`: siempre hay a lo más un `CashRegisterShift` `'open'` por sucursal (`getOpenShift` lo crea si no hay uno), `closeShift` es una transición final (no reabre — el siguiente shift se crea solo la próxima vez que se pide el abierto). Junta `COUNTER_SALES` + `MEMBERSHIP_PAYMENTS` de esa sucursal en la ventana del shift como `ShiftTransaction[]`; los totales por método de pago (`cash`/`card`/`transfer`) son una función pura (`lib/cashRegister.ts`, `calculateShiftTotals`) con su propio test, no lógica en el componente. **Prerequisito que se descubrió al construir esto:** `counterSale.mock.ts` nunca persistía las ventas (`createSale()` solo devolvía el objeto y descontaba stock) — ahora también hace `COUNTER_SALES.push(sale)`, si no no había nada que sumar para ningún corte.
 - ✅ Fase 2 completa, reportes/inventario local de gerente: `/reports`, solo `manager` (mismo `RequireManager.tsx`). Reporte de ventas de 7 días (ingresos, transacciones, desglose por día, top 5 productos) vía `calculateSalesReport()` (`lib/reports.ts`, función pura con su propio test, mismo patrón que `cashRegister.ts`) sobre `COUNTER_SALES`/`MEMBERSHIP_PAYMENTS` — distinto del corte de caja (que es por turno, para cuadrar el cajón; esto es tendencia, sin importar turnos). Reutiliza `useBranchInventoryStore` ya existente para el inventario local, con bandera de "stock bajo" (`isLowStock()`, umbral `LOW_STOCK_THRESHOLD`). Se sembró una semana de `COUNTER_SALES`/`MEMBERSHIP_PAYMENTS` ilustrativos (branchId 1) para que el reporte no se vea vacío en el primer load.
 - ✅ Captura real de asistencia (2026-09-11), precondición de nómina real: `/attendance`, abierta a ambos roles — cualquier staff registra su propia entrada/salida (`AttendanceEntry`, a lo más una "abierta" por `staffEmail` a la vez, mismo invariante que `CashRegisterShift` pero por persona en vez de por sucursal); `manager` además ve la asistencia del equipo de hoy. Vive aislada en el mock de este app, como todo lo demás hasta que exista backend real — el payroll de `owner-panel` sigue leyendo su propio `AttendanceSummary` sembrado hasta que ambos apps compartan una base de datos real.
+
+## Verificado en navegador real (2026-09-12) ✅
+
+Con el User Pool levantado un momento y los 3 usuarios de prueba, manejando Chromium con Playwright y el backend contra Postgres:
+
+| Pantalla | Qué se comprobó |
+|---|---|
+| `/counter` | Vendió 2 Energy → stock de Roma Sur 200 → 198, `counter_sales` escrita, **las otras 3 sucursales intactas**. |
+| `/` (pedidos) | Un pedido creado por el socio en la tienda apareció en la cola, se marcó entregado, y el socio lo vio entregado. |
+| `/attendance` | Fichó entrada y salida — `AttendanceEntry` real. |
+| `/qr` | Código real → `ACCESO PERMITIDO · DIEGO RAMÍREZ · Vence el 12 oct 2026`; código inexistente → `NO ENCONTRADO`; búsqueda por nombre → resolvió al socio único. |
+| `/cash-register` | El efectivo del pedido entregado apareció como `PEDIDO EN EFECTIVO · $2,080`, con el `kind: 'pickup'` nuevo. |
+| `/reports` | Cargó (en $0, porque la ventana estaba limpia). |
+
+Roles: Luis (`staff`) no ve las pestañas de Caja ni Reportes; Ana (`manager`) sí. Cero errores de consola en todo el recorrido.

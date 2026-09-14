@@ -9,10 +9,13 @@
     "lint": "eslint app components lib",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1128.0",
+    "@mucho-loco/api-client": "workspace:*",
+    "@mucho-loco/customer-core": "workspace:*",
     "@mucho-loco/types": "workspace:*",
     "@vis.gl/react-google-maps": "^1.9.0",
     "jose": "^6.2.12",

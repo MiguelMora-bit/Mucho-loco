@@ -1,11 +1,25 @@
 import type { AccessMethod } from '../AccessMethod';
-import { qrAccessMethod } from './qrAccessMethod';
-import { fingerprintAccessMethod } from './fingerprintAccessMethod';
-import { nameAccessMethod } from './nameAccessMethod';
+import { isHttpDatasourceEnabled } from '../../datasources/http/config';
+import { QrAccessMethod } from './qrAccessMethod';
+import { FingerprintAccessMethod } from './fingerprintAccessMethod';
+import { NameAccessMethod } from './nameAccessMethod';
+import {
+  qrHttpAccessMethod,
+  fingerprintHttpAccessMethod,
+  nameHttpAccessMethod,
+} from './httpAccessMethod';
 
-export { qrAccessMethod } from './qrAccessMethod';
-export { fingerprintAccessMethod } from './fingerprintAccessMethod';
-export { nameAccessMethod } from './nameAccessMethod';
+// Mock o backend NestJS real, según VITE_DATA_SOURCE — misma decisión y mismo
+// lugar único que los repositorios (ver datasources/http/config.ts).
+export const qrAccessMethod: AccessMethod = isHttpDatasourceEnabled()
+  ? qrHttpAccessMethod
+  : new QrAccessMethod();
+export const fingerprintAccessMethod: AccessMethod = isHttpDatasourceEnabled()
+  ? fingerprintHttpAccessMethod
+  : new FingerprintAccessMethod();
+export const nameAccessMethod: AccessMethod = isHttpDatasourceEnabled()
+  ? nameHttpAccessMethod
+  : new NameAccessMethod();
 
 /** Los 3 métodos de entrada de mostrador, en el orden en que se intentan: QR
  *  primero (lo más común, socio con la app), huella después (sin app),

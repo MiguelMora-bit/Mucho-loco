@@ -1,5 +1,7 @@
 import type { CashRegisterShift, ShiftTransaction } from '@mucho-loco/types';
 import { CashRegisterShiftMockDatasource } from '../datasources/mock/cashRegisterShift.mock';
+import { CashRegisterShiftHttpDatasource } from '../datasources/http/cashRegisterShift.http';
+import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
 export { ShiftNotFoundError, ShiftAlreadyClosedError } from './cashRegisterShift.errors';
 
@@ -14,5 +16,7 @@ export interface ICashRegisterShiftRepository {
   closeShift(shiftId: string): Promise<CashRegisterShift>;
 }
 
-// Swap this line to plug in a real API datasource
-export const cashRegisterShiftRepository: ICashRegisterShiftRepository = new CashRegisterShiftMockDatasource();
+// Mock o backend NestJS real, según VITE_DATA_SOURCE — ver datasources/http/config.ts.
+export const cashRegisterShiftRepository: ICashRegisterShiftRepository = isHttpDatasourceEnabled()
+  ? new CashRegisterShiftHttpDatasource()
+  : new CashRegisterShiftMockDatasource();

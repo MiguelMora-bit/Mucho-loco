@@ -3,8 +3,9 @@ import { EMPLOYEES, PAYROLL_PERIODS, ATTENDANCE_SUMMARIES, PAYSLIPS } from '../.
 import { delay } from './delay';
 import { calculatePayroll } from '../../payroll';
 import { PeriodNotFoundError, PeriodAlreadyClosedError } from '../../repositories/payroll.errors';
+import type { IPayrollRepository } from '../../repositories/payroll.repository';
 
-export class PayrollMockDatasource {
+export class PayrollMockDatasource implements IPayrollRepository {
   async getEmployees(): Promise<Employee[]> {
     await delay(150);
     return EMPLOYEES;

@@ -1,13 +1,20 @@
-import type { MembershipInfo, Translations, UserProfile } from '@mucho-loco/types';
+import type { Lang, MembershipInfo, Translations, UserProfile } from '@mucho-loco/types';
+import { Link } from '@/i18n/routing';
+import { formatDate } from '../../lib/dates';
 
 const TODAY_IDX = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
 
 interface HomePaneProps {
   t: Translations;
+  lang: Lang;
   active: boolean;
   profile: UserProfile;
-  membership: MembershipInfo;
-  onRenew: () => void;
+  /** null = todavía no contrata. */
+  membership: MembershipInfo | null;
+  /** Acaba de volver de pagar en Stripe (`?membership=paid`). */
+  justPaid: boolean;
+  /** A dónde lleva "elegir plan" / "renovar" / "reactivar". */
+  planHref: string;
   onRetryPayment: () => void;
   retryingPayment: boolean;
   retryError: string | null;
@@ -16,41 +23,65 @@ interface HomePaneProps {
 const BANNER_CLASS = 'flex items-center gap-4 px-5.5 py-4 mb-7 [background:linear-gradient(90deg,rgba(225,20,28,0.18),rgba(225,20,28,0.04))] border border-ml-red border-l-[4px] border-l-ml-red-bright';
 const BANNER_BUTTON_CLASS = 'px-5 py-2.5 bg-ml-red text-ml-cream font-bebas tracking-wide text-sm border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 
-export function HomePane({ t, active, profile, membership, onRenew, onRetryPayment, retryingPayment, retryError }: HomePaneProps) {
+export function HomePane({ t, lang, active, profile, membership, justPaid, planHref, onRetryPayment, retryingPayment, retryError }: HomePaneProps) {
   const stats = [
-    { lbl: t.dashboard.home.statVisits, num: membership.visits, delta: t.dashboard.home.statVisitsDelta, up: true },
-    { lbl: t.dashboard.home.statStreak, num: membership.streak, delta: t.dashboard.home.statStreakDelta },
-    { lbl: t.dashboard.home.statDaysLeft, num: membership.daysLeft, delta: t.dashboard.home.statDaysLeftDelta },
+    { lbl: t.dashboard.home.statVisits, num: membership?.visits ?? 0, delta: t.dashboard.home.statVisitsDelta, up: true },
+    { lbl: t.dashboard.home.statStreak, num: membership?.streak ?? 0, delta: t.dashboard.home.statStreakDelta },
+    { lbl: t.dashboard.home.statDaysLeft, num: membership?.daysLeft ?? 0, delta: t.dashboard.home.statDaysLeftDelta },
     { lbl: t.dashboard.home.statBranches, num: 3, delta: t.dashboard.home.statBranchesDelta },
   ];
+  // Volvió de Stripe pero el webhook todavía no llega (o el banco no ha
+  // confirmado): no es un error, son segundos. Volver de pagar NO activa nada.
+  const processing = justPaid && membership?.status !== 'active';
 
   return (
     <div className={'pane' + (active ? ' active' : '')}>
       <div className="font-display text-[clamp(40px,5vw,64px)] leading-[0.95] mb-2">
         {t.dashboard.home.welcomePrefix}<br /><span style={{ background: 'linear-gradient(180deg, #ffe066, #ff8c1a 40%, #e1141c 75%, #8b0a10)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{profile.name.split(' ')[0]}</span>
       </div>
-      <p className="text-ml-cream-dim text-[15px] mb-7">{t.dashboard.home.branchLabel} {membership.branch} · {t.dashboard.home.planLabel} {membership.plan}</p>
+      {membership && (
+        <p className="text-ml-cream-dim text-[15px] mb-7">{t.dashboard.home.branchLabel} {membership.branch} · {t.dashboard.home.planLabel} {membership.plan}</p>
+      )}
+      {!membership && <div className="mb-7" />}
 
-      {membership.status === 'expired' && (
+      {processing && (
+        <div className={BANNER_CLASS} role="status">
+          <span className="text-[26px]">⏳</span>
+          <div className="flex-1">
+            <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.paymentProcessingTitle}</b>
+            <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.paymentProcessingBody}</p>
+          </div>
+        </div>
+      )}
+
+      {!membership && !processing && (
+        <div className={BANNER_CLASS}>
+          <span className="text-[26px]">🏋️</span>
+          <div className="flex-1">
+            <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.noMembershipTitle}</b>
+            <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.noMembershipBody}</p>
+          </div>
+          <Link href={planHref} className={BANNER_BUTTON_CLASS}>{t.dashboard.home.choosePlan}</Link>
+        </div>
+      )}
+
+      {membership?.status === 'expired' && !processing && (
         <div className={BANNER_CLASS}>
           <span className="text-[26px]">🚫</span>
           <div className="flex-1">
             <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.suspendedTitle}</b>
             <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.suspendedBody}</p>
-            {retryError && <p className="text-xs text-ml-red-bright mt-1">{retryError}</p>}
           </div>
-          <button onClick={onRetryPayment} disabled={retryingPayment} className={BANNER_BUTTON_CLASS}>
-            {retryingPayment ? t.common.updating : t.dashboard.home.reactivate}
-          </button>
+          <Link href={planHref} className={BANNER_BUTTON_CLASS}>{t.dashboard.home.reactivate}</Link>
         </div>
       )}
 
-      {membership.status === 'grace' && (
+      {membership?.status === 'grace' && (
         <div className={BANNER_CLASS}>
           <span className="text-[26px]">💳</span>
           <div className="flex-1">
             <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.paymentFailedTitle}</b>
-            <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.paymentFailedBody} {t.dashboard.home.graceUntilPrefix} {membership.graceEndsAt}.</p>
+            <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.paymentFailedBody} {t.dashboard.home.graceUntilPrefix} {membership.graceEndsAt ? formatDate(membership.graceEndsAt, lang) : ''}.</p>
             {retryError && <p className="text-xs text-ml-red-bright mt-1">{retryError}</p>}
           </div>
           <button onClick={onRetryPayment} disabled={retryingPayment} className={BANNER_BUTTON_CLASS}>
@@ -59,15 +90,20 @@ export function HomePane({ t, active, profile, membership, onRenew, onRetryPayme
         </div>
       )}
 
-      {membership.status === 'active' && membership.daysLeft <= 15 && (
+      {/* Con suscripción no hay nada que renovar: Stripe cobra solo. */}
+      {membership?.status === 'active' && !membership.autoRenews && membership.daysLeft <= 15 && (
         <div className={BANNER_CLASS}>
           <span className="text-[26px]">⚠️</span>
           <div className="flex-1">
             <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.membershipExpiringPrefix} {membership.daysLeft} {t.dashboard.home.membershipExpiringSuffix}</b>
             <p className="text-sm text-ml-cream-dim mt-0.5">{t.dashboard.home.renewNotePrefix} {membership.streak} {t.dashboard.home.renewNoteSuffix}</p>
           </div>
-          <button onClick={onRenew} className={BANNER_BUTTON_CLASS}>{t.dashboard.home.renew}</button>
+          <Link href={planHref} className={BANNER_BUTTON_CLASS}>{t.dashboard.home.renew}</Link>
         </div>
+      )}
+
+      {membership?.status === 'active' && membership.autoRenews && (
+        <p className="text-sm text-ml-cream-dim -mt-4 mb-7">{t.dashboard.home.autoRenewsPrefix} {formatDate(membership.expiresAt, lang)}.</p>
       )}
 
       <div className="grid grid-cols-4 gap-4 mb-7">

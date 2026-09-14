@@ -114,13 +114,38 @@ export interface MembershipInfo {
   status: AccessStatus;
   /** Deadline to fix a failed payment before access is suspended. Only set (non-null) while status is 'grace'. */
   graceEndsAt: string | null;
+  /**
+   * true = la renueva una suscripción: se cobra sola al vencer, así que no
+   * hay que avisarle "renueva". false = vence y hay que volver a contratar
+   * (se pagó en mostrador, fue una visita, o canceló la suscripción).
+   */
+  autoRenews: boolean;
 }
 
+/**
+ * Lo único que el socio elige al contratar una membresía en línea. Igual que
+ * `NewOrderLine`, NO lleva precio: el importe lo calcula el servidor desde la
+ * sucursal, el tier y el periodo — el cliente nunca decide cuánto se cobra.
+ */
+export interface MembershipPlanChoice {
+  branchId: number;
+  tierKey: TierKey;
+  periodKey: PlanKey;
+}
+
+/**
+ * Una visita al gimnasio.
+ *
+ * `visitedAt` en ISO y `durationMinutes` como número, NO texto ya formateado
+ * (antes eran `day: '18'`, `month: 'JUN'`, `duration: '1h 24m'`). El formato
+ * es decisión de quien pinta, y con texto pre-armado la pantalla no podía
+ * cambiar de idioma — el mismo defecto que ya se corrigió en `Order.date` y
+ * en `MembershipInfo.expiresAt`.
+ */
 export interface Visit {
-  day: string;
-  month: string;
+  visitedAt: string;
   branch: string;
-  duration: string;
+  durationMinutes: number;
 }
 
 export interface CommunityComment {
@@ -161,6 +186,18 @@ export interface OrderItem {
   name: string;
   flav: string;
   img: string;
+  qty: number;
+}
+/**
+ * Lo único que el cliente manda al crear un pedido: qué producto y cuántos.
+ *
+ * Nombre, sabor, imagen, precio unitario y total los resuelve el servidor
+ * desde el catálogo — un cliente no puede elegir cuánto paga (ver "Seguridad"
+ * en apps/backend/CLAUDE.md). `OrderItem` de arriba es la respuesta ya
+ * congelada, no la entrada.
+ */
+export interface NewOrderLine {
+  productId: string;
   qty: number;
 }
 
@@ -225,6 +262,29 @@ export interface Translations {
     quote: string;
     spec: string;
     branch: string;
+  };
+  /** Pantalla para contratar o renovar la membresía (web: /membership; móvil: pantalla `membership`). */
+  membershipCheckout: {
+    eyebrow: string;
+    title: string;
+    sub: string;
+    branchLabel: string;
+    branchNoteSingle: string;
+    branchNoteAll: string;
+    tierLabel: string;
+    periodLabel: string;
+    totalLabel: string;
+    periodSuffix: Record<PlanKey, string>;
+    recurringNote: string;
+    oneTimeNote: string;
+    carryOverPrefix: string;
+    carryOverSuffix: string;
+    pay: string;
+    paying: string;
+    error: string;
+    alreadySubscribed: string;
+    stillActive: string;
+    cancelled: string;
   };
   memberships: {
     eyebrow: string;
@@ -330,6 +390,10 @@ export interface Translations {
     updating: string;
     connectionError: string;
   };
+  error: {
+    title: string;
+    retry: string;
+  };
   account: {
     headlineA: string;
     headlineB: string;
@@ -428,6 +492,12 @@ export interface Translations {
       statBranches: string;
       statBranchesDelta: string;
       thisWeek: string;
+      noMembershipTitle: string;
+      noMembershipBody: string;
+      choosePlan: string;
+      paymentProcessingTitle: string;
+      paymentProcessingBody: string;
+      autoRenewsPrefix: string;
     };
     access: {
       expiresLabel: string;
@@ -437,6 +507,7 @@ export interface Translations {
       suspendedNote: string;
       accessHistory: string;
       entryNote: string;
+      noMembershipNote: string;
     };
     orders: {
       ready: string;
@@ -463,6 +534,7 @@ export interface Translations {
       partnersLabel: string;
       notLinked: string;
       renewMembership: string;
+      noMembership: string;
     };
     settings: {
       title: string;
@@ -646,6 +718,23 @@ export interface MemberAccessRecord {
   fingerprintId?: string;
 }
 
+/** Cómo llegó mostrador al socio: escaneó su QR, leyó su huella, o lo buscó
+ *  por nombre (último recurso, ver "Métodos de acceso" en el CLAUDE.md raíz). */
+export type AccessMethodId = 'qr' | 'fingerprint' | 'name';
+
+/** Resultado de evaluar el acceso de un socio en una sucursal. Vive aquí y no
+ *  en branch-app porque el backend aplica la MISMA regla al resolver
+ *  /member-access — la decisión de dejar pasar no puede depender de que el
+ *  cliente la calcule bien. */
+export type AccessCheckResult =
+  | { outcome: 'not_found' }
+  /** Único outcome que QR/huella nunca producen — solo la búsqueda por
+   *  nombre puede matchear a más de un socio a la vez. */
+  | { outcome: 'ambiguous'; candidates: MemberAccessRecord[] }
+  | { outcome: 'wrong_branch'; record: MemberAccessRecord }
+  | { outcome: 'expired'; record: MemberAccessRecord }
+  | { outcome: 'valid'; record: MemberAccessRecord };
+
 /** A membership sold or renewed in person at the counter — covers both
  *  signing up a new member (isNewMember: true, mints a new MemberAccessRecord)
  *  and renewing an existing member's plan (isNewMember: false, extends theirs). */
@@ -679,7 +768,11 @@ export interface CashRegisterShift {
  *  tenga que combinar dos formas distintas de transacción. */
 export interface ShiftTransaction {
   id: string;
-  kind: 'sale' | 'membership';
+  /** 'pickup' = pedido de la tienda pagado en efectivo AL RECOGER (ver "Pagos
+   *  en línea" en el CLAUDE.md raíz) — ese dinero entra al cajón de la
+   *  sucursal en el momento de la entrega, así que el corte tiene que verlo.
+   *  Un pedido pagado en línea con tarjeta no entra: nunca tocó esa caja. */
+  kind: 'sale' | 'membership' | 'pickup';
   description: string;
   amount: number;
   paymentMethod: PaymentMethod;
@@ -785,6 +878,10 @@ export interface Employee {
   id: string;
   branchId: number;
   name: string;
+  /** Llave que cruza al empleado con la asistencia que captura branch-app
+   *  (AttendanceEntry.staffEmail). Sin ella, nómina y asistencia siguen
+   *  siendo dos islas — era el pendiente explícito de la Fase 3. */
+  email: string;
   role: EmployeeRole;
   dailyRate: number;
   hireDate: string;

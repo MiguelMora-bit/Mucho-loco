@@ -11,31 +11,41 @@ import type { UserProfile, MembershipInfo, Visit, Order, CommunityPost, Lang } f
 
 interface DashboardClientProps {
   profile: UserProfile;
-  membership: MembershipInfo;
+  /** null = todavía no contrata (un socio nuevo nace sin membresía). */
+  membership: MembershipInfo | null;
+  /** Acaba de volver de pagar la membresía en Stripe. */
+  justPaid: boolean;
   history: Visit[];
   orders: Order[];
   feed: CommunityPost[];
 }
 
-export default function DashboardClient({ profile, membership, history, orders, feed }: DashboardClientProps) {
+export default function DashboardClient({ profile, membership, justPaid, history, orders, feed }: DashboardClientProps) {
   const t = useT();
   const lang = useLocale() as Lang;
-  const { pane, leaving, setPane } = useDashboardPaneStore();
+  const { pane, leaving } = useDashboardPaneStore();
   const [qrOpen, setQrOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [membershipState, setMembershipState] = useState(membership);
   const [feedState, setFeedState] = useState(feed);
   const isActive = (key: typeof pane) => pane === key && !leaving;
+
+  // Renovar arranca de lo que ya tiene; la página completa el resto.
+  const planHref = membership ? `/membership?plan=${membership.tierKey}` : '/membership';
 
   const { loading: retryingPayment, error: retryError, run: runRetryPayment } = useAsyncSubmit({
     errorMessage: t.dashboard.home.retryPaymentError,
     connectionErrorMessage: t.common.connectionError,
   });
 
+  // Periodo de gracia: se paga la factura que falló, en la página de Stripe.
+  // Aquí no se "reintenta" nada — antes esto reactivaba la membresía sin
+  // cobrar. Vuelve a `active` cuando el backend recibe invoice.paid.
   async function handleRetryPayment() {
     await runRetryPayment(async () => {
-      const updated = await postJson<MembershipInfo>('/api/membership/retry-payment', {});
-      setMembershipState(updated);
+      const { url } = await postJson<{ url: string }>('/api/membership/invoice', {
+        returnUrl: `${window.location.origin}/${lang}/dashboard`,
+      });
+      window.location.href = url;
     });
   }
 
@@ -69,21 +79,23 @@ export default function DashboardClient({ profile, membership, history, orders, 
 
   return (
     <>
-      <QrModal t={t} open={qrOpen} onClose={() => setQrOpen(false)} accessCode={membershipState.accessCode} />
+      {membership && <QrModal t={t} open={qrOpen} onClose={() => setQrOpen(false)} accessCode={membership.accessCode} />}
       <OrderDetailModal t={t} lang={lang} order={selectedOrder} onClose={() => setSelectedOrder(null)} />
       <Header t={t} pane={pane} avatarInitial={profile.name[0]} />
 
       <HomePane
         t={t}
+        lang={lang}
         active={isActive('home')}
         profile={profile}
-        membership={membershipState}
-        onRenew={() => setPane('access')}
+        membership={membership}
+        justPaid={justPaid}
+        planHref={planHref}
         onRetryPayment={handleRetryPayment}
         retryingPayment={retryingPayment}
         retryError={retryError}
       />
-      <AccessPane t={t} active={isActive('access')} profile={profile} membership={membershipState} history={history} onShowQr={() => setQrOpen(true)} />
+      <AccessPane t={t} lang={lang} active={isActive('access')} profile={profile} membership={membership} planHref={planHref} history={history} onShowQr={() => setQrOpen(true)} />
       <OrdersPane t={t} lang={lang} active={isActive('orders')} orders={orders} onSelectOrder={setSelectedOrder} />
       <CommunityPane
         t={t}
@@ -96,7 +108,7 @@ export default function DashboardClient({ profile, membership, history, orders, 
         onToggleLike={handleToggleLike}
         onAddComment={handleAddComment}
       />
-      <ProfilePane t={t} active={isActive('profile')} profile={profile} membership={membershipState} onRenew={() => setPane('access')} />
+      <ProfilePane t={t} lang={lang} active={isActive('profile')} profile={profile} membership={membership} planHref={planHref} />
       <SettingsPane t={t} active={isActive('settings')} />
     </>
   );

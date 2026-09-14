@@ -4,13 +4,15 @@ import { usePickupOrdersStore } from '../lib/stores/pickupOrders.store';
 import { pickupOrderRepository } from '../lib/repositories/pickupOrder.repository';
 import { QrCameraScanner } from '../components/QrCameraScanner';
 import type { PickupOrder } from '@mucho-loco/types';
+import { formatDateTime, langOf } from '../lib/dates';
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-MX')}`;
 }
 
 function OrderCard({ order, onDelivered }: { order: PickupOrder; onDelivered: (id: string) => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = langOf(i18n.language);
   const [marking, setMarking] = useState(false);
 
   async function handleMarkDelivered() {
@@ -29,7 +31,7 @@ function OrderCard({ order, onDelivered }: { order: PickupOrder; onDelivered: (i
         <div className="flex items-center gap-2 mb-1">
           <span className="font-mono text-xs text-ml-cream-dim">{order.id}</span>
           <span className="text-ml-muted">·</span>
-          <span className="text-xs text-ml-cream-dim">{order.placedAt}</span>
+          <span className="text-xs text-ml-cream-dim">{formatDateTime(order.placedAt, lang)}</span>
         </div>
         <div className="font-medium mb-2">{order.customerName}</div>
         <ul className="space-y-1 mb-2">

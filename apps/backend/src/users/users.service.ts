@@ -1,12 +1,13 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import type { Order, UserProfile, Visit } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
-import { MembershipsService } from '../memberships/memberships.service';
 import type { CreateOrderDto } from './dto/create-order.dto';
+import { Prisma } from '@prisma/client';
 import type {
   Branch,
   Order as OrderRow,
@@ -14,42 +15,41 @@ import type {
   User,
   Visit as VisitRow,
 } from '@prisma/client';
+import {
+  cashRequiresPickup,
+  emailAlreadyLinked,
+  pickupRequiresMembership,
+  productNotFound,
+} from '../common/error-codes';
+
+/**
+ * Quién es el socio según su ID token. Estructuralmente es un subconjunto de
+ * `IdTokenClaims`, así que los controllers pasan `@CurrentUser()` tal cual.
+ */
+export interface CognitoIdentity {
+  sub: string;
+  email: string;
+  name: string;
+  /** `phone_number` del token, en E.164. Solo lo trae quien lo dio al registrarse (hoy, mobile-app). */
+  phone?: string;
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+  );
+}
 
 // Mismo cargo fijo que hoy vive hardcodeado en CheckoutClient.tsx del
 // frontend — duplicado a propósito (sin runtime compartido entre back/front
 // todavía, ver CLAUDE.md raíz sobre esa misma decisión entre apps).
 const HOME_SHIPPING_FEE = 99;
 
-const MONTHS_ES = [
-  'ENE',
-  'FEB',
-  'MAR',
-  'ABR',
-  'MAY',
-  'JUN',
-  'JUL',
-  'AGO',
-  'SEP',
-  'OCT',
-  'NOV',
-  'DIC',
-];
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
-}
-
-// day/month/duration pre-formateados en español, igual que el mock — mismo
-// defecto latente que Visit ya tenía documentado en customer-app (no se
-// corrige aquí para no forzar un cambio de frontend fuera de alcance).
 function toVisit(row: VisitRow & { branch: Branch }): Visit {
   return {
-    day: String(row.visitedAt.getUTCDate()).padStart(2, '0'),
-    month: MONTHS_ES[row.visitedAt.getUTCMonth()],
+    visitedAt: row.visitedAt.toISOString(),
     branch: row.branch.name,
-    duration: formatDuration(row.durationMinutes),
+    durationMinutes: row.durationMinutes,
   };
 }
 
@@ -76,52 +76,114 @@ function toOrder(
 
 @Injectable()
 export class UsersService {
-  constructor(
-    private prisma: PrismaService,
-    private memberships: MembershipsService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
-  /** Primera vez que se ve este sub de Cognito: crea el perfil + membresía
-   *  default (tier 'all', Roma Sur, activa 30 días) — mismo comportamiento
-   *  que fallbackRecord() en user.mock.ts para una cuenta real sin dato
-   *  curado. Cognito ya garantiza que el sub es válido (pasó CognitoAuthGuard). */
-  async findOrCreateByCognito(
-    sub: string,
-    email: string,
-    name: string,
-  ): Promise<User> {
+  /**
+   * El socio detrás de un ID token, creándolo la primera vez que se le ve.
+   *
+   * La identidad es `cognitoSub`, no el correo: un correo puede cambiar en
+   * Cognito, el `sub` no. Pero `email` es `@unique` en la base, así que hay un
+   * caso intermedio que hay que resolver a mano — un `sub` nuevo con un correo
+   * que ya existe:
+   *
+   * - **El socio ya existía SIN cuenta de acceso** (`cognitoSub` null): lo dio
+   *   de alta mostrador y ahora se instaló la app. Se le liga la cuenta y
+   *   conserva su membresía, sus visitas y sus pedidos. Es un flujo real y
+   *   deseable, y no hay riesgo: esa fila nunca tuvo login.
+   * - **El correo ya pertenece a OTRA cuenta de acceso**: se rechaza con 409.
+   *   Tomar la cuenta en silencio dejaría a alguien fuera de la suya. Pasa,
+   *   por ejemplo, si se destruye y recrea el User Pool (ver "Nota operativa"
+   *   en el CLAUDE.md raíz) — los socios viejos quedan con un `sub` que ya no
+   *   existe y hay que limpiarlos o volver a ligarlos a mano.
+   */
+  async findOrCreateByCognito(identity: CognitoIdentity): Promise<User> {
+    const { sub, email, name, phone } = identity;
     const existing = await this.prisma.user.findUnique({
       where: { cognitoSub: sub },
     });
-    if (existing) return existing;
+    if (existing) return this.backfillPhone(existing, phone);
 
-    const user = await this.prisma.user.create({
-      data: {
-        cognitoSub: sub,
-        email,
-        name: name || email.split('@')[0].toUpperCase(),
-      },
-    });
-    await this.memberships.createDefaultForUser(user.id);
-    return user;
+    const displayName = name || email.split('@')[0].toUpperCase();
+
+    const sameEmail = email
+      ? await this.prisma.user.findUnique({ where: { email } })
+      : null;
+    if (sameEmail) {
+      // Ligado a ESTE mismo sub: lo creó una request paralela del mismo socio
+      // entre las dos búsquedas de arriba (no existía por `cognitoSub`, y para
+      // cuando se buscó por correo ya sí). Es él, no otra cuenta.
+      if (sameEmail.cognitoSub === sub) {
+        return this.backfillPhone(sameEmail, phone);
+      }
+      if (sameEmail.cognitoSub !== null) {
+        throw new ConflictException(emailAlreadyLinked(email));
+      }
+      return this.prisma.user.update({
+        where: { id: sameEmail.id },
+        data: {
+          cognitoSub: sub,
+          name: sameEmail.name || displayName,
+          // El teléfono que dio en mostrador gana: es el que ya se verificó en persona.
+          ...(phone && !sameEmail.phone ? { phone } : {}),
+        },
+      });
+    }
+
+    // El choque de índice único se trata como "ya lo creó otro". El panel del
+    // móvil pide perfil, membresía, visitas y pedidos a la vez: con un socio
+    // nuevo, las cuatro requests llegan aquí antes de que exista. Gana un
+    // insert; los demás chocan con el índice de `cognitoSub` y leen al ganador.
+    //
+    // Nace SIN membresía: existe desde su primer cobro confirmado (ver
+    // MembershipBillingService). Antes se le regalaba una mensual de 15
+    // sucursales al registrarse, sin cobrarle nada.
+    try {
+      return await this.prisma.user.create({
+        // `email || null` y no `email`: un token sin correo guardaría la cadena
+        // vacía, y como la columna es UNIQUE el segundo caso así reventaría.
+        // "Sin correo" es null, que Postgres sí permite repetir.
+        data: {
+          cognitoSub: sub,
+          email: email || null,
+          name: displayName,
+          phone: phone ?? '',
+        },
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        return this.prisma.user.findUniqueOrThrow({
+          where: { cognitoSub: sub },
+        });
+      }
+      throw err;
+    }
   }
 
-  async getProfile(
-    sub: string,
-    email: string,
-    name: string,
-  ): Promise<UserProfile> {
-    const user = await this.findOrCreateByCognito(sub, email, name);
-    const membership = await this.prisma.membership.findUniqueOrThrow({
+  /**
+   * Un socio que se registró antes de que se pidiera teléfono (la web todavía
+   * no lo pide) lo gana la primera vez que entra con un token que sí lo trae.
+   * Nunca se sobrescribe uno que ya tenía.
+   */
+  private async backfillPhone(
+    user: User,
+    phone: string | undefined,
+  ): Promise<User> {
+    if (!phone || user.phone) return user;
+    return this.prisma.user.update({ where: { id: user.id }, data: { phone } });
+  }
+
+  async getProfile(identity: CognitoIdentity): Promise<UserProfile> {
+    const user = await this.findOrCreateByCognito(identity);
+    const membership = await this.prisma.membership.findUnique({
       where: { userId: user.id },
       include: { branch: true },
     });
     return {
-      email: user.email,
+      email: user.email ?? '',
       name: user.name,
       phone: user.phone,
       birthdate: user.birthdate,
-      branch: membership.branch.name,
+      branch: membership?.branch.name ?? '',
     };
   }
 
@@ -146,9 +208,7 @@ export class UsersService {
   async createOrder(userId: string, dto: CreateOrderDto): Promise<Order> {
     if (dto.paymentMethod === 'cash' && dto.delivery !== 'pickup') {
       // Efectivo online solo aplica cuando la entrega es "recoger en gym" — ver CLAUDE.md raíz.
-      throw new BadRequestException(
-        'cash payment method requires pickup delivery',
-      );
+      throw new BadRequestException(cashRequiresPickup());
     }
 
     const productIds = dto.items.map((i) => i.productId);
@@ -160,7 +220,7 @@ export class UsersService {
     const items = dto.items.map((line) => {
       const product = productById.get(line.productId);
       if (!product)
-        throw new NotFoundException(`Product not found: ${line.productId}`);
+        throw new NotFoundException(productNotFound(line.productId));
       const name = (product.name as Record<string, string>)[dto.lang];
       const flav = (product.flav as Record<string, string>)[dto.lang];
       return {
@@ -177,9 +237,10 @@ export class UsersService {
 
     let branchId: number | null = null;
     if (dto.delivery === 'pickup') {
-      const membership = await this.prisma.membership.findUniqueOrThrow({
+      const membership = await this.prisma.membership.findUnique({
         where: { userId },
       });
+      if (!membership) throw new BadRequestException(pickupRequiresMembership());
       branchId = membership.branchId;
     }
 

@@ -2,7 +2,7 @@
 
 import type { SubmitEvent } from 'react';
 import { useCartStore, selectSubtotal } from '../../lib/stores/cart.store';
-import { formatPrice } from '../../lib/pricing';
+import { formatPrice, HOME_SHIPPING_FEE } from '../../lib/pricing';
 import { PAY_ICON, payLabels as buildPayLabels } from '../paymentMethodIcons';
 import type { Lang, OnlinePaymentMethod, Translations } from '@mucho-loco/types';
 
@@ -20,7 +20,7 @@ interface PaymentStepProps {
 export function PaymentStep({ t, lang, delivery, payMethod, setPayMethod, placing, error, onSubmit }: PaymentStepProps) {
   const cart = useCartStore((s) => s.items);
   const subtotal = useCartStore(selectSubtotal);
-  const shipping = delivery === 'home' ? 99 : 0;
+  const shipping = delivery === 'home' ? HOME_SHIPPING_FEE : 0;
   const total = subtotal + shipping;
 
   const payLabels = buildPayLabels(t);
@@ -97,7 +97,7 @@ export function PaymentStep({ t, lang, delivery, payMethod, setPayMethod, placin
             </div>
           ))}
           <div className="row mt-2 pt-2"><span>{t.checkout.payment.subtotal}</span><span>{formatPrice(subtotal)}</span></div>
-          {delivery === 'home' && <div className="row"><span>{t.checkout.payment.shippingLabel}</span><span>$99</span></div>}
+          {delivery === 'home' && <div className="row"><span>{t.checkout.payment.shippingLabel}</span><span>{formatPrice(HOME_SHIPPING_FEE)}</span></div>}
           <div className="row total"><span>{t.checkout.payment.total}</span><span>{formatPrice(total)}</span></div>
         </div>
       </div>

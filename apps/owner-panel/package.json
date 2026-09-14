@@ -9,11 +9,13 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1128.0",
+    "@mucho-loco/api-client": "workspace:*",
     "@mucho-loco/types": "workspace:*",
     "i18next": "^26.4.1",
     "jose": "^6.2.12",

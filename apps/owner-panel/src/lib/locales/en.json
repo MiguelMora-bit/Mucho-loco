@@ -54,7 +54,7 @@
   "payroll": {
     "title": "Payroll",
     "subtitle": "Calculate each biweekly period's payroll from recorded attendance.",
-    "disclaimer": "ISR and IMSS amounts are a simplified calculation for demo purposes — not the real SAT withholding tables or real IMSS contribution rates. Do not use these figures for actual payroll. Attendance shown here is also fixed sample data: it isn't connected yet to the real attendance branches capture.",
+    "disclaimer": "ISR and IMSS amounts are a simplified calculation for demo purposes — not the real SAT withholding tables or real IMSS contribution rates. Do not use these figures for actual payroll. Days worked come from the attendance branches capture (or from sample data, if this panel is running on mocks).",
     "periodLabel": "Pay period",
     "statusOpen": "Open",
     "statusClosed": "Closed",
@@ -109,7 +109,7 @@
   },
   "dashboard": {
     "title": "Chain overview",
-    "readOnlyNote": "Read-only — cash reconciliation arrives with branch-app Phase 2.",
+    "readOnlyNote": "Read-only view of the whole chain. Cash reconciliation happens per branch, in the branch app.",
     "totalRevenue": "Total revenue",
     "activeCustomers": "Active customers",
     "byBranch": "Sales and active customers by branch",

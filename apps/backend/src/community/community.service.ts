@@ -71,7 +71,7 @@ export class CommunityService {
   async createPost(authorId: string, body: string): Promise<CommunityPost> {
     const [user, membership] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({ where: { id: authorId } }),
-      this.prisma.membership.findUniqueOrThrow({
+      this.prisma.membership.findUnique({
         where: { userId: authorId },
         include: { branch: true },
       }),
@@ -80,7 +80,9 @@ export class CommunityService {
       data: {
         authorId,
         authorName: user.name,
-        authorBranch: membership.branch.name,
+        // Un socio recién registrado todavía no tiene membresía (nace sin
+        // ella) y puede publicar igual: su post sale sin sucursal.
+        authorBranch: membership?.branch.name ?? '',
         body,
       },
       include: feedInclude,

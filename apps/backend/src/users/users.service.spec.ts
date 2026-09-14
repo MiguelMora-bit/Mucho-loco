@@ -1,36 +1,44 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- jest.fn() sin generics: los mocks de Prisma son deliberadamente `any`, no vale la pena tipar Prisma.OrderCreateArgs solo para reconstruir el valor de retorno del mock. */
 import { Test } from '@nestjs/testing';
+import { ConflictException } from '@nestjs/common';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { MembershipsService } from '../memberships/memberships.service';
 import type { CreateOrderDto } from './dto/create-order.dto';
 
 describe('UsersService', () => {
   let service: UsersService;
   let prisma: {
-    user: { findUnique: jest.Mock; create: jest.Mock };
-    membership: { findUniqueOrThrow: jest.Mock };
+    user: {
+      findUnique: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+    };
+    membership: { findUnique: jest.Mock };
     visit: { findMany: jest.Mock };
     order: { findMany: jest.Mock; create: jest.Mock };
     product: { findMany: jest.Mock };
   };
-  let memberships: { createDefaultForUser: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
-      user: { findUnique: jest.fn(), create: jest.fn() },
-      membership: { findUniqueOrThrow: jest.fn() },
+      user: {
+        findUnique: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+      membership: { findUnique: jest.fn() },
       visit: { findMany: jest.fn() },
       order: { findMany: jest.fn(), create: jest.fn() },
       product: { findMany: jest.fn() },
     };
-    memberships = { createDefaultForUser: jest.fn() };
     const module = await Test.createTestingModule({
       providers: [
         UsersService,
         { provide: PrismaService, useValue: prisma },
-        { provide: MembershipsService, useValue: memberships },
       ],
     }).compile();
     service = module.get(UsersService);
@@ -43,37 +51,228 @@ describe('UsersService', () => {
         email: 'diego@mucholoco.mx',
       });
 
-      const user = await service.findOrCreateByCognito(
-        'sub-1',
-        'diego@mucholoco.mx',
-        'Diego',
-      );
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-1',
+        email: 'diego@mucholoco.mx',
+        name: 'Diego',
+      });
 
       expect(user.id).toBe('u1');
       expect(prisma.user.create).not.toHaveBeenCalled();
-      expect(memberships.createDefaultForUser).not.toHaveBeenCalled();
     });
 
-    it('auto-provisions a new user and a default membership on first sight', async () => {
+    // Antes nacía con una mensual de 15 sucursales regalada. Ahora la
+    // membresía existe desde el primer cobro (MembershipBillingService), así
+    // que aquí solo se crea el socio.
+    it('auto-provisions a new user on first sight, without a membership', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue({
         id: 'new-1',
         email: 'nuevo@mucholoco.mx',
       });
 
-      const user = await service.findOrCreateByCognito(
-        'sub-2',
-        'nuevo@mucholoco.mx',
-        '',
-      );
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-2',
+        email: 'nuevo@mucholoco.mx',
+        name: '',
+      });
 
       expect(user.id).toBe('new-1');
       expect(prisma.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ cognitoSub: 'sub-2', name: 'NUEVO' }),
+          data: expect.objectContaining({
+            cognitoSub: 'sub-2',
+            name: 'NUEVO',
+            phone: '',
+          }),
         }),
       );
-      expect(memberships.createDefaultForUser).toHaveBeenCalledWith('new-1');
+    });
+
+    // Un socio dado de alta en mostrador (sin cuenta de acceso) que después se
+    // instala la app: se le liga la cuenta y CONSERVA su membresía, sus
+    // visitas y sus pedidos. Crear una fila nueva le borraría su historia.
+    it('links the account to a counter-created member who now installed the app', async () => {
+      prisma.user.findUnique
+        .mockResolvedValueOnce(null) // por cognitoSub
+        .mockResolvedValueOnce({
+          id: 'counter-1',
+          email: 'socio@mucholoco.mx',
+          cognitoSub: null,
+          name: 'SOCIO DE MOSTRADOR',
+        });
+      prisma.user.update.mockResolvedValue({ id: 'counter-1' });
+
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-3',
+        email: 'socio@mucholoco.mx',
+        name: 'Socio',
+      });
+
+      expect(user.id).toBe('counter-1');
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'counter-1' },
+        data: { cognitoSub: 'sub-3', name: 'SOCIO DE MOSTRADOR' },
+      });
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    // Tomar la cuenta en silencio dejaría fuera al dueño original. Pasa al
+    // recrear el User Pool: los socios viejos quedan con un sub que ya no
+    // existe (ver "Nota operativa" en el CLAUDE.md raíz).
+    it('refuses to take over an email that already belongs to another login', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({
+        id: 'u1',
+        email: 'diego@mucholoco.mx',
+        cognitoSub: 'sub-viejo',
+      });
+
+      await expect(
+        service.findOrCreateByCognito({
+          sub: 'sub-nuevo',
+          email: 'diego@mucholoco.mx',
+          name: 'Diego',
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    // El otro lado del caso anterior, y lo que destapó el e2e de requests
+    // paralelas: una request paralela del MISMO socio lo creó entre la
+    // búsqueda por sub y la búsqueda por correo. No es otra cuenta: es él.
+    it('recognizes itself when a parallel request linked the email to the same sub', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({
+        id: 'same-1',
+        email: 'nuevo@mucholoco.mx',
+        cognitoSub: 'sub-mismo',
+        phone: '',
+      });
+
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-mismo',
+        email: 'nuevo@mucholoco.mx',
+        name: 'Nuevo',
+      });
+
+      expect(user.id).toBe('same-1');
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    // Un socio de mostrador puede no tener correo; buscar por `email: ''`
+    // encontraría a cualquier otro sin correo y los mezclaría.
+    it('does not look up by an empty email', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null);
+      prisma.user.create.mockResolvedValue({ id: 'new-2' });
+
+      await service.findOrCreateByCognito({
+        sub: 'sub-4',
+        email: '',
+        name: 'Alguien',
+      });
+
+      expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
+      // "Sin correo" se guarda como null: la columna es UNIQUE y la cadena
+      // vacía solo cabe una vez.
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ email: null }),
+        }),
+      );
+    });
+
+    // mobile-app pide teléfono al registrarse y viaja en el ID token
+    // (`phone_number`). Sin él no hay avisos de WhatsApp.
+    it('stores the phone from the token when provisioning a new member', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({ id: 'new-3' });
+
+      await service.findOrCreateByCognito({
+        sub: 'sub-5',
+        email: 'tel@mucholoco.mx',
+        name: 'Tel',
+        phone: '+525512345678',
+      });
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ phone: '+525512345678' }),
+        }),
+      );
+    });
+
+    it('backfills the phone of an existing member who did not have one', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1', phone: '' });
+      prisma.user.update.mockResolvedValue({
+        id: 'u1',
+        phone: '+525512345678',
+      });
+
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-1',
+        email: 'diego@mucholoco.mx',
+        name: 'Diego',
+        phone: '+525512345678',
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'u1' },
+        data: { phone: '+525512345678' },
+      });
+      expect(user.phone).toBe('+525512345678');
+    });
+
+    it('never overwrites a phone the member already has', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        phone: '+525500000000',
+      });
+
+      await service.findOrCreateByCognito({
+        sub: 'sub-1',
+        email: 'diego@mucholoco.mx',
+        name: 'Diego',
+        phone: '+525512345678',
+      });
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    // Varias requests del mismo socio nuevo al mismo tiempo: gana un insert,
+    // los demás chocan con el índice único y leen al ganador.
+    it('returns the winner when a parallel first request already created the member', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        }),
+      );
+      prisma.user.findUniqueOrThrow.mockResolvedValue({ id: 'winner' });
+
+      const user = await service.findOrCreateByCognito({
+        sub: 'sub-6',
+        email: 'race@mucholoco.mx',
+        name: 'Race',
+      });
+
+      expect(user.id).toBe('winner');
+      expect(prisma.user.findUniqueOrThrow).toHaveBeenCalledWith({
+        where: { cognitoSub: 'sub-6' },
+      });
+    });
+
+    it('does not swallow errors that are not a unique violation', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockRejectedValueOnce(new Error('connection lost'));
+
+      await expect(
+        service.findOrCreateByCognito({
+          sub: 'sub-7',
+          email: 'x@y.mx',
+          name: 'X',
+        }),
+      ).rejects.toThrow('connection lost');
     });
   });
 
@@ -113,8 +312,19 @@ describe('UsersService', () => {
       expect(order.total).toBe(1679);
     });
 
+    // "Recoger en gym" sale de la sucursal de la membresía. Un socio recién
+    // registrado ya no nace con una, así que ese caso tiene que dar un 400
+    // explicado, no un 500 de Prisma.
+    it('rejects a pickup order from a member without a membership', async () => {
+      prisma.membership.findUnique.mockResolvedValue(null);
+      await expect(
+        service.createOrder('user-1', dto({ delivery: 'pickup' })),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
     it('does not charge shipping for pickup', async () => {
-      prisma.membership.findUniqueOrThrow.mockResolvedValue({ branchId: 1 });
+      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
       const order = await service.createOrder(
         'user-1',
         dto({ delivery: 'pickup' }),
@@ -146,7 +356,7 @@ describe('UsersService', () => {
     });
 
     it('allows cash payment for pickup, but leaves it pending payment until collected in person', async () => {
-      prisma.membership.findUniqueOrThrow.mockResolvedValue({ branchId: 1 });
+      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
       const order = await service.createOrder(
         'user-1',
         dto({ paymentMethod: 'cash', delivery: 'pickup' }),
@@ -155,7 +365,7 @@ describe('UsersService', () => {
     });
 
     it('marks non-cash orders ready immediately, since they were already charged online', async () => {
-      prisma.membership.findUniqueOrThrow.mockResolvedValue({ branchId: 1 });
+      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
       const order = await service.createOrder(
         'user-1',
         dto({ paymentMethod: 'card', delivery: 'pickup' }),

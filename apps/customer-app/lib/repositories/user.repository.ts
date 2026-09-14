@@ -1,13 +1,14 @@
-import type { UserProfile, MembershipInfo, Visit, Order, OrderItem, OnlinePaymentMethod } from '@mucho-loco/types';
-import { UserMockDatasource } from '../datasources/mock/user.mock';
+import type { IUserRepository } from '@mucho-loco/customer-core/contract';
+import { UserHttpDatasource } from '@mucho-loco/customer-core/http';
+import { UserMockDatasource } from '@mucho-loco/customer-core/mock';
+import { accountApi } from '../datasources/http/account-client';
+import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
-export interface IUserRepository {
-  getProfile(email: string): Promise<UserProfile>;
-  getMembership(email: string): Promise<MembershipInfo>;
-  retryMembershipPayment(email: string): Promise<MembershipInfo>;
-  getVisitHistory(email: string): Promise<Visit[]>;
-  getOrders(email: string): Promise<Order[]>;
-  createOrder(email: string, items: OrderItem[], total: number, paymentMethod: OnlinePaymentMethod, delivery: 'pickup' | 'home'): Promise<Order>;
-}
+// El contrato y los datasources viven en @mucho-loco/customer-core (los
+// comparte mobile-app); aquí solo se elige cuál y con qué cliente. Cuenta =
+// `accountApi`: solo servidor, lee la cookie ml_session.
+export type { IUserRepository };
 
-export const userRepository: IUserRepository = new UserMockDatasource();
+export const userRepository: IUserRepository = isHttpDatasourceEnabled()
+  ? new UserHttpDatasource(accountApi)
+  : new UserMockDatasource();

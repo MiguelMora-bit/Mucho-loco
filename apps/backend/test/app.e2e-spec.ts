@@ -231,6 +231,28 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
       await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     });
 
+    // La sucursal del autor sale de su membresía, y un socio nuevo ya no nace
+    // con una: A ya pagó la suya, en Roma Sur.
+    beforeAll(async () => {
+      await request(app.getHttpServer())
+        .get('/users/me')
+        .set(...fakeAuthHeader(emailA))
+        .expect(200);
+      const author = await prisma.user.findUniqueOrThrow({
+        where: { email: emailA },
+      });
+      await prisma.membership.create({
+        data: {
+          userId: author.id,
+          branchId: 1,
+          tierKey: 'all',
+          periodKey: 'monthly',
+          expiresAt: new Date(Date.now() + 30 * 86_400_000),
+          accessCode: `ML-COMMUNITY-${Date.now()}`,
+        },
+      });
+    });
+
     it('creates a post with authorName/authorBranch resolved server-side from the token, not from the request body', async () => {
       const res = await request(app.getHttpServer())
         .post('/community/posts')
@@ -329,6 +351,47 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
     });
   });
 
+  // El panel del móvil pide perfil, membresía, visitas y pedidos AL MISMO
+  // TIEMPO. Con un socio que el backend nunca ha visto, las cuatro requests
+  // compiten por crearlo: ninguna debe fallar por la carrera, y debe quedar
+  // UN socio — sin membresía, que nace con su primer cobro (ver
+  // findOrCreateByCognito).
+  describe('a brand-new member opening the mobile dashboard', () => {
+    const email = `e2e-race-${Date.now()}@mucholoco.mx`;
+
+    afterAll(async () => {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (user) {
+        await prisma.membership.deleteMany({ where: { userId: user.id } });
+        await prisma.user.delete({ where: { id: user.id } });
+      }
+    });
+
+    it('survives four parallel first requests: one member, and no membership until paying', async () => {
+      const server = app.getHttpServer();
+      const responses = await Promise.all(
+        [
+          '/users/me',
+          '/users/me/membership',
+          '/users/me/visits',
+          '/users/me/orders',
+        ].map((path) =>
+          request(server)
+            .get(path)
+            .set(...fakeAuthHeader(email)),
+        ),
+      );
+
+      // 404 en membresía = "todavía no contrata", no un error de la carrera.
+      expect(responses.map((r) => r.status)).toEqual([200, 404, 200, 200]);
+      expect(await prisma.user.count({ where: { email } })).toBe(1);
+      const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+      expect(
+        await prisma.membership.count({ where: { userId: user.id } }),
+      ).toBe(0);
+    });
+  });
+
   describe('a new user end to end', () => {
     const email = `e2e-${Date.now()}@mucholoco.mx`;
 
@@ -343,25 +406,23 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
       }
     });
 
-    it('auto-provisions a profile + default membership on first request', async () => {
+    it('auto-provisions a profile on first request, with no branch yet', async () => {
       const res = await request(app.getHttpServer())
         .get('/users/me')
         .set(...fakeAuthHeader(email))
         .expect(200);
       const profile = body<UserProfile>(res);
       expect(profile.email).toBe(email);
-      expect(profile.branch).toBe('ROMA SUR');
+      expect(profile.branch).toBe('');
     });
 
-    it('starts with an active membership, tier all, ~30 days left', async () => {
-      const res = await request(app.getHttpServer())
+    // Antes nacía con una mensual de 15 sucursales regalada. La membresía
+    // ahora existe desde el primer cobro: ver test/membership-billing.e2e-spec.ts.
+    it('has no membership until the first payment', async () => {
+      await request(app.getHttpServer())
         .get('/users/me/membership')
         .set(...fakeAuthHeader(email))
-        .expect(200);
-      const membership = body<MembershipInfo>(res);
-      expect(membership.status).toBe('active');
-      expect(membership.tierKey).toBe('all');
-      expect(membership.daysLeft).toBeGreaterThanOrEqual(29);
+        .expect(404);
     });
 
     it('starts with no orders', async () => {
@@ -410,21 +471,13 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
         .expect(400);
     });
 
-    it('retryPayment flips a grace/expired membership back to active', async () => {
-      const user = await prisma.user.findUniqueOrThrow({ where: { email } });
-      await prisma.membership.update({
-        where: { userId: user.id },
-        data: { status: 'grace', graceEndsAt: new Date() },
-      });
-
-      const res = await request(app.getHttpServer())
+    // Reactivaba la membresía sin cobrar nada. El pago de verdad es
+    // POST /payments/membership-invoice (factura pendiente en Stripe).
+    it('no longer exposes the fake retry-payment that reactivated without charging', async () => {
+      await request(app.getHttpServer())
         .post('/users/me/membership/retry-payment')
         .set(...fakeAuthHeader(email))
-        .expect(201);
-
-      const membership = body<MembershipInfo>(res);
-      expect(membership.status).toBe('active');
-      expect(membership.graceEndsAt).toBeNull();
+        .expect(404);
     });
   });
 

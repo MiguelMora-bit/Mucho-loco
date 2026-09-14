@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { qrAccessMethod } from './qrAccessMethod';
+import { QrAccessMethod } from './qrAccessMethod';
+
+// Se instancia aquí: el singleton exportado ahora vive en index.ts y
+// depende de VITE_DATA_SOURCE. Estos tests son del método MOCK.
+const qrAccessMethod = new QrAccessMethod();
 
 const ROMA_SUR = 1;
 const CONDESA = 3;

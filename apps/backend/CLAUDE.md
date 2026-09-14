@@ -6,7 +6,7 @@ Visión de negocio completa y estructura del monorepo: ver [`CLAUDE.md`](../../C
 
 API REST que reemplaza, dominio por dominio, los repositorios mock de `customer-app` — contract-first: cada método de `I*Repository` en `customer-app/lib/repositories/*.ts` es el contrato que un endpoint de aquí tiene que cumplir. Cuando un dominio esté migrado, `customer-app` solo cambia el datasource (mock → HTTP), nunca el resto del app (componentes, stores, tipos).
 
-**Estado (2026-09-12): 8 dominios migrados.** `branches`, `products`, `membership-tiers` (catálogo) y `users/me/*` (perfil, membresía + retry-payment, visitas, pedidos) — los 4 que el CLAUDE.md raíz nombraba explícitamente para el primer corte ("branches, products, orders, memberships"). Más `announcements`, `social` (links + feed de marketing), `performance` (stats/records/workouts/heatmap) y `community` (feed interno entre socios) — la segunda pasada, ver detalle de cada uno abajo ("Segunda pasada: community/announcements/social/performance"). `customer-app` sigue usando sus datasources mock para TODO — el swap real (Fase 5 de la metodología) todavía no se hizo, este backend hoy corre standalone, verificado con tests y curl, no conectado a ningún frontend.
+**Estado (2026-09-12): 8 dominios migrados.** `branches`, `products`, `membership-tiers` (catálogo) y `users/me/*` (perfil, membresía, visitas, pedidos) — los 4 que el CLAUDE.md raíz nombraba explícitamente para el primer corte ("branches, products, orders, memberships"). Más `announcements`, `social` (links + feed de marketing), `performance` (stats/records/workouts/heatmap) y `community` (feed interno entre socios) — la segunda pasada, ver detalle de cada uno abajo ("Segunda pasada: community/announcements/social/performance"). `customer-app` sigue usando sus datasources mock para TODO — el swap real (Fase 5 de la metodología) todavía no se hizo, este backend hoy corre standalone, verificado con tests y curl, no conectado a ningún frontend.
 
 ### Segunda pasada: community/announcements/social/performance (2026-09-12)
 
@@ -17,6 +17,199 @@ API REST que reemplaza, dominio por dominio, los repositorios mock de `customer-
 - Tipos `SocialLink`/`FeedPost`/`Workout`/`PerformanceStat`/`PersonalRecord`/`HeatmapLevel` se movieron de `apps/customer-app/lib/types/{social,performance}.ts` a `@mucho-loco/types` (este backend los necesitaba también) — esos 2 archivos de `customer-app` quedaron como re-export para no tocar sus ~13 importadores.
 
 `branch-app`/`owner-panel` no conectan aquí todavía (Fase 7 de la metodología) — sus mocks (inventario, corte de caja, nómina, asistencia, reportes) siguen siendo islas aisladas por app, a propósito, hasta que este backend cubra esos dominios también.
+
+## Operación de sucursal y HQ (2026-09-12) — 10 dominios nuevos
+
+Segunda gran tanda: los dominios que `branch-app` y `owner-panel` tenían como mocks aislados por app. Antes de esto, "el stock" existía tres veces (uno por app) y la asistencia que capturaba sucursal nunca llegaba a la nómina. Ahora hay una sola base, y eso desbloquea dos cruces que ningún mock podía montar:
+
+- **Un pedido "recoger en gym" de la tienda aparece en la fila de mostrador**, se marca entregado ahí, y el socio lo ve entregado en su propio panel. Es el MISMO `Order`, no un modelo aparte.
+- **La asistencia que ficha `branch-app` es la que paga la nómina de `owner-panel`.** `AttendanceSummary.daysWorked` dejó de ser un dato semilla: se cuenta de `AttendanceEntry` reales. Ese era el pendiente explícito de la Fase 3 en el CLAUDE.md raíz.
+
+### Módulos
+
+| Módulo | Rutas | Rol | Reemplaza |
+|---|---|---|---|
+| `inventory` | `branches/:id/inventory`, `inventory`, `inventory/global`, `inventory/transfers` | staff / owner | `counterSale.getInventory`, `stats.getGlobalInventory`, `inventoryTransfer.*` |
+| `counter-sales` | `POST branches/:id/counter-sales` | staff | `counterSale.createSale` |
+| `counter-memberships` | `branches/:id/member-access`, `members`, `memberships/renew`, `memberships/signup` | staff | `membership.*` de branch-app |
+| `cash-register` | `branches/:id/cash-register/open-shift`, `history`, `cash-register/shifts/:id/{transactions,close}` | staff / manager | `cashRegisterShift.*` |
+| `pickup-orders` | `branches/:id/pickup-orders`, `pickup-orders/:id/deliver` | staff | `pickupOrder.*` |
+| `reports` | `branches/:id/reports/sales`, `stats/branches` | manager / owner | `reports.getSalesReport`, `stats.getBranchStats` |
+| `attendance` | `attendance/open`, `branches/:id/attendance/{clock-in,today}`, `attendance/clock-out` | staff / manager | `attendance.*` |
+| `payroll` | `payroll/{employees,periods,attendance,payslips}`, `payroll/periods/:id/run` | owner | `payroll.*` |
+| `expenses` | `expenses` | owner | `expenses.*` |
+
+### Roles (`auth/roles.decorator.ts` + `roles.guard.ts`)
+
+`@Roles('staff'|'manager'|'owner')` sobre un handler o un controller. El guard es global y corre DESPUÉS de `CognitoAuthGuard`, así que solo decide, nunca autentica. Los roles son **jerárquicos** (staff < manager < owner): el dueño puede hacer lo de un gerente y lo de mostrador, así que no hay que listar los tres grupos en cada ruta de sucursal. Un socio autenticado sin grupo recibe 403 (no 401) en cualquier ruta interna.
+
+### Decisiones que NO son fieles al mock, a propósito
+
+1. **El precio de una membresía lo pone la sucursal que cobra.** El mock de branch-app tenía `CURRENT_BRANCH_PRICE = 1090` fijo, así que Coyoacán ($890) y Santa Fe ($1390) cobraban precio de Roma Sur.
+2. **`User.cognitoSub` y `User.email` son nullables.** Un socio dado de alta en mostrador (con huella o solo su nombre) no tiene cuenta en la app ni necesariamente correo. Ser socio y tener login son cosas distintas.
+3. **`Employee.email`** se agregó al tipo compartido: es la llave que cruza asistencia con nómina. Sin ella los dos módulos siguen siendo islas.
+4. **`BranchInventoryLevel.productName`/`unitPrice` no se guardan**, se resuelven del catálogo al leer — un cambio de precio no puede dejar copias viejas en 15 sucursales. El nombre se arma siempre igual (`name · flav`); los mocks lo escribían a mano, a veces con sabor y a veces sin.
+5. **`ShiftTransaction` gana `kind: 'pickup'`.** El efectivo de un pedido recogido entra al cajón de esa sucursal, así que el corte tiene que verlo — contado por `deliveredAt`, no por cuándo se hizo el pedido. Uno pagado con tarjeta en línea no entra: nunca tocó esa caja.
+6. **`BranchStatsSummary` se deriva.** El mock devolvía cuatro filas escritas a mano (`revenue: 186400`); aquí sale de transacciones reales, así que los números arrancan chicos. Socios en periodo de gracia cuentan como activos: siguen entrando al gimnasio.
+7. **Fechas en ISO**, nunca texto pre-formateado en español (`MemberAccessRecord.expiresAt`, `Employee.hireDate`, `Expense.date`). Mismo criterio que ya seguía `MembershipInfo`.
+
+### Invariantes que NO viven solo en el código
+
+Dos índices únicos **parciales**, escritos a mano en `20260912090000_branch_ops_and_hq/migration.sql` porque Prisma no sabe declararlos:
+
+- `cash_register_shifts_one_open_per_branch` — `WHERE status = 'open'`.
+- `attendance_entries_one_open_per_staff` — `WHERE "clockOut" IS NULL`.
+
+Sin ellos, dos requests simultáneos abrirían dos turnos. `getOpenShift` incluso maneja la carrera: si su insert pierde, relee y devuelve el turno que ganó.
+
+### Zona horaria
+
+Hay lógica que depende de qué día es "hoy" en la sucursal (asistencia del equipo, agrupación por día de los reportes). El `Dockerfile` fija `TZ=America/Mexico_City`; correr el contenedor en UTC haría que a partir de las 18:00 locales el gerente viera el día siguiente. Los límites de un PERIODO de nómina, en cambio, se calculan en UTC — `startDate`/`endDate` se guardan como fecha sola y mezclarlas con horas locales recortaba seis horas del último día.
+
+### Cálculo de nómina
+
+`payroll/payroll.math.ts` es gemelo de `owner-panel/src/lib/payroll.ts` (tablas de ISR/IMSS **ilustrativas, no las reales del SAT/IMSS**). La diferencia importa: aquí el recibo se emite y se **guarda**, con nombre, sucursal, puesto y sueldo congelados — un recibo es un documento histórico, no algo que se recalcule cada vez que alguien abre la pantalla. Cuando `owner-panel` conecte a este backend, su copia se borra. `daysWorked` cuenta **días distintos con turno cerrado**, no turnos: entrar y salir dos veces el mismo día es un día trabajado.
+
+## Pagos con Stripe (2026-09-12)
+
+Cobro con pasarela para los pedidos de la tienda. Módulo `payments`, dos endpoints:
+
+| Ruta | Quién la llama |
+|---|---|
+| `POST /payments/checkout-sessions` | El socio (autenticado). Crea el pedido en `pending_payment` y devuelve la URL de Stripe. |
+| `POST /payments/stripe/webhook` | Stripe. `@Public()` por necesidad; lo protege la FIRMA, no un token. |
+
+### Decisiones (siguen la skill `stripe-best-practices` instalada)
+
+- **Checkout Sessions, no PaymentIntents.** Es lo recomendado para un pago único on-session: maneja descuentos, envío y métodos de pago dinámicos sin código extra.
+- **Nunca se pasa `payment_method_types`.** Omitirlo activa los métodos de pago dinámicos: Stripe decide qué ofrecerle a cada socio según país, monto y dispositivo. Fijarlo a `['card']` apagaría eso y bajaría la conversión — y en México importa (OXXO, SPEI).
+- **El pedido se guarda ANTES de mandar al socio a pagar.** Si se creara al volver, alguien que paga y cierra la pestaña habría pagado sin pedido.
+- **La entrega la dispara el WEBHOOK, nunca la página de éxito.** Un socio puede pagar y perder la conexión antes de que cargue; ese pedido se quedaría sin surtir para siempre.
+- **`checkout.session.completed` no basta.** Con métodos de notificación diferida (OXXO, transferencia) ese evento llega con la sesión todavía `unpaid`. Se exige `payment_status !== 'unpaid'` y se escucha también `async_payment_succeeded` / `async_payment_failed`.
+- **Idempotencia.** Stripe reentrega el mismo evento ante cualquier duda. `providerSessionId` es `@unique` y `markPaid` no hace nada si el pago ya estaba en `paid`.
+- **Cuerpo crudo.** `NestFactory.create(AppModule, { rawBody: true })`: la firma se calcula sobre los bytes exactos, y volver a serializar el JSON parseado la rompe siempre.
+- **Centavos.** El catálogo guarda pesos enteros y Stripe cobra en la unidad mínima — $1290 son 129000. Sin la conversión se cobraría $12.90.
+- **Modelo `Payment` aparte de `Order`.** Son ciclos de vida distintos: un pedido puede acumular varios intentos (el socio abandona el checkout y vuelve), y deja lugar para PayPal y Mercado Pago sin volver a tocar `Order`.
+
+### Probado contra Stripe real (2026-09-12) ✅
+
+Flujo completo ejercido de punta a punta contra un sandbox real, no contra mocks:
+
+1. Token real de Cognito (`initiate-auth` con `diego@mucholoco.mx`) → `POST /payments/checkout-sessions`.
+2. Stripe devolvió una sesión real; el pedido quedó en `pending_payment` con `total: 2580` **calculado por el servidor** (1290 × 2), no por el cliente.
+3. Pago completado en la página hospedada de Stripe con la tarjeta de prueba `4242…`, manejando el navegador con Playwright (no hay API para "pagar" una sesión de Checkout — es una página de Stripe).
+4. Stripe redirigió a `successUrl` con el `session_id`, y entregó `checkout.session.completed` vía `stripe listen`.
+5. El backend verificó la firma REAL, respondió 200, y el pedido pasó a `ready` con `providerPaymentIntentId` guardado.
+6. Una firma inventada contra el mismo verificador real devolvió **400**.
+
+Un hallazgo del ejercicio: el aviso de WhatsApp se omitió con `Socio ... sin teléfono`. La auto-provisión desde Cognito deja `phone` vacío porque el registro de `customer-app` no lo pide — **el canal de avisos no puede funcionar hasta que el signup capture teléfono**. Está anotado abajo.
+
+Para repetirlo:
+
+```bash
+npm i -g @stripe/cli
+stripe sandbox create           # llaves de prueba, sin registrarse
+# poner STRIPE_SECRET_KEY en apps/backend/.env
+stripe listen --forward-to localhost:3001/payments/stripe/webhook
+# el comando imprime STRIPE_WEBHOOK_SECRET — ponerla también en .env
+stripe trigger checkout.session.completed
+```
+
+Sin esas dos variables el resto del backend funciona igual; solo `/payments/*` falla al usarse.
+
+### Pendiente
+
+- **El registro web no pide teléfono.** mobile-app sí (desde 2026-09-12): lo manda como `phone_number` y `findOrCreateByCognito` lo guarda (ver "Auth" abajo). Falta lo mismo en `SignupForm` de customer-app — que además pide cumpleaños y nunca lo manda a Cognito.
+- **PayPal y Mercado Pago.** El modelo `Payment` ya tiene `provider`, así que agregarlos es un módulo más, no un rediseño. Hay skill oficial de PayPal instalada; para Mercado Pago no hay y se diseña directo con el usuario.
+- ~~**Membresía recurrente.**~~ ✅ Hecho (2026-09-13) — ver "Membresías con Stripe Billing" abajo.
+- **Reembolsos.** `providerPaymentIntentId` se guarda justo para eso, pero no hay endpoint todavía (y la política de devoluciones sigue sin decidirse — ver "Pendiente de decidir" en el CLAUDE.md raíz).
+
+## Membresías con Stripe Billing (2026-09-13)
+
+Antes: todo socio nuevo nacía con una mensual de 15 sucursales **regalada**, `retry-payment` "cobraba" sin tocar pasarela, y nada pasaba una membresía a `grace`/`expired` — una vencida abría la puerta para siempre. Ahora la membresía existe desde su primer cobro confirmado.
+
+| Ruta | Qué hace |
+|---|---|
+| `POST /payments/membership-checkout-sessions` | Contratar o renovar. Body = sucursal + tier + periodo (+ `lang` y URLs), **nunca importe**. Visita = `mode: 'payment'`; semanal/mensual/trimestral/anual = `mode: 'subscription'`. |
+| `POST /payments/membership-invoice` | En gracia: la `hosted_invoice_url` de la factura que falló, para pagarla con otra tarjeta. |
+| `GET /users/me/membership` | 404 = todavía no contrata (el cliente HTTP lo lee como `null`, `getOrNull`). |
+
+Se quitó `POST /users/me/membership/retry-payment`. Código: `payments/membership-billing.service.ts` (Stripe) y `memberships/` (dominio: `grant`, `enterGrace`, `detachSubscription`, `expireLapsed`).
+
+### Reglas
+
+- **El estado lo decide Stripe.** Ningún evento se aplica tal cual llega: `syncSubscription` vuelve a leer la suscripción y copia su estado — `active`/`trialing` → activa hasta el fin del periodo; `past_due` → gracia de 7 días (`GRACE_DAYS`); `canceled`/`unpaid` → se desliga y vale hasta `expiresAt`. Stripe no garantiza el orden de los eventos (la factura pagada puede llegar antes que la sesión completada); leer el estado fresco hace que no importe y que reprocesar no cambie nada. Con API `dahlia` el periodo vive en `items.data[].current_period_end` y la factura liga su suscripción en `parent.subscription_details`.
+- **De quién es** viaja en `subscription_data.metadata` (userId, branchId, tierKey, periodKey): los eventos de renovación de meses después solo traen la suscripción.
+- **Vencimiento en un solo lugar**: `memberships/membership-status.ts` (`effectiveStatus`). Se aplica al LEER (panel del socio y check-in de sucursal, así una membresía deja de abrir la puerta al momento en que vence) y un cron cada hora (`expireLapsed`) lo persiste para reportes y avisos. Con suscripción se toleran 3 días de retraso del webhook de renovación.
+- **Precio del servidor**: `calculateMembershipPrice(branch.price, tier, periodo)` — `membership-plans.ts` se movió de `counter-memberships/` a `memberships/`. Un Product de Stripe por tier con id fijo (`ml_membership_single`/`ml_membership_all`, se crea solo la primera vez); el precio va en `price_data` de cada sesión porque depende de la sucursal.
+- **No cobrar dos veces**: 409 `ALREADY_SUBSCRIBED` con una suscripción viva. Si contrata desde gracia o suspendido, la suscripción vieja se cancela ANTES de ligar la nueva. Visita encima de una membresía vigente → 409 `MEMBERSHIP_STILL_ACTIVE`.
+- **Renovar antes no pierde lo pagado**: si le quedan más de 3 días (pagados en mostrador, por ejemplo), `trial_end` = ese día y el primer cobro cae ahí.
+- **Visita idempotente**: la tabla nueva `MembershipPurchase` se marca pagada y la membresía se da en UNA transacción — un evento reentregado no suma otro día.
+- Tras el primer cobro se fija `payment_settings.save_default_payment_method: 'on_subscription'`: la tarjeta con la que se paga una factura atrasada queda para las renovaciones.
+- Los avisos de WhatsApp "por vencer" ya no se mandan a quien tiene suscripción (Stripe le cobra solo).
+- "Recoger en gym" sin membresía → 400 `PICKUP_REQUIRES_MEMBERSHIP` (antes funcionaba solo porque todos tenían la regalada). Comunidad sí deja publicar sin membresía (el post sale sin sucursal).
+
+### Configurar en Stripe antes de probarlo de verdad
+
+- El webhook (o `stripe listen`, que sin `--events` reenvía todo) necesita: `checkout.session.completed`, `checkout.session.async_payment_succeeded`/`_failed`, `checkout.session.expired`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.created`/`updated`/`deleted`.
+- Billing → recuperación de ingresos: Smart Retries y qué hacer al agotar reintentos (recomendado: cancelar la suscripción). Nuestra gracia de 7 días es independiente: si Stripe logra cobrar después, `invoice.paid` la reactiva.
+
+### Probado
+
+Unit (`membership-billing.service.spec.ts`, `membership-status.spec.ts`, `memberships.service.spec.ts`) y e2e contra Postgres real con Stripe sobreescrito — `test/membership-billing.e2e-spec.ts` recorre el ciclo completo: sin membresía → contrata → activa → falla la renovación → gracia → paga la factura → activa → un evento viejo reentregado no la regresa → cancela → vence → compra una visita.
+
+### Probado contra el sandbox de Stripe (2026-09-13) ✅
+
+Backend local + `stripe listen` + Postgres dev. Sin User Pool vivo no hay token para el endpoint, así que el checkout se abrió con el `MembershipBillingService` real desde un script en contexto de Nest, y se pagó en la página hospedada de Stripe con `4242…` manejando el navegador con Playwright.
+
+1. **Visita (15 sucursales)**: Stripe aceptó el checkout en `mode: 'payment'` (`customer_creation`, `payment_intent_data`, producto con id fijo). `checkout.session.completed` → activa 24 h, `autoRenews: false`, compra `paid` por $200, cliente de Stripe guardado.
+2. **Mensual (1 sucursal)**: suscripción real con la metadata del socio, `ml_membership_single`, 109000 centavos/mes y `save_default_payment_method: on_subscription`. `expiresAt` = el fin de periodo de Stripe, exacto.
+3. **Renovación que falla**: tarjeta `pm_card_chargeCustomerFail` como default + subida de precio con `proration_behavior: always_invoice` → factura `subscription_update` rechazada → `past_due` → `invoice.payment_failed` → gracia de 7 días.
+4. **Pagar el atraso**: `openPendingInvoice` devolvió la página de la factura abierta. Pagarla ahí con Playwright no se pudo (la página de facturas trae hCaptcha y Link, y en headless el clic no llega a procesarse), así que se pagó por API con una tarjeta nueva → `invoice.paid` → activa, gracia borrada, y Stripe dejó la tarjeta NUEVA como la de renovaciones.
+5. Segunda contratación con la suscripción viva → 409 `ALREADY_SUBSCRIBED`.
+6. **Cancelar** en Stripe → `customer.subscription.deleted` → sin suscripción, activa hasta el fin del periodo pagado, `autoRenews: false`.
+
+46 eventos reenviados, los 46 respondidos 200, sin warnings. Clientes y socios de prueba borrados; los Products `ml_membership_single`/`ml_membership_all` se quedan en el sandbox (el código los reusa).
+
+**Lo que no se pudo probar**: la renovación natural al terminar el periodo. La llave de `.env` es de un sandbox **reclamable**, con permisos limitados, y no puede crear test clocks (ni con la CLI, que usa la misma llave). Para probarla: "Claim sandbox" en el dashboard de Stripe → llave completa → test clocks.
+
+### Pendiente
+
+- **Portal de cliente de Stripe** (cambiar plan, actualizar tarjeta, cancelar): hoy el socio no puede cancelar desde la app.
+- `branch-app` renovando en mostrador a un socio con suscripción viva le cobraría dos veces — el mostrador no sabe de la suscripción.
+- Los reportes de `owner-panel` no suman las membresías cobradas en línea (solo `MembershipPayment` de mostrador).
+- Al recrear el User Pool, diego/valeria entran SIN membresía (el seed no crea membresías): se contrata con la tarjeta `4242…`.
+
+## Notificaciones por WhatsApp (2026-09-12)
+
+Avisos por WhatsApp Business Platform (Cloud API de Meta) — se eligió sobre email porque es el canal dominante en México (ver CLAUDE.md raíz). Módulo `notifications`.
+
+### Qué se avisa y qué lo dispara
+
+| Aviso | Disparador |
+|---|---|
+| `payment_confirmed` | El webhook de Stripe, al confirmar el cobro. |
+| `order_ready` | El mismo, pero solo si la entrega es "recoger en gym". |
+| `membership_expiring` | Cron diario, a 7 / 3 / 1 días del vencimiento. |
+| `membership_grace` | Cron diario, mientras el socio esté en periodo de gracia. |
+
+### Decisiones
+
+- **Plantillas aprobadas, no texto libre.** Fuera de la ventana de 24h desde el último mensaje del socio, Meta solo deja enviar plantillas registradas. Por eso cada aviso nombra una plantilla y manda parámetros posicionales; los nombres (`membresia_por_vencer`, etc.) tienen que existir en Meta Business.
+- **Idempotencia en la base, no en el código.** `Notification` con `@@unique([userId, kind, dedupeKey])`. Sin eso, el barrido diario le manda al socio el mismo "vence en 3 días" cada vez que corre. La llave es la **fecha de vencimiento**, no los días restantes: así los tres avisos (7/3/1) comparten llave y el socio recibe UNO por ciclo. Si renueva, la fecha cambia y el siguiente ciclo vuelve a avisar.
+- **Un aviso que falla no tumba lo que lo disparó.** `notifyOnce` nunca tira: registra `status: 'failed'` y sigue. El envío ocurre DESPUÉS de escribir el pedido y fuera de la transacción — un WhatsApp caído no puede revertir un cobro que sí ocurrió. El fallo se guarda también para que el cron no reintente en bucle contra un número roto.
+- **Un cron y no un evento** para las membresías: "vencer" no es algo que alguien haga: nadie hace clic el día que a un socio le quedan 3 días. Corre a las 9am de CDMX (`TZ` del contenedor) — mandar avisos de cobro a las 3am sería hostil.
+- **`@nestjs/schedule` fijado en v4.** La v12 es ESM-only y rompe Jest con el mismo error que ya obligó a quedarse en Prisma 6 (ver esa decisión abajo). La v4 es CommonJS y no necesita configuración especial.
+- **Teléfonos normalizados a E.164 sin `+`.** El seed los tiene como `"+52 55 1234 5678"` y Meta responde 400 sin explicar por qué; `normalizePhone` los limpia y le antepone 52 a un número mexicano de 10 dígitos.
+- **El webhook responde 200 incluso a una firma inválida.** Meta desactiva un webhook que responde errores de forma sostenida, así que alguien mandando basura no debe poder tirarnos el canal. El evento simplemente se descarta. (Distinto de Stripe, que sí quiere un 400: ahí un 5xx provoca reintentos.)
+
+### Limitación conocida: el cron corre en cada instancia
+
+Es un cron **en proceso**. Con `desired_count = 1` en ECS (lo que hay hoy) está bien; con dos tareas, el barrido corre dos veces. El índice único evita el aviso duplicado, así que el daño está acotado, pero la solución correcta al escalar es sacarlo del proceso: EventBridge Scheduler pegándole a un endpoint, o una tarea programada de ECS.
+
+### Probarlo de verdad
+
+Como con Stripe, el código está completo y testeado (17 unit + 8 e2e) pero **nunca se ha ejercido contra Meta**. Hace falta: una app en Meta for Developers con el producto WhatsApp, un número de prueba, las plantillas dadas de alta y aprobadas, y las cuatro variables de `.env.example`. El webhook necesita una URL pública — en local, un túnel (`ngrok`, `cloudflared`).
 
 ## Decisión importante: Prisma 6, no Prisma 7 (2026-09-11)
 
@@ -46,9 +239,11 @@ El mock de `customer-app` confiaba en quien lo llamaba (era código del mismo fr
 ## Auth (Cognito — mismo User Pool que los 3 frontends)
 
 - **`CognitoAuthGuard`** (`src/auth/`) es global (`APP_GUARD` en `AppModule`) — toda ruta pide `Authorization: Bearer <idToken>` salvo que use `@Public()` (catálogo: branches, products, membership-tiers, health).
-- **Verificación real vía `jose`** (`src/auth/cognito.ts`, `verifyIdToken()`) — mismo criterio que `lib/jwt.ts` en los 3 frontends (firma + expiración + issuer + audience contra el JWKS público de Cognito). `COGNITO_CLIENT_IDS` (coma-separado) acepta el ID token de cualquiera de los 3 app clients (`web`/`owner_panel`/`branch_app`), no solo el de customer-app — para cuando branch-app/owner-panel conecten aquí.
+- **Verificación real vía `jose`** (`src/auth/cognito.ts`, `verifyIdToken()`) — mismo criterio que `lib/jwt.ts` en los 3 frontends (firma + expiración + issuer + audience contra el JWKS público de Cognito). `COGNITO_CLIENT_IDS` (coma-separado) acepta el ID token de cualquiera de los 4 app clients (`web`/`mobile`/`owner_panel`/`branch_app`), no solo el de customer-app.
 - **`CognitoVerifierService`** envuelve `verifyIdToken()` como provider inyectable — el guard depende de la clase, no de la función suelta. Es la costura que permite testear: los tests e2e hacen `overrideProvider(CognitoVerifierService)` para simular un usuario autenticado sin un User Pool real (no hay uno vivo hoy, ver "Infra destruida" en el CLAUDE.md raíz), sin mockear módulos con `jest.mock()`.
-- **Auto-provisión**: la primera vez que se ve un `cognitoSub`, `UsersService.findOrCreateByCognito()` crea el `User` + una membresía default (tier `all`, Roma Sur, activa 30 días) — mismo comportamiento que `fallbackRecord()` en `user.mock.ts` para una cuenta real sin dato curado.
+- **Auto-provisión**: la primera vez que se ve un `cognitoSub`, `UsersService.findOrCreateByCognito()` crea el `User` + una membresía default (tier `all`, Roma Sur, activa 30 días) — mismo comportamiento que `fallbackRecord()` en `user.mock.ts` para una cuenta real sin dato curado. Recibe los claims completos (`@CurrentUser()` tal cual), no `sub/email/name` sueltos.
+  - **Teléfono (2026-09-12)**: `IdTokenClaims.phone` sale del claim `phone_number` (E.164). Se guarda al crear al socio y se completa en uno que no tenía; nunca se sobrescribe uno existente (el de mostrador gana). Hoy solo mobile-app lo pide al registrarse.
+  - **Requests paralelas del mismo socio nuevo (2026-09-12)**: el panel del móvil pide perfil, membresía, visitas y pedidos a la vez, y las cuatro llegan antes de que el socio exista. Socio + membresía se crean en UNA transacción; un choque de índice único (P2002) se trata como "ya lo creó otro" y se relee. Y si el correo ya está ligado a ESTE mismo `sub` (lo creó la request de al lado entre las dos búsquedas), es él, no un 409. Lo prueba el e2e "a brand-new member opening the mobile dashboard" contra Postgres real — ese test fue el que destapó el 409.
 
 ## Entorno local
 
@@ -95,5 +290,6 @@ Multi-stage (`deps` → `build` → `runtime`), probado de punta a punta: build 
 
 1. Optimizar tamaño de imagen (`pnpm deploy`/`prune --prod`) si hace falta — ver nota arriba.
 2. Terraform (`infra/`, ya existe de antes — VPC, RDS, Cognito, y ahora también necesitaría un repositorio ECR) — código intacto, **sin aplicar**: aplicar significa gastar en la cuenta de AWS del usuario y necesita que él cree las apps OAuth de Google/Facebook primero (ver "Nota operativa" en el CLAUDE.md raíz) — pendiente de confirmación explícita antes de correr `terraform apply`.
-3. Swap de datasource en `customer-app` (mock → HTTP) para los 8 dominios ya migrados — no se tocó todavía, cero riesgo de romper el mock-first que ya funciona.
-4. CI/CD, y después branch-app/owner-panel reusando este backend (Fase 7 de la metodología).
+3. ~~Swap de datasource en `customer-app`~~ — ✅ hecho (2026-09-12), ver "Swap de datasource" en `apps/customer-app/CLAUDE.md`. Tres cosas que salieron de ahí y afectan a ESTE app: (a) el contrato `createOrder` del frontend ahora manda `{productId, qty}` + `lang`, igual que `CreateOrderDto` — ya no hay desajuste; (b) `NewOrderLine` vive en `@mucho-loco/types` y es el tipo que `CreateOrderItemDto` refleja; (c) `AnnouncementsService` ordena por fecha y el mock no — diferencia cosmética documentada, si el orden del tablero importa hace falta una columna de prioridad aquí.
+4. CI/CD.
+5. Swap de datasource en `branch-app` y `owner-panel` (Fase 7): el backend ya cubre sus 10 dominios, falta que ellos dejen sus mocks. Al hacerlo, ojo con lo mismo que ya mordió a customer-app: **fechas**. Sus mocks todavía traen `expiresAt: '20 JUL 2026'` y este backend manda ISO — hay que formatear al pintar, no antes. Y `owner-panel/src/lib/payroll.ts` se borra: el recibo lo emite el servidor.

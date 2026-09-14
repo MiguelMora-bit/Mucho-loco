@@ -49,6 +49,11 @@ FROM node:${NODE_VERSION} AS runtime
 RUN apk add --no-cache dumb-init
 WORKDIR /app
 ENV NODE_ENV=production
+# La cadena opera en CDMX y hay lógica que depende de qué día es "hoy" en la
+# sucursal (asistencia del equipo, agrupación por día de los reportes). Sin
+# esto el contenedor corre en UTC y a partir de las 18:00 locales el gerente
+# vería el día siguiente.
+ENV TZ=America/Mexico_City
 COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/apps/backend/node_modules ./apps/backend/node_modules
 COPY --from=build /repo/apps/backend/dist ./apps/backend/dist

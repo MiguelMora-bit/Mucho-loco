@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Mucho Loco",
+    "slug": "mucho-loco",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/bull-head.png",
+    "scheme": "mucholoco",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0606",
+    "ios": {
+      "bundleIdentifier": "mx.mucholoco.app",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "mx.mucholoco.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0606",
+        "foregroundImage": "./assets/images/bull-head.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/bull-head.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0a0606",
+          "image": "./assets/images/bull-head.png",
+          "imageWidth": 140
+        }
+      ],
+      "expo-secure-store",
+      "expo-localization"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
