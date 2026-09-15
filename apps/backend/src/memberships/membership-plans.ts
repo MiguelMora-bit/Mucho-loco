@@ -18,6 +18,15 @@ export const PERIOD_MULTIPLIERS: Record<PlanKey, number> = {
   annual: 9.5,
 };
 
+/** Cómo se llama cada periodo en Checkout de Stripe y en los renglones de cobro. */
+export const PERIOD_NAME: Record<PlanKey, string> = {
+  visit: 'Visita',
+  weekly: 'Semanal',
+  monthly: 'Mensual',
+  quarterly: 'Trimestral',
+  annual: 'Anual',
+};
+
 /** Días de vigencia que otorga cada periodo — se usan para calcular expiresAt. */
 export const PERIOD_DAYS: Record<PlanKey, number> = {
   visit: 1,

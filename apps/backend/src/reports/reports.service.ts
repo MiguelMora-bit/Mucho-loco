@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   BranchSalesReport,
   BranchStatsSummary,
@@ -20,6 +20,9 @@ function daysAgo(days: number): Date {
 
 const dateKey = (d: Date): string => d.toISOString().slice(0, 10);
 
+/** Los reportes hablan en pesos, como el resto del contrato; el registro de cobros guarda centavos. */
+const toPesos = (cents: number): number => cents / 100;
+
 @Injectable()
 export class ReportsService {
   constructor(private prisma: PrismaService) {}
@@ -28,10 +31,13 @@ export class ReportsService {
    * Reporte del gerente de UNA sucursal: cuánto entró, en qué días y qué se
    * vendió más.
    *
-   * "Lo que entró" son las tres cosas que pasan por esa sucursal: ventas de
-   * mostrador, cobros de membresía y pedidos recogidos. Un envío a domicilio
-   * NO cuenta: sale de la bodega central y no toca la sucursal (ver CLAUDE.md
-   * raíz, "Inventario por sucursal").
+   * "Lo que entró" sale del registro de cobros (`Charge`): todo cobro ligado a
+   * esa sucursal, del canal que sea — ventas y membresías de mostrador,
+   * pedidos de recoger (en efectivo al entregarlos, en línea al pagarlos) y
+   * membresías contratadas en línea con esa sucursal de inscripción. Antes se
+   * sumaban tres tablas a mano y lo cobrado en línea no aparecía. Un envío a
+   * domicilio NO cuenta: sale de la bodega central y no toca la sucursal (ver
+   * CLAUDE.md raíz, "Inventario por sucursal").
    *
    * Gemelo de `calculateSalesReport` en branch-app/lib/reports.ts, que hacía
    * esta misma cuenta en el navegador sobre arreglos mock. La diferencia no es
@@ -41,32 +47,30 @@ export class ReportsService {
   async getSalesReport(branchId: number, days: number): Promise<BranchSalesReport> {
     const since = daysAgo(days);
 
-    const [sales, payments, pickups] = await Promise.all([
+    const [charges, sales] = await Promise.all([
+      this.prisma.charge.findMany({
+        where: { branchId, paidAt: { gte: since } },
+        select: { totalCents: true, paidAt: true },
+      }),
+      // Solo para el ranking de productos (ver abajo).
       this.prisma.counterSale.findMany({
         where: { branchId, createdAt: { gte: since } },
         include: { items: true },
       }),
-      this.prisma.membershipPayment.findMany({
-        where: { branchId, createdAt: { gte: since } },
-      }),
-      this.prisma.order.findMany({
-        where: { branchId, delivery: 'pickup', status: 'done', deliveredAt: { gte: since } },
-      }),
     ]);
 
+    // Se suma en centavos y se convierte al final: una renovación de Stripe
+    // puede traer centavos, y sumar pesos con decimales acumula error.
     // Sin relleno de ceros: un día sin movimiento simplemente no aparece,
     // mismo comportamiento que ya tenía el reporte del mock.
-    const byDayMap = new Map<string, number>();
-    const add = (date: Date, amount: number) => {
-      const key = dateKey(date);
-      byDayMap.set(key, (byDayMap.get(key) ?? 0) + amount);
-    };
-    for (const sale of sales) add(sale.createdAt, sale.total);
-    for (const payment of payments) add(payment.createdAt, payment.amount);
-    for (const order of pickups) add(order.deliveredAt as Date, order.total);
+    const centsByDay = new Map<string, number>();
+    for (const charge of charges) {
+      const key = dateKey(charge.paidAt);
+      centsByDay.set(key, (centsByDay.get(key) ?? 0) + charge.totalCents);
+    }
 
-    const byDay: DailySales[] = [...byDayMap.entries()]
-      .map(([date, revenue]) => ({ date, revenue }))
+    const byDay: DailySales[] = [...centsByDay.entries()]
+      .map(([date, cents]) => ({ date, revenue: toPesos(cents) }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
     // Solo ventas de mostrador: una membresía no es un producto, y un pedido
@@ -96,8 +100,8 @@ export class ReportsService {
     return {
       branchId,
       days,
-      totalRevenue: [...byDayMap.values()].reduce((sum, n) => sum + n, 0),
-      transactionCount: sales.length + payments.length + pickups.length,
+      totalRevenue: toPesos(charges.reduce((sum, c) => sum + c.totalCents, 0)),
+      transactionCount: charges.length,
       byDay,
       topProducts,
     };
@@ -108,7 +112,7 @@ export class ReportsService {
    * ventana y cuántos socios activos tiene.
    *
    * El mock devolvía cuatro filas escritas a mano (`BRANCH_STATS`, con
-   * revenue: 186400 fijo). Aquí sale de las transacciones reales, así que al
+   * revenue: 186400 fijo). Aquí sale del registro de cobros, así que al
    * principio los números son chicos — es el precio de que sean ciertos.
    *
    * `activeCustomers` cuenta membresías vigentes, incluidas las que están en
@@ -118,46 +122,26 @@ export class ReportsService {
   async getBranchStats(days = DEFAULT_STATS_WINDOW_DAYS): Promise<BranchStatsSummary[]> {
     const since = daysAgo(days);
 
-    const [branches, salesByBranch, paymentsByBranch, pickupsByBranch, membersByBranch] =
-      await Promise.all([
-        this.prisma.branch.findMany({ orderBy: { id: 'asc' } }),
-        this.prisma.counterSale.groupBy({
-          by: ['branchId'],
-          where: { createdAt: { gte: since } },
-          _sum: { total: true },
-        }),
-        this.prisma.membershipPayment.groupBy({
-          by: ['branchId'],
-          where: { createdAt: { gte: since } },
-          _sum: { amount: true },
-        }),
-        this.prisma.order.groupBy({
-          by: ['branchId'],
-          where: { delivery: 'pickup', status: 'done', deliveredAt: { gte: since } },
-          _sum: { total: true },
-        }),
-        this.prisma.membership.groupBy({
-          by: ['branchId'],
-          where: { status: { in: ['active', 'grace'] } },
-          _count: { _all: true },
-        }),
-      ]);
-
-    const sumOf = (
-      rows: { branchId: number | null; _sum: { total?: number | null; amount?: number | null } }[],
-      branchId: number,
-    ): number => {
-      const row = rows.find((r) => r.branchId === branchId);
-      return (row?._sum.total ?? row?._sum.amount ?? 0) || 0;
-    };
+    const [branches, revenueByBranch, membersByBranch] = await Promise.all([
+      this.prisma.branch.findMany({ orderBy: { id: 'asc' } }),
+      this.prisma.charge.groupBy({
+        by: ['branchId'],
+        where: { paidAt: { gte: since } },
+        _sum: { totalCents: true },
+      }),
+      this.prisma.membership.groupBy({
+        by: ['branchId'],
+        where: { status: { in: ['active', 'grace'] } },
+        _count: { _all: true },
+      }),
+    ]);
 
     return branches.map((branch) => ({
       branchId: branch.id,
       branchName: branch.name,
-      revenue:
-        sumOf(salesByBranch, branch.id) +
-        sumOf(paymentsByBranch, branch.id) +
-        sumOf(pickupsByBranch, branch.id),
+      revenue: toPesos(
+        revenueByBranch.find((r) => r.branchId === branch.id)?._sum.totalCents ?? 0,
+      ),
       activeCustomers:
         membersByBranch.find((m) => m.branchId === branch.id)?._count._all ?? 0,
     }));

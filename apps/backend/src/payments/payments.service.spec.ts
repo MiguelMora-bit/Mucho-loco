@@ -7,6 +7,7 @@ import { StripeService } from './stripe.provider';
 import { MembershipBillingService } from './membership-billing.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ChargesService } from '../charges/charges.service';
 
 const whey = {
   id: 'p1',
@@ -33,6 +34,8 @@ const HOME_ADDRESS = {
   phone: '+525512345678',
 };
 
+const paidOrder = { id: 'order-1', items: [] };
+
 function sessionEvent(
   type: string,
   overrides: Record<string, unknown> = {},
@@ -55,17 +58,27 @@ describe('PaymentsService', () => {
   };
   let sessionsCreate: jest.Mock;
   let notifyPaymentConfirmed: jest.Mock;
+  let recordOrder: jest.Mock;
+  let paymentIntentsRetrieve: jest.Mock;
 
   beforeEach(async () => {
     sessionsCreate = jest.fn().mockResolvedValue({ id: 'cs_test_1', url: 'https://checkout.stripe.com/x' });
     notifyPaymentConfirmed = jest.fn().mockResolvedValue(undefined);
+    recordOrder = jest.fn().mockResolvedValue(true);
+    paymentIntentsRetrieve = jest.fn().mockResolvedValue({
+      latest_charge: { payment_method_details: { type: 'card', card: { funding: 'credit' } } },
+    });
     prisma = {
       product: { findMany: jest.fn().mockResolvedValue([whey]) },
       membership: { findUnique: jest.fn().mockResolvedValue({ branchId: 1 }) },
       user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ name: 'DIEGO RAMÍREZ' }) },
-      order: { create: jest.fn().mockResolvedValue({ id: 'order-1' }), update: jest.fn() },
+      order: {
+        create: jest.fn().mockResolvedValue({ id: 'order-1' }),
+        update: jest.fn().mockResolvedValue(paidOrder),
+      },
       payment: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
-      $transaction: jest.fn().mockResolvedValue([]),
+      // La transacción interactiva corre el callback con el mismo mock como `tx`.
+      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     const module = await Test.createTestingModule({
       providers: [
@@ -73,11 +86,17 @@ describe('PaymentsService', () => {
         { provide: PrismaService, useValue: prisma },
         {
           provide: StripeService,
-          useValue: { stripe: { checkout: { sessions: { create: sessionsCreate } } } },
+          useValue: {
+            stripe: {
+              checkout: { sessions: { create: sessionsCreate } },
+              paymentIntents: { retrieve: paymentIntentsRetrieve },
+            },
+          },
         },
         { provide: NotificationsService, useValue: { notifyPaymentConfirmed } },
         // Ningún evento de estos tests es de membresías: todos siguen a la tienda.
         { provide: MembershipBillingService, useValue: { handleEvent: jest.fn().mockResolvedValue(false) } },
+        { provide: ChargesService, useValue: { recordOrder } },
       ],
     }).compile();
     service = module.get(PaymentsService);
@@ -104,6 +123,20 @@ describe('PaymentsService', () => {
       expect(params.line_items?.[1].price_data?.unit_amount).toBe(9900);
       expect(prisma.order.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ total: 1290 * 2 + 99 }) }),
+      );
+    });
+
+    // El cobro puede llegar días después (OXXO): su renglón tiene que llevar
+    // el precio que se le cotizó al socio, no el del catálogo de ese día.
+    it('freezes product and unit price on each order line', async () => {
+      await service.createCheckoutSession('u1', baseDto);
+
+      expect(prisma.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            items: { create: [expect.objectContaining({ productId: 'p1', unitPrice: 1290, qty: 2 })] },
+          }),
+        }),
       );
     });
 
@@ -227,13 +260,47 @@ describe('PaymentsService', () => {
       await service.handleEvent(sessionEvent('checkout.session.completed'));
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: 'order-1' },
-        data: { status: 'ready' },
-      });
+      expect(prisma.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'order-1' }, data: { status: 'ready' } }),
+      );
       expect(prisma.payment.update).toHaveBeenCalledWith({
         where: { id: 'pay-1' },
         data: { status: 'paid', providerPaymentIntentId: 'pi_1' },
+      });
+    });
+
+    // Pagado e ingreso registrado van en la misma transacción: no puede
+    // quedar un pedido cobrado que el registro de cobros no conozca.
+    it('records the paid order as a charge, with how it was really paid', async () => {
+      prisma.payment.findUnique.mockResolvedValue(pendingPayment);
+
+      await service.handleEvent(sessionEvent('checkout.session.completed'));
+
+      // La sesión no dice con qué se pagó; el cargo del PaymentIntent sí.
+      expect(paymentIntentsRetrieve).toHaveBeenCalledWith('pi_1', { expand: ['latest_charge'] });
+      expect(recordOrder).toHaveBeenCalledWith(prisma, paidOrder, {
+        method: 'card_credit',
+        paidAt: expect.any(Date),
+      });
+    });
+
+    // OXXO se paga en la tienda días después de abrir el checkout. El cobro es
+    // del día que Stripe lo confirmó: de eso depende en qué mes se factura.
+    it('dates an OXXO payment on the day Stripe confirmed it', async () => {
+      prisma.payment.findUnique.mockResolvedValue(pendingPayment);
+      paymentIntentsRetrieve.mockResolvedValue({
+        latest_charge: { payment_method_details: { type: 'oxxo' } },
+      });
+      const confirmedAt = 1_790_000_000;
+
+      await service.handleEvent({
+        ...sessionEvent('checkout.session.async_payment_succeeded'),
+        created: confirmedAt,
+      } as Stripe.Event);
+
+      expect(recordOrder).toHaveBeenCalledWith(prisma, paidOrder, {
+        method: 'oxxo',
+        paidAt: new Date(confirmedAt * 1000),
       });
     });
 
@@ -287,6 +354,7 @@ describe('PaymentsService', () => {
       await service.handleEvent(sessionEvent('checkout.session.completed'));
 
       expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(recordOrder).not.toHaveBeenCalled();
     });
 
     it('ignores a webhook for a session it never created', async () => {

@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { PickupOrder } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Order as OrderRow, OrderItem as OrderItemRow, User } from '@prisma/client';
-import { notAPickupOrder, orderAlreadyDelivered } from '../common/error-codes';
+import { notAPickupOrder, orderAlreadyDelivered, orderNotPaid } from '../common/error-codes';
+import { ChargesService } from '../charges/charges.service';
 
 /**
  * Un pedido "recoger en gym" visto por mostrador. NO es un modelo aparte: es
@@ -28,11 +29,23 @@ function toPickupOrder(row: OrderRow & { items: OrderItemRow[]; user: User }): P
 
 @Injectable()
 export class PickupOrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private charges: ChargesService,
+  ) {}
 
+  /**
+   * Un pedido en línea que sigue en `pending_payment` es un checkout de
+   * Stripe que nunca se pagó: no se lista, porque para mostrador no hay nada
+   * que entregar. El efectivo pendiente sí — ese se cobra al entregarlo.
+   */
   async getByBranch(branchId: number): Promise<PickupOrder[]> {
     const rows = await this.prisma.order.findMany({
-      where: { branchId, delivery: 'pickup' },
+      where: {
+        branchId,
+        delivery: 'pickup',
+        OR: [{ status: { not: 'pending_payment' } }, { paymentMethod: 'cash' }],
+      },
       include: { items: true, user: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -55,11 +68,25 @@ export class PickupOrdersService {
     if (order.status === 'done') {
       throw new BadRequestException(orderAlreadyDelivered(orderId));
     }
+    // Pendiente de pago solo se entrega en efectivo, que se cobra aquí mismo.
+    // Uno en línea sin pagar es un checkout abandonado: entregarlo sería
+    // regalarlo, y no dejaría cobro en el registro.
+    if (order.status === 'pending_payment' && order.paymentMethod !== 'cash') {
+      throw new BadRequestException(orderNotPaid(orderId));
+    }
 
-    const updated = await this.prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'done', deliveredAt: new Date() },
-      include: { items: true, user: true },
+    const deliveredAt = new Date();
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.order.update({
+        where: { id: orderId },
+        data: { status: 'done', deliveredAt },
+        include: { items: true, user: true },
+      });
+      // Uno pagado en línea ya quedó registrado cuando Stripe lo confirmó.
+      if (order.paymentMethod === 'cash') {
+        await this.charges.recordOrder(tx, row, { method: 'cash', paidAt: deliveredAt });
+      }
+      return row;
     });
     return toPickupOrder(updated);
   }

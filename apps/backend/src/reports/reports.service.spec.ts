@@ -8,18 +8,16 @@ const day = (iso: string) => new Date(`${iso}T12:00:00.000Z`);
 describe('ReportsService', () => {
   let service: ReportsService;
   let prisma: {
-    counterSale: { findMany: jest.Mock; groupBy: jest.Mock };
-    membershipPayment: { findMany: jest.Mock; groupBy: jest.Mock };
-    order: { findMany: jest.Mock; groupBy: jest.Mock };
+    charge: { findMany: jest.Mock; groupBy: jest.Mock };
+    counterSale: { findMany: jest.Mock };
     branch: { findMany: jest.Mock };
     membership: { groupBy: jest.Mock };
   };
 
   beforeEach(async () => {
     prisma = {
-      counterSale: { findMany: jest.fn().mockResolvedValue([]), groupBy: jest.fn().mockResolvedValue([]) },
-      membershipPayment: { findMany: jest.fn().mockResolvedValue([]), groupBy: jest.fn().mockResolvedValue([]) },
-      order: { findMany: jest.fn().mockResolvedValue([]), groupBy: jest.fn().mockResolvedValue([]) },
+      charge: { findMany: jest.fn().mockResolvedValue([]), groupBy: jest.fn().mockResolvedValue([]) },
+      counterSale: { findMany: jest.fn().mockResolvedValue([]) },
       branch: { findMany: jest.fn().mockResolvedValue([]) },
       membership: { groupBy: jest.fn().mockResolvedValue([]) },
     };
@@ -30,26 +28,34 @@ describe('ReportsService', () => {
   });
 
   describe('getSalesReport', () => {
-    it('adds counter sales, membership payments and picked-up orders into one revenue figure', async () => {
-      prisma.counterSale.findMany.mockResolvedValue([
-        { total: 1580, createdAt: day('2026-09-10'), items: [] },
+    // Antes se sumaban tres tablas a mano y lo cobrado en línea no entraba.
+    it('adds every charge of the branch into one revenue figure, whatever the channel', async () => {
+      prisma.charge.findMany.mockResolvedValue([
+        { totalCents: 158000, paidAt: day('2026-09-10') }, // venta de mostrador
+        { totalCents: 164000, paidAt: day('2026-09-10') }, // membresía de mostrador
+        { totalCents: 29000, paidAt: day('2026-09-11') }, // pedido recogido
+        { totalCents: 109000, paidAt: day('2026-09-11') }, // membresía contratada en línea
       ]);
-      prisma.membershipPayment.findMany.mockResolvedValue([
-        { amount: 1640, createdAt: day('2026-09-10') },
-      ]);
-      prisma.order.findMany.mockResolvedValue([{ total: 290, deliveredAt: day('2026-09-11') }]);
 
       const report = await service.getSalesReport(1, 7);
 
-      expect(report.totalRevenue).toBe(1580 + 1640 + 290);
-      expect(report.transactionCount).toBe(3);
+      expect(report.totalRevenue).toBe(1580 + 1640 + 290 + 1090);
+      expect(report.transactionCount).toBe(4);
+    });
+
+    it('reads only the charges of that branch inside the window', async () => {
+      await service.getSalesReport(3, 7);
+
+      expect(prisma.charge.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { branchId: 3, paidAt: { gte: expect.any(Date) } } }),
+      );
     });
 
     it('groups revenue by day, sorted oldest first, with no zero-filled gaps', async () => {
-      prisma.counterSale.findMany.mockResolvedValue([
-        { total: 100, createdAt: day('2026-09-11'), items: [] },
-        { total: 200, createdAt: day('2026-09-09'), items: [] },
-        { total: 50, createdAt: day('2026-09-09'), items: [] },
+      prisma.charge.findMany.mockResolvedValue([
+        { totalCents: 10000, paidAt: day('2026-09-11') },
+        { totalCents: 20000, paidAt: day('2026-09-09') },
+        { totalCents: 5000, paidAt: day('2026-09-09') },
       ]);
 
       const report = await service.getSalesReport(1, 7);
@@ -60,16 +66,17 @@ describe('ReportsService', () => {
       ]);
     });
 
-    // Un pedido recogido cuenta el día que se ENTREGÓ, no el que se hizo: el
-    // dinero (y el movimiento en la sucursal) ocurre al recoger.
-    it('dates a picked-up order by its delivery, not by when it was placed', async () => {
-      prisma.order.findMany.mockResolvedValue([
-        { total: 290, createdAt: day('2026-09-01'), deliveredAt: day('2026-09-11') },
+    // Una renovación de Stripe con prorrateo puede traer centavos.
+    it('keeps the centavos instead of rounding them away', async () => {
+      prisma.charge.findMany.mockResolvedValue([
+        { totalCents: 109050, paidAt: day('2026-09-10') },
+        { totalCents: 25, paidAt: day('2026-09-10') },
       ]);
 
       const report = await service.getSalesReport(1, 7);
 
-      expect(report.byDay).toEqual([{ date: '2026-09-11', revenue: 290 }]);
+      expect(report.totalRevenue).toBe(1090.75);
+      expect(report.byDay).toEqual([{ date: '2026-09-10', revenue: 1090.75 }]);
     });
 
     it('ranks top products by units sold and caps the list at five', async () => {
@@ -108,10 +115,13 @@ describe('ReportsService', () => {
     });
 
     // Una membresía no es un producto, y un pedido en línea salió de la bodega
-    // central — ninguno de los dos pertenece al ranking de mostrador.
+    // central — ninguno de los dos pertenece al ranking de mostrador, aunque
+    // sí sumen al ingreso.
     it('keeps memberships and online orders out of the top-products ranking', async () => {
-      prisma.membershipPayment.findMany.mockResolvedValue([{ amount: 1640, createdAt: day('2026-09-10') }]);
-      prisma.order.findMany.mockResolvedValue([{ total: 290, deliveredAt: day('2026-09-10') }]);
+      prisma.charge.findMany.mockResolvedValue([
+        { totalCents: 164000, paidAt: day('2026-09-10') },
+        { totalCents: 29000, paidAt: day('2026-09-10') },
+      ]);
 
       const report = await service.getSalesReport(1, 7);
 
@@ -136,10 +146,12 @@ describe('ReportsService', () => {
       ]);
     });
 
-    it('derives revenue per branch from its three income sources', async () => {
-      prisma.counterSale.groupBy.mockResolvedValue([{ branchId: 1, _sum: { total: 5000 } }]);
-      prisma.membershipPayment.groupBy.mockResolvedValue([{ branchId: 1, _sum: { amount: 1640 } }]);
-      prisma.order.groupBy.mockResolvedValue([{ branchId: 1, _sum: { total: 290 } }]);
+    it('derives revenue per branch from the charges ledger', async () => {
+      prisma.charge.groupBy.mockResolvedValue([
+        { branchId: 1, _sum: { totalCents: 693000 } },
+        // Envíos a domicilio: salen de bodega, no son de ninguna sucursal.
+        { branchId: null, _sum: { totalCents: 138900 } },
+      ]);
 
       const [romaSur, romaNorte] = await service.getBranchStats();
 

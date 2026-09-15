@@ -9,11 +9,18 @@ import type {
   TierKey,
 } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
-import type { Branch, Membership, User } from '@prisma/client';
+import type {
+  Branch,
+  Membership,
+  MembershipPayment as MembershipPaymentRow,
+  Prisma,
+  User,
+} from '@prisma/client';
 import { RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dto';
 import { PERIOD_DAYS, addDays, calculateMembershipPrice } from '../memberships/membership-plans';
 import { effectiveStatus } from '../memberships/membership-status';
 import { memberNotFound } from '../common/error-codes';
+import { ChargesService, toCents } from '../charges/charges.service';
 
 type MembershipWithOwner = Membership & { user: User; branch: Branch };
 
@@ -67,7 +74,10 @@ function generateAccessCode(): string {
 
 @Injectable()
 export class CounterMembershipsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private charges: ChargesService,
+  ) {}
 
   private readonly include = { user: true, branch: true } as const;
 
@@ -167,6 +177,7 @@ export class CounterMembershipsService {
           isNewMember: false,
         },
       });
+      await this.recordCharge(tx, payment, membership.userId);
       return toPayment(payment);
     });
   }
@@ -214,7 +225,27 @@ export class CounterMembershipsService {
           isNewMember: true,
         },
       });
+      await this.recordCharge(tx, payment, user.id);
       return toPayment(payment);
+    });
+  }
+
+  /** El cobro de mostrador entra al registro de cobros en la misma transacción que lo cobra. */
+  private recordCharge(
+    tx: Prisma.TransactionClient,
+    payment: MembershipPaymentRow,
+    userId: string,
+  ): Promise<boolean> {
+    return this.charges.recordMembership(tx, {
+      source: 'counter_membership',
+      method: payment.paymentMethod,
+      paidAt: payment.createdAt,
+      userId,
+      branchId: payment.branchId,
+      tierKey: payment.tierKey,
+      periodKey: payment.periodKey,
+      totalCents: toCents(payment.amount),
+      origin: { membershipPaymentId: payment.id },
     });
   }
 

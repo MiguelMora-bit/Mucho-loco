@@ -9,6 +9,7 @@ import {
 import { StripeService } from './stripe.provider';
 import { PrismaService } from '../prisma/prisma.service';
 import { MembershipsService } from '../memberships/memberships.service';
+import { ChargesService } from '../charges/charges.service';
 
 const DAY = 86_400_000;
 const daysFromNow = (days: number): Date => new Date(Date.now() + days * DAY);
@@ -48,6 +49,7 @@ describe('MembershipBillingService', () => {
   let service: MembershipBillingService;
   let prisma: any;
   let stripe: any;
+  let charges: { recordMembership: jest.Mock };
   let memberships: {
     findByUser: jest.Mock;
     grant: jest.Mock;
@@ -76,6 +78,7 @@ describe('MembershipBillingService', () => {
         update: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      charge: { findUnique: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn(),
     };
     // La transacción interactiva corre el callback con el mismo mock como `tx`.
@@ -101,6 +104,8 @@ describe('MembershipBillingService', () => {
         update: jest.fn(),
         cancel: jest.fn(),
       },
+      paymentIntents: { retrieve: jest.fn() },
+      invoicePayments: { list: jest.fn().mockResolvedValue({ data: [] }) },
     };
     memberships = {
       findByUser: jest.fn().mockResolvedValue(null),
@@ -109,12 +114,15 @@ describe('MembershipBillingService', () => {
       detachSubscription: jest.fn(),
     };
 
+    charges = { recordMembership: jest.fn().mockResolvedValue(true) };
+
     const module = await Test.createTestingModule({
       providers: [
         MembershipBillingService,
         { provide: PrismaService, useValue: prisma },
         { provide: StripeService, useValue: { stripe } },
         { provide: MembershipsService, useValue: memberships },
+        { provide: ChargesService, useValue: charges },
       ],
     }).compile();
     service = module.get(MembershipBillingService);
@@ -423,6 +431,7 @@ describe('MembershipBillingService', () => {
         branchId: 1,
         tierKey: 'all',
         periodKey: 'visit',
+        amount: 200,
         status: 'pending',
       });
 
@@ -435,6 +444,17 @@ describe('MembershipBillingService', () => {
       });
       expect(grant.paidThrough.getTime()).toBeGreaterThan(
         daysFromNow(0.9).getTime(),
+      );
+      // El cobro, en la misma transacción que el acceso que compró.
+      expect(charges.recordMembership).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          source: 'membership_visit',
+          userId: 'user-1',
+          branchId: 1,
+          totalCents: 20000,
+          origin: { membershipPurchaseId: 'pur_2' },
+        }),
       );
     });
 
@@ -450,6 +470,90 @@ describe('MembershipBillingService', () => {
       await service.handleEvent(visitCompleted);
 
       expect(memberships.grant).not.toHaveBeenCalled();
+      expect(charges.recordMembership).not.toHaveBeenCalled();
+    });
+
+    const renewalPaid = (overrides: Record<string, unknown> = {}) =>
+      event('invoice.paid', {
+        id: 'in_1',
+        amount_paid: 109000,
+        status_transitions: { paid_at: 1_790_000_000 },
+        parent: {
+          subscription_details: {
+            subscription: 'sub_1',
+            metadata: planMetadata,
+          },
+        },
+        ...overrides,
+      });
+
+    // La membresía solo guarda hasta cuándo está pagada: sin esto, del mes 2
+    // en adelante ningún cobro de la suscripción quedaba registrado.
+    it('records every paid invoice of the subscription as a charge', async () => {
+      stripe.invoicePayments.list.mockResolvedValue({
+        data: [
+          { payment: { type: 'payment_intent', payment_intent: 'pi_renewal' } },
+        ],
+      });
+      stripe.paymentIntents.retrieve.mockResolvedValue({
+        latest_charge: {
+          payment_method_details: { type: 'card', card: { funding: 'credit' } },
+        },
+      });
+
+      await service.handleEvent(renewalPaid());
+
+      expect(memberships.grant).toHaveBeenCalled();
+      expect(stripe.paymentIntents.retrieve).toHaveBeenCalledWith(
+        'pi_renewal',
+        {
+          expand: ['latest_charge'],
+        },
+      );
+      expect(charges.recordMembership).toHaveBeenCalledWith(prisma, {
+        source: 'membership_subscription',
+        method: 'card_credit',
+        paidAt: new Date(1_790_000_000 * 1000),
+        userId: 'user-1',
+        branchId: 1,
+        tierKey: 'single',
+        periodKey: 'monthly',
+        totalCents: 109000,
+        origin: { stripeInvoiceId: 'in_1' },
+      });
+    });
+
+    it('does not record a $0 invoice — a renewal started early charged nothing', async () => {
+      await service.handleEvent(renewalPaid({ amount_paid: 0 }));
+
+      expect(charges.recordMembership).not.toHaveBeenCalled();
+    });
+
+    it('a redelivered invoice is not recorded twice, nor sent back to Stripe', async () => {
+      prisma.charge.findUnique.mockResolvedValue({ id: 'charge-1' });
+
+      await service.handleEvent(renewalPaid());
+
+      expect(stripe.invoicePayments.list).not.toHaveBeenCalled();
+      expect(charges.recordMembership).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the subscription metadata on an invoice that carries none', async () => {
+      await service.handleEvent(
+        renewalPaid({
+          parent: {
+            subscription_details: { subscription: 'sub_1', metadata: null },
+          },
+        }),
+      );
+
+      expect(charges.recordMembership).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          userId: 'user-1',
+          origin: { stripeInvoiceId: 'in_1' },
+        }),
+      );
     });
 
     it('waits for the money on a completed-but-unpaid session', async () => {

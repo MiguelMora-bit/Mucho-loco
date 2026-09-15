@@ -47,6 +47,29 @@ const products = [
   { id: 'p18', cat: 'merch' as const, name: { es: 'Shaker Loco', en: 'Shaker Loco' }, flav: { es: '700ml', en: '700ml' }, price: 290, img: '/assets/mucho-loco-logo.jpg', tag: null },
 ];
 
+// Registro de cobros (2026-09-14). Mismas filas que inserta la migración
+// 20260914150000_charges_ledger. 01010101 ("No existe en el catálogo") es
+// válida pero genérica: la clave real de cada categoría la define el
+// contador antes de emitir la primera factura.
+const taxCategories = [
+  { id: 'supplement', name: 'Suplementos alimenticios', satProductKey: '01010101', satUnitKey: 'H87', taxRateBp: 1600 },
+  { id: 'energy_drink', name: 'Bebidas energizantes', satProductKey: '01010101', satUnitKey: 'H87', taxRateBp: 1600 },
+  { id: 'beverage', name: 'Agua y bebidas', satProductKey: '01010101', satUnitKey: 'H87', taxRateBp: 1600 },
+  { id: 'merch', name: 'Mercancía', satProductKey: '01010101', satUnitKey: 'H87', taxRateBp: 1600 },
+  { id: 'gym_membership', name: 'Membresía de gimnasio', satProductKey: '01010101', satUnitKey: 'E48', taxRateBp: 1600 },
+  { id: 'shipping', name: 'Envío a domicilio', satProductKey: '01010101', satUnitKey: 'E48', taxRateBp: 1600 },
+  { id: 'unclassified', name: 'Sin clasificar', satProductKey: '01010101', satUnitKey: 'H87', taxRateBp: 1600 },
+];
+
+const TAX_CATEGORY_BY_CAT: Record<(typeof products)[number]['cat'], string> = {
+  proteinas: 'supplement',
+  pre: 'supplement',
+  gomitas: 'supplement',
+  energy: 'energy_drink',
+  agua: 'beverage',
+  merch: 'merch',
+};
+
 const membershipTiers = [
   {
     key: 'single' as const,
@@ -249,6 +272,10 @@ const payrollPeriods = [
 ];
 
 async function main() {
+  // Antes que productos y tiers: los dos apuntan a una categoría fiscal.
+  for (const category of taxCategories) {
+    await prisma.taxCategory.upsert({ where: { id: category.id }, create: category, update: category });
+  }
   for (const branch of branches) {
     // Prisma exige el sentinel Prisma.JsonNull para "esta columna JSON es
     // NULL" — un `null` de JS ahí significaría literalmente el string JSON "null".
@@ -256,10 +283,12 @@ async function main() {
     await prisma.branch.upsert({ where: { id: branch.id }, create: data, update: data });
   }
   for (const product of products) {
-    await prisma.product.upsert({ where: { id: product.id }, create: product, update: product });
+    const data = { ...product, taxCategoryId: TAX_CATEGORY_BY_CAT[product.cat] };
+    await prisma.product.upsert({ where: { id: product.id }, create: data, update: data });
   }
   for (const tier of membershipTiers) {
-    await prisma.membershipTier.upsert({ where: { key: tier.key }, create: tier, update: tier });
+    const data = { ...tier, taxCategoryId: 'gym_membership' };
+    await prisma.membershipTier.upsert({ where: { key: tier.key }, create: data, update: data });
   }
   for (const announcement of announcements) {
     await prisma.announcement.upsert({ where: { id: announcement.id }, create: announcement, update: announcement });

@@ -59,7 +59,15 @@ describe('Payments (e2e)', () => {
       .overrideProvider(StripeService)
       .useValue({
         configured: true,
-        stripe: { checkout: { sessions: { create: sessionsCreate } } },
+        stripe: {
+          checkout: { sessions: { create: sessionsCreate } },
+          // Con qué pagó el socio: lo dice el cargo, no la sesión.
+          paymentIntents: {
+            retrieve: jest.fn().mockResolvedValue({
+              latest_charge: { payment_method_details: { type: 'card', card: { funding: 'debit' } } },
+            }),
+          },
+        },
         constructEvent: (raw: Buffer, sig: string) => constructEvent(raw, sig) as Stripe.Event,
       })
       .compile();
@@ -94,6 +102,8 @@ describe('Payments (e2e)', () => {
   });
 
   afterAll(async () => {
+    // Primero los cobros: un pedido que originó un ingreso no se deja borrar.
+    await prisma.charge.deleteMany({ where: { user: { email: CUSTOMER } } });
     await prisma.payment.deleteMany({ where: { order: { user: { email: CUSTOMER } } } });
     await prisma.orderItem.deleteMany({ where: { order: { user: { email: CUSTOMER } } } });
     await prisma.order.deleteMany({ where: { user: { email: CUSTOMER } } });
@@ -251,6 +261,21 @@ describe('Payments (e2e)', () => {
         expect(order.status).toBe('ready');
         expect(payment.status).toBe('paid');
         expect(payment.providerPaymentIntentId).toBe('pi_e2e_1');
+
+        // Pagado y registrado como ingreso, en la misma transacción.
+        const charge = await prisma.charge.findUniqueOrThrow({
+          where: { orderId },
+          include: { lines: true },
+        });
+        expect(charge).toMatchObject({
+          source: 'order',
+          method: 'card_debit',
+          totalCents: 258000,
+          branchId: 1,
+        });
+        expect(charge.lines).toEqual([
+          expect.objectContaining({ qty: 2, unitPriceCents: 129000, taxCategoryId: 'supplement' }),
+        ]);
       });
 
       // Stripe reentrega el mismo evento ante cualquier duda.
@@ -264,6 +289,7 @@ describe('Payments (e2e)', () => {
         const payments = await prisma.payment.findMany({ where: { orderId } });
         expect(payments).toHaveLength(1);
         expect(payments[0].status).toBe('paid');
+        expect(await prisma.charge.count({ where: { orderId } })).toBe(1);
       });
 
       it('a late failure never un-pays a paid order', async () => {

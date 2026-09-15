@@ -5,6 +5,7 @@ import type { MemberAccessRecord } from '@mucho-loco/types';
 import { CounterMembershipsService, evaluateAccess } from './counter-memberships.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { calculateMembershipPrice } from '../memberships/membership-plans';
+import { ChargesService } from '../charges/charges.service';
 
 const ROMA_SUR = 1;
 const CONDESA = 3;
@@ -65,6 +66,7 @@ describe('CounterMembershipsService', () => {
     user: { create: jest.Mock };
     $transaction: jest.Mock;
   };
+  let charges: { recordMembership: jest.Mock };
 
   const romaSurRow = {
     id: 'm1',
@@ -86,10 +88,73 @@ describe('CounterMembershipsService', () => {
       user: { create: jest.fn() },
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
+    charges = { recordMembership: jest.fn().mockResolvedValue(true) };
     const module = await Test.createTestingModule({
-      providers: [CounterMembershipsService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        CounterMembershipsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: ChargesService, useValue: charges },
+      ],
     }).compile();
     service = module.get(CounterMembershipsService);
+  });
+
+  // Lo que se cobra en mostrador también es ingreso: entra al registro de
+  // cobros en la misma transacción que el cobro.
+  describe('charges ledger', () => {
+    it('records a renewal as a counter-membership charge, in centavos', async () => {
+      prisma.membership.findUnique.mockResolvedValue({ ...romaSurRow, userId: 'u-diego' });
+      prisma.branch.findUnique.mockResolvedValue({ id: ROMA_SUR, price: 1090 });
+      const createdAt = new Date('2026-09-14T15:00:00.000Z');
+      prisma.membershipPayment.create.mockImplementation(({ data }: never) => ({
+        ...(data as object),
+        id: 'mp-1',
+        createdAt,
+      }));
+
+      await service.renew(ROMA_SUR, {
+        qrCode: 'ML-DIEGO-2026-ALLGYMS',
+        tierKey: 'all',
+        periodKey: 'monthly',
+        paymentMethod: 'card',
+      });
+
+      expect(charges.recordMembership).toHaveBeenCalledWith(prisma, {
+        source: 'counter_membership',
+        method: 'card',
+        paidAt: createdAt,
+        userId: 'u-diego',
+        branchId: ROMA_SUR,
+        tierKey: 'all',
+        periodKey: 'monthly',
+        totalCents: calculateMembershipPrice(1090, 'all', 'monthly') * 100,
+        origin: { membershipPaymentId: 'mp-1' },
+      });
+    });
+
+    it('records a walk-in signup against the member it just created', async () => {
+      prisma.branch.findUnique.mockResolvedValue({ id: ROMA_SUR, price: 1090 });
+      prisma.user.create.mockResolvedValue({ id: 'u-new' });
+      prisma.membership.create.mockImplementation(({ data }: never) => ({ ...(data as object), id: 'm-new' }));
+      prisma.membershipPayment.create.mockImplementation(({ data }: never) => ({
+        ...(data as object),
+        id: 'mp-2',
+        createdAt: new Date(),
+      }));
+
+      await service.signUp(ROMA_SUR, {
+        memberName: 'Walk In',
+        phone: '5512345678',
+        tierKey: 'single',
+        periodKey: 'visit',
+        paymentMethod: 'cash',
+      });
+
+      expect(charges.recordMembership).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ userId: 'u-new', method: 'cash', origin: { membershipPaymentId: 'mp-2' } }),
+      );
+    });
   });
 
   it('exposes expiresAt as ISO, not as pre-formatted Spanish text', async () => {

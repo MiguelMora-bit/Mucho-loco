@@ -4,6 +4,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CounterSalesService } from './counter-sales.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ChargesService } from '../charges/charges.service';
 
 const pre = {
   id: 'p7',
@@ -26,6 +27,7 @@ describe('CounterSalesService', () => {
     $transaction: jest.Mock;
   };
   let inventory: { decrementForSale: jest.Mock };
+  let charges: { recordCounterSale: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -34,11 +36,13 @@ describe('CounterSalesService', () => {
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
     };
     inventory = { decrementForSale: jest.fn() };
+    charges = { recordCounterSale: jest.fn().mockResolvedValue(true) };
     const module = await Test.createTestingModule({
       providers: [
         CounterSalesService,
         { provide: PrismaService, useValue: prisma },
         { provide: InventoryService, useValue: inventory },
+        { provide: ChargesService, useValue: charges },
       ],
     }).compile();
     service = module.get(CounterSalesService);
@@ -94,6 +98,19 @@ describe('CounterSalesService', () => {
       service.createSale(1, { picks: [{ productId: 'p7', qty: 99 }], paymentMethod: 'cash' }, 'es'),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.counterSale.create).not.toHaveBeenCalled();
+    expect(charges.recordCounterSale).not.toHaveBeenCalled();
+  });
+
+  // Lo que cobra mostrador es ingreso: entra al registro de cobros en la misma
+  // transacción que la venta y el descuento de stock.
+  it('records the sale in the charges ledger, inside the sale transaction', async () => {
+    prisma.product.findMany.mockResolvedValue([pre]);
+    const row = saleRow(790, []);
+    prisma.counterSale.create.mockResolvedValue(row);
+
+    await service.createSale(1, { picks: [{ productId: 'p7', qty: 1 }], paymentMethod: 'card' }, 'es');
+
+    expect(charges.recordCounterSale).toHaveBeenCalledWith(prisma, row);
   });
 
   it('rejects a product that is not in the catalog before opening a transaction', async () => {

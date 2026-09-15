@@ -8,6 +8,8 @@ import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { MembershipBillingService } from './membership-billing.service';
 import { addressRequired, pickupRequiresMembership, productNotFound } from '../common/error-codes';
 import { shippingAddressJson } from '../users/shipping-address';
+import { ChargesService } from '../charges/charges.service';
+import { eventTime, paymentIntentMethod } from './stripe-payment-method';
 
 /** Mismo cargo que aplica UsersService.createOrder — el envío no deja de cobrarse por pagar con tarjeta. */
 const HOME_SHIPPING_FEE = 99;
@@ -60,6 +62,7 @@ export class PaymentsService {
     private stripe: StripeService,
     private notifications: NotificationsService,
     private membershipBilling: MembershipBillingService,
+    private charges: ChargesService,
   ) {}
 
   /**
@@ -125,6 +128,8 @@ export class PaymentsService {
             flav: l.flav,
             img: l.product.img,
             qty: l.qty,
+            productId: l.product.id,
+            unitPrice: l.product.price,
           })),
         },
       },
@@ -216,7 +221,7 @@ export class PaymentsService {
           this.logger.log(`Sesión ${session.id} completada pero todavía sin pagar — se espera el evento asíncrono`);
           return;
         }
-        await this.markPaid(session);
+        await this.markPaid(session, eventTime(event));
         return;
       }
       case 'checkout.session.async_payment_failed': {
@@ -239,10 +244,9 @@ export class PaymentsService {
    * puede llegar varias veces. Si el pago ya estaba en 'paid', no se vuelve a
    * tocar el pedido.
    */
-  private async markPaid(session: Stripe.Checkout.Session): Promise<void> {
+  private async markPaid(session: Stripe.Checkout.Session, paidAt: Date): Promise<void> {
     const payment = await this.prisma.payment.findUnique({
       where: { providerSessionId: session.id },
-      include: { order: true },
     });
     if (!payment) {
       this.logger.warn(`Webhook de una sesión desconocida: ${session.id}`);
@@ -254,19 +258,25 @@ export class PaymentsService {
       typeof session.payment_intent === 'string'
         ? session.payment_intent
         : (session.payment_intent?.id ?? null);
+    // Antes de abrir la transacción: una llamada de red no debe tener una
+    // transacción de Postgres abierta esperándola.
+    const method = await paymentIntentMethod(this.stripe.stripe, paymentIntentId);
 
-    await this.prisma.$transaction([
-      this.prisma.payment.update({
+    // Pagado, listo para surtir y registrado como ingreso: las tres o ninguna.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payment.update({
         where: { id: payment.id },
         data: { status: 'paid', providerPaymentIntentId: paymentIntentId },
-      }),
+      });
       // 'ready' = pagado y listo para surtir; es el mismo estado al que llega
       // un pedido con cualquier otro método ya cobrado.
-      this.prisma.order.update({
+      const order = await tx.order.update({
         where: { id: payment.orderId },
         data: { status: 'ready' },
-      }),
-    ]);
+        include: { items: true },
+      });
+      await this.charges.recordOrder(tx, order, { method, paidAt });
+    });
     this.logger.log(`Pedido ${payment.orderId} pagado (sesión ${session.id})`);
 
     // Después de escribir, nunca dentro de la transacción: un aviso que falla
