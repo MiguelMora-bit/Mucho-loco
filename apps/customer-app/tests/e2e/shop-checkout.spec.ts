@@ -38,10 +38,8 @@ test.describe('shop -> checkout -> order shows up in dashboard', () => {
     // Go to checkout and place the order.
     await page.goto('/checkout');
     await page.locator('button:has-text("CONTINUAR AL PAGO")').click();
-    await page.fill('input[placeholder="4242 4242 4242 4242"]', '4242424242424242');
-    await page.fill('input[placeholder="12/27"]', '12/30');
-    await page.fill('input[placeholder="123"]', '123');
-    await page.fill('input[placeholder="DIEGO RAMÍREZ"]', 'TEST USER');
+    // Tarjeta = Stripe: aquí no se captura ningún dato de tarjeta. En modo mock
+    // el "cobro" es instantáneo y regresa a ?paid=1, que es la confirmación.
     await page.locator('button:has-text("CONFIRMAR PEDIDO")').click();
     await expect(page.locator('.confirm-screen')).toBeVisible();
 

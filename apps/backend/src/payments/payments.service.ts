@@ -1,12 +1,13 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { Lang, LocalizedString } from '@mucho-loco/types';
+import type { Lang, LocalizedString, ShippingAddress } from '@mucho-loco/types';
 import type Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from './stripe.provider';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { MembershipBillingService } from './membership-billing.service';
-import { pickupRequiresMembership, productNotFound } from '../common/error-codes';
+import { addressRequired, pickupRequiresMembership, productNotFound } from '../common/error-codes';
+import { shippingAddressJson } from '../users/shipping-address';
 
 /** Mismo cargo que aplica UsersService.createOrder — el envío no deja de cobrarse por pagar con tarjeta. */
 const HOME_SHIPPING_FEE = 99;
@@ -24,6 +25,25 @@ const toCents = (pesos: number): number => pesos * 100;
  * distintas no compartan etiqueta.
  */
 const INTEGRATION_IDENTIFIER = 'mucho-loco-store-kqvxnzrb';
+
+/**
+ * La dirección de envío también va al PaymentIntent: Stripe la usa en su
+ * antifraude (Radar) y queda a la vista junto al cobro en el dashboard.
+ */
+function stripeShipping(name: string, address: ShippingAddress) {
+  return {
+    name,
+    phone: address.phone,
+    address: {
+      line1: address.street,
+      line2: address.neighborhood,
+      city: address.city,
+      state: address.state,
+      postal_code: address.postalCode,
+      country: 'MX',
+    },
+  };
+}
 
 export interface CheckoutSessionResult {
   orderId: string;
@@ -74,6 +94,15 @@ export class PaymentsService {
     const shipping = dto.delivery === 'home' ? HOME_SHIPPING_FEE : 0;
     const total = subtotal + shipping;
 
+    // El DTO ya la exige; esto cubre a quien llame al service sin pasar por él.
+    const shippingAddress = dto.delivery === 'home' ? dto.address : undefined;
+    if (dto.delivery === 'home' && !shippingAddress) {
+      throw new BadRequestException(addressRequired());
+    }
+    const recipient = shippingAddress
+      ? await this.prisma.user.findUniqueOrThrow({ where: { id: userId } })
+      : null;
+
     let branchId: number | null = null;
     if (dto.delivery === 'pickup') {
       const membership = await this.prisma.membership.findUnique({ where: { userId } });
@@ -89,6 +118,7 @@ export class PaymentsService {
         paymentMethod: 'stripe',
         delivery: dto.delivery,
         branchId,
+        ...(shippingAddress ? { shippingAddress: shippingAddressJson(shippingAddress) } : {}),
         items: {
           create: lines.map((l) => ({
             name: l.name,
@@ -137,6 +167,9 @@ export class PaymentsService {
       client_reference_id: order.id,
       metadata: { orderId: order.id },
       integration_identifier: INTEGRATION_IDENTIFIER,
+      ...(shippingAddress && recipient
+        ? { payment_intent_data: { shipping: stripeShipping(recipient.name, shippingAddress) } }
+        : {}),
     });
 
     if (!session.url) {

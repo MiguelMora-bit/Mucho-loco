@@ -57,7 +57,7 @@ describe('account endpoints are really guarded', () => {
     expect(await statusOf(() => payments.openMembershipInvoice('diego@mucholoco.mx', 'http://x'))).toBe(401);
     expect(
       await statusOf(() =>
-        ds.createOrder('diego@mucholoco.mx', [{ productId: 'p1', qty: 1 }], 'card', 'pickup', 'es'),
+        ds.createOrder('diego@mucholoco.mx', [{ productId: 'p1', qty: 1 }], 'cash', { method: 'pickup' }, 'es'),
       ),
     ).toBe(401);
   });

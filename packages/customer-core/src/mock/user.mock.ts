@@ -7,6 +7,10 @@ import type {
   OrderItem,
   NewOrderLine,
   OnlinePaymentMethod,
+  OfflinePaymentMethod,
+  OrderDelivery,
+  OrderStatus,
+  ShippingAddress,
   Lang,
   PlanKey,
   TierKey,
@@ -16,6 +20,7 @@ import { BRANCHES, PRODUCTS } from '../data';
 import { HOME_SHIPPING_FEE } from '../pricing';
 import { MembershipError } from '../membership-errors';
 import { purchaseBlock, renewalStartsOn } from '../membership-rules';
+import { parseShippingAddress } from '../shipping';
 import { delay } from './delay';
 
 interface UserRecord {
@@ -287,20 +292,54 @@ export class UserMockDatasource implements IUserRepository {
   }
 
   /** Mismas reglas que UsersService.createOrder() del backend: el total se
-   *  calcula aquí desde el catálogo, nunca se recibe del cliente, y efectivo
-   *  exige "recoger en gym". Si esto se desviara del backend, el swap de
+   *  calcula aquí desde el catálogo, nunca se recibe del cliente, y sin
+   *  pasarela solo hay efectivo al recoger (queda pendiente de pago). Si esto se desviara del backend, el swap de
    *  datasource cambiaría el comportamiento del checkout — por eso el mock
    *  imita la regla en vez de confiar en quien lo llama. */
   async createOrder(
     email: string,
     lines: NewOrderLine[],
-    paymentMethod: OnlinePaymentMethod,
-    delivery: 'pickup' | 'home',
+    paymentMethod: OfflinePaymentMethod,
+    delivery: OrderDelivery,
     lang: Lang,
   ): Promise<Order> {
     await delay(150);
-    if (paymentMethod === 'cash' && delivery !== 'pickup') {
+    // El tipo ya lo impide; esto cubre el body de /api/orders, que llega sin tipos.
+    if (paymentMethod !== 'cash') {
+      throw new OrderValidationError('online payments go through the checkout session');
+    }
+    if (delivery.method !== 'pickup') {
       throw new OrderValidationError('cash payment method requires pickup delivery');
+    }
+    return this.placeOrder(email, lines, 'cash', delivery, lang, 'pending_payment');
+  }
+
+  /**
+   * Lo que en el backend hace el webhook de Stripe al confirmar el cobro: el
+   * pedido nace pagado. No es parte del contrato — lo usa
+   * `PaymentMockDatasource`, que en modo mock "cobra" al instante.
+   */
+  placePaidOrder(email: string, lines: NewOrderLine[], delivery: OrderDelivery, lang: Lang): Order {
+    return this.placeOrder(email, lines, 'card', delivery, lang, 'ready');
+  }
+
+  private placeOrder(
+    email: string,
+    lines: NewOrderLine[],
+    paymentMethod: OnlinePaymentMethod,
+    delivery: OrderDelivery,
+    lang: Lang,
+    status: OrderStatus,
+  ): Order {
+    const method = delivery.method;
+    // Misma validación que ShippingAddressDto del backend.
+    let shippingAddress: ShippingAddress | undefined;
+    if (delivery.method === 'home') {
+      const parsed = parseShippingAddress(delivery.address);
+      if (parsed.invalid.length > 0) {
+        throw new OrderValidationError(`invalid shipping address: ${parsed.invalid.join(', ')}`);
+      }
+      shippingAddress = parsed.address;
     }
 
     const items: OrderItem[] = [];
@@ -317,22 +356,19 @@ export class UserMockDatasource implements IUserRepository {
     const record = getRecord(email);
     // "Recoger en gym" sale de la sucursal de la membresía: sin ella no hay
     // dónde. Mismo 400 que el backend (PICKUP_REQUIRES_MEMBERSHIP).
-    if (delivery === 'pickup' && !record.membership) {
+    if (method === 'pickup' && !record.membership) {
       throw new OrderValidationError('pickup requires a membership');
     }
-    // Efectivo solo aplica con "recoger en gym" (ver CLAUDE.md raíz, "Pagos en
-    // línea") — el pedido queda pendiente de pago hasta que se cobra en
-    // mostrador, no "listo para retiro" como si ya estuviera pagado.
-    const status = paymentMethod === 'cash' ? 'pending_payment' : 'ready';
     const order: Order = {
       id: `#ML-${Date.now().toString().slice(-6)}`,
       date: new Date().toISOString(),
       status,
       items,
-      total: subtotal + (delivery === 'home' ? HOME_SHIPPING_FEE : 0),
+      total: subtotal + (method === 'home' ? HOME_SHIPPING_FEE : 0),
       paymentMethod,
-      delivery,
-      branch: delivery === 'pickup' ? record.membership?.branch : undefined,
+      delivery: method,
+      branch: method === 'pickup' ? record.membership?.branch : undefined,
+      shippingAddress,
     };
     record.orders = [order, ...record.orders];
     return order;

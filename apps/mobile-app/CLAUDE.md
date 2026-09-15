@@ -59,7 +59,7 @@ Regla: si algo no depende de React Native ni de Next, va a customer-core. Si dep
 
 - **Datos**: `lib/repositories.ts` elige mock (default) o HTTP según `EXPO_PUBLIC_DATA_SOURCE` — ver "Swap a backend" abajo. Las pantallas solo conocen las interfaces del contrato.
 - **Auth**: `MockAuthService` (default) acepta cualquier email con contraseña de 8+ caracteres. `diego@mucholoco.mx` (tier `all`) y `valeria@mucholoco.mx` (tier `single`) muestran los datos curados de los mocks; cualquier otro email recibe el perfil genérico de `fallbackRecord`. El registro aplica la misma política de contraseña que el User Pool y el código de confirmación es `123456`. Cognito real: ver "Auth: mock o Cognito" abajo.
-- **Pago**: con tarjeta el flujo YA es el real — `paymentRepository.createCheckoutSession` + `WebBrowser.openAuthSessionAsync` hacia Stripe, regresando por deep link `mucholoco://checkout?paid=1`. El mock devuelve directo la URL de éxito (ver `payment.mock.ts`), así que en modo mock no se abre navegador. Efectivo solo con "recoger en gym"; Mercado Pago y PayPal no se ofrecen porque el backend todavía no los cobra.
+- **Pago**: con tarjeta el flujo YA es el real — `paymentRepository.createCheckoutSession` + `WebBrowser.openAuthSessionAsync` hacia Stripe, regresando por deep link `mucholoco://checkout?paid=1`. El mock devuelve directo la URL de éxito (ver `payment.mock.ts`), así que en modo mock no se abre navegador. Efectivo solo con "recoger en gym". Nada más (2026-09-14): "transferencia" se quitó porque creaba el pedido como pagado sin cobrar nada; Stripe ya ofrece OXXO y SPEI en su página. Un envío muestra "EN CAMINO" y la guía cuando bodega lo manda.
 
 ## Swap a backend (2026-09-12)
 
@@ -149,5 +149,5 @@ pnpm --filter @mucho-loco/mobile-app test:e2e   # recorrido completo en Playwrig
 
 ### Hallazgos de contrato (afectan también a la web)
 
-1. **Dirección de envío que nunca se envía.** El checkout web pide dirección para "a domicilio", pero `createOrder`/`createCheckoutSession` no la reciben: esos campos nunca salen del formulario, así que un pedido a domicilio se crea sin dirección. El móvil no la pide porque no tendría a dónde mandarla. Arreglarlo es un cambio de contrato (`NewOrder` con dirección) en customer-core + backend.
+1. ~~**Dirección de envío que nunca se envía.**~~ ✅ Resuelto (2026-09-14): el contrato recibe `OrderDelivery` (`{ method: 'pickup' }` o `{ method: 'home', address }`, así "a domicilio sin dirección" no compila). Los dos checkouts la validan con `parseShippingAddress` de customer-core (el teléfono sale en E.164; `toE164` se mudó a `@mucho-loco/customer-core/phone`) y el backend con `ShippingAddressDto`. El detalle de un pedido a domicilio muestra a dónde se envía en vez del QR de retiro. El campo de texto del registro (`Field`) ahora es `components/Field.tsx`, compartido con el checkout.
 2. **Colores escritos en CSS.** `PerformanceStat.color` viaja como `'var(--orange)'`: solo tiene sentido en un navegador. `lib/css-color.ts` lo traduce a la paleta, pero lo correcto es que el contrato mande un nombre de la paleta o un hex.

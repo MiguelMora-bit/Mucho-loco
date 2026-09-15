@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Field } from '@/components/Field';
 import { authService } from '@/lib/auth';
 import { authErrorCode, authErrorMessage } from '@/lib/auth/errors';
 import type { SocialProvider } from '@/lib/auth/types';
 import { useT } from '@/lib/i18n';
 import { useSessionStore } from '@/lib/stores/session.store';
-import { colors, fonts, space } from '@/theme';
+import { colors, space } from '@/theme';
 import { Body, Button, Chip, Display, Mono } from '../ui';
 
 type Mode = { name: 'login' } | { name: 'signup' } | { name: 'confirm'; email: string; password: string };
@@ -48,20 +49,6 @@ export function AuthPanel({ onSuccess }: { onSuccess?: () => void }) {
           onBack={() => setMode({ name: 'login' })}
         />
       )}
-    </View>
-  );
-}
-
-function Field({ label, ...input }: TextInputProps & { label: string }) {
-  return (
-    <View style={styles.field}>
-      <Mono>{label}</Mono>
-      <TextInput
-        accessibilityLabel={label}
-        placeholderTextColor={colors.muted}
-        style={styles.input}
-        {...input}
-      />
     </View>
   );
 }
@@ -303,17 +290,6 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
   center: { textAlign: 'center' },
-  field: { gap: space.xs },
-  input: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.cream,
-    fontFamily: fonts.body,
-    fontSize: 16,
-    paddingHorizontal: space.md,
-    paddingVertical: 14,
-  },
   error: { color: colors.redBright },
   notice: { color: colors.green },
   note: { textTransform: 'none', lineHeight: 16, color: colors.muted },

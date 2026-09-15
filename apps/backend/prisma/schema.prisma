@@ -126,6 +126,8 @@ enum DeliveryMethod {
 enum OrderStatus {
   pending_payment
   ready
+  /// Solo a domicilio: bodega ya lo dio a la paquetería.
+  shipped
   done
 }
 
@@ -318,6 +320,13 @@ model Order {
   /// bodega central, sin sucursal asociada (ver CLAUDE.md raíz).
   branchId      Int?
   branch        Branch?             @relation(fields: [branchId], references: [id])
+  /// ShippingAddress { street, neighborhood, city, state, postalCode, phone, references? }
+  /// — solo con delivery = home. Copia congelada: si el socio se muda, el
+  /// pedido no cambia de destino.
+  shippingAddress Json?
+  /// Solo a domicilio: cuándo lo entregó bodega a la paquetería, y con qué guía.
+  shippedAt      DateTime?
+  trackingNumber String?
   deliveredAt   DateTime?
   createdAt     DateTime            @default(now())
 

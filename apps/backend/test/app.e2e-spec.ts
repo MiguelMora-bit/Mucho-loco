@@ -433,21 +433,66 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
       expect(body<Order[]>(res)).toEqual([]);
     });
 
-    it('creates a real order with a server-computed total, not a client-supplied one', async () => {
+    // Sin pasarela solo se puede pedir en efectivo y al recoger. Antes esta
+    // ruta aceptaba 'card' (y transferencia, Mercado Pago, PayPal) y creaba
+    // el pedido como pagado sin cobrar nada.
+    it('refuses an online payment method: those go through the Stripe checkout', async () => {
+      for (const paymentMethod of ['card', 'transfer', 'paypal', 'mercadopago']) {
+        await request(app.getHttpServer())
+          .post('/users/me/orders')
+          .set(...fakeAuthHeader(email))
+          .send({
+            items: [{ productId: 'p18', qty: 1 }],
+            paymentMethod,
+            delivery: 'pickup',
+            lang: 'es',
+          })
+          .expect(400);
+      }
+    });
+
+    it('refuses a pickup order before the member has a membership to pick it up at', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/users/me/orders')
+        .set(...fakeAuthHeader(email))
+        .send({
+          items: [{ productId: 'p18', qty: 1 }],
+          paymentMethod: 'cash',
+          delivery: 'pickup',
+          lang: 'es',
+        })
+        .expect(400);
+      expect(body<{ code: string }>(res).code).toBe('PICKUP_REQUIRES_MEMBERSHIP');
+    });
+
+    it('creates a cash pickup order with a server-computed total, pending until the counter collects it', async () => {
+      const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+      await prisma.membership.create({
+        data: {
+          userId: user.id,
+          branchId: 1,
+          tierKey: 'all',
+          periodKey: 'monthly',
+          expiresAt: new Date(Date.now() + 30 * 86_400_000),
+          accessCode: `ML-E2E-${Date.now()}`,
+        },
+      });
+
       const res = await request(app.getHttpServer())
         .post('/users/me/orders')
         .set(...fakeAuthHeader(email))
         .send({
           items: [{ productId: 'p18', qty: 2 }],
-          paymentMethod: 'card',
-          delivery: 'home',
+          paymentMethod: 'cash',
+          delivery: 'pickup',
           lang: 'es',
         })
         .expect(201);
 
-      // p18 = Shaker Loco, $290 — 2*290 + 99 envío = 679. El request no manda total.
+      // p18 = Shaker Loco, $290 — 2*290 = 580. El request no manda total.
       const order = body<Order>(res);
-      expect(order.total).toBe(679);
+      expect(order.total).toBe(580);
+      expect(order.status).toBe('pending_payment');
       expect(order.items[0]).toMatchObject({ name: 'Shaker Loco', qty: 2 });
 
       const ordersRes = await request(app.getHttpServer())
@@ -463,7 +508,7 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
         .set(...fakeAuthHeader(email))
         .send({
           items: [{ productId: 'p18', qty: 1 }],
-          paymentMethod: 'card',
+          paymentMethod: 'cash',
           delivery: 'pickup',
           lang: 'es',
           total: 1,

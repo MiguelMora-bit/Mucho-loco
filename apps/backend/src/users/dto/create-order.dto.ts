@@ -7,16 +7,15 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { Lang, OnlinePaymentMethod } from '@mucho-loco/types';
+import type { Lang, OfflinePaymentMethod } from '@mucho-loco/types';
 
-const PAYMENT_METHODS: OnlinePaymentMethod[] = [
-  'card',
-  'transfer',
-  'mercadopago',
-  'stripe',
-  'paypal',
-  'cash',
-];
+/**
+ * Sin pasarela solo se puede pedir en efectivo (y se cobra al recoger). Antes
+ * aceptaba 'card', 'transfer', 'mercadopago' y 'paypal' y creaba el pedido
+ * como pagado sin cobrar nada. Todo pago en línea va por
+ * POST /payments/checkout-sessions (Stripe).
+ */
+const OFFLINE_METHODS: OfflinePaymentMethod[] = ['cash'];
 const LANGS: Lang[] = ['es', 'en'];
 
 export class CreateOrderItemDto {
@@ -42,9 +41,11 @@ export class CreateOrderDto {
   @ArrayMinSize(1)
   items!: CreateOrderItemDto[];
 
-  @IsIn(PAYMENT_METHODS)
-  paymentMethod!: OnlinePaymentMethod;
+  @IsIn(OFFLINE_METHODS)
+  paymentMethod!: OfflinePaymentMethod;
 
+  /** Efectivo solo al recoger (CASH_REQUIRES_PICKUP): a domicilio siempre es
+   *  por Stripe, y ahí va la dirección (CreateCheckoutSessionDto). */
   @IsIn(['pickup', 'home'])
   delivery!: 'pickup' | 'home';
 

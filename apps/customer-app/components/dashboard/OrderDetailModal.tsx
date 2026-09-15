@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { formatDate } from '@/lib/dates';
 import { formatPrice } from '@/lib/pricing';
 import { orderStatusLabel } from '@/lib/orderStatus';
+import { shippingAddressLines } from '@mucho-loco/customer-core/shipping';
 import { PAY_ICON, payLabels } from '../paymentMethodIcons';
 import type { Lang, Order, Translations } from '@mucho-loco/types';
 
@@ -27,7 +28,7 @@ export function OrderDetailModal({ t, lang, order, onClose }: OrderDetailModalPr
             {order.id} · {formatDate(order.date, lang)}
           </span>
           <span className={'status ' + order.status}>
-            {orderStatusLabel(order.status, t)}
+            {orderStatusLabel(order.status, t, order.delivery)}
           </span>
         </div>
 
@@ -53,7 +54,26 @@ export function OrderDetailModal({ t, lang, order, onClose }: OrderDetailModalPr
           </span>
         </div>
 
-        {order.status !== 'done' ? (
+        {/* A domicilio no hay QR ni sucursal: se muestra a dónde se envía. */}
+        {order.delivery === 'home' ? (
+          <div className="mt-1 pt-3 border-t border-ml-border text-sm">
+            <span className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl block mb-1.5">
+              {t.dashboard.orders.shipToLabel}
+            </span>
+            {order.shippingAddress
+              ? shippingAddressLines(order.shippingAddress).map((line, i) => (
+                  <span key={i} className={'block ' + (i === 0 ? 'text-ml-cream font-bold' : 'text-ml-cream-dim')}>
+                    {line}
+                  </span>
+                ))
+              : '—'}
+            {order.trackingNumber && (
+              <span className="block mt-2 font-mono text-xs text-ml-cream">
+                {t.dashboard.orders.trackingLabel}: {order.trackingNumber}
+              </span>
+            )}
+          </div>
+        ) : order.status !== 'done' ? (
           <div className="mt-1 pt-3 border-t border-ml-border text-center">
             <div className="bg-white p-4 inline-block">
               <QRCodeSVG value={order.id} size={140} marginSize={0} level="M" />

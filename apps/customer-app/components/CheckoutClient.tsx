@@ -12,20 +12,11 @@ import { useAsyncSubmit } from '../lib/hooks/useAsyncSubmit';
 import { useSessionRefresh } from '../lib/hooks/useSessionRefresh';
 import { useT } from '../lib/hooks/useT';
 import { Stepper, CartStep, PaymentStep, ConfirmationStep } from './checkout';
-import type { Lang, Order, NewOrderLine, OnlinePaymentMethod } from '@mucho-loco/types';
+import type { CheckoutPayMethod } from './checkout/PaymentStep';
+import { EMPTY_SHIPPING_ADDRESS, parseShippingAddress, type ShippingAddressField } from '@mucho-loco/customer-core/shipping';
+import type { Lang, Order, NewOrderLine, OrderDelivery, ShippingAddress } from '@mucho-loco/types';
 
 type Delivery = 'pickup' | 'home';
-
-/**
- * Métodos que se cobran fuera del sitio, en una pasarela. El resto
- * (transferencia, efectivo al recoger) deja el pedido pendiente y se cobra por
- * otro canal, así que no pasa por aquí.
- *
- * 'card' y 'stripe' son el mismo camino: Stripe decide qué métodos mostrarle a
- * cada socio (métodos de pago dinámicos), así que "tarjeta" no es una
- * pasarela distinta — es lo que ese checkout va a ofrecer casi siempre.
- */
-const GATEWAY_METHODS: OnlinePaymentMethod[] = ['card', 'stripe'];
 
 /**
  * `useSearchParams` obliga a un límite de Suspense (requisito del App Router).
@@ -54,7 +45,12 @@ function CheckoutFlow() {
   const paidReturn = useSearchParams().get('paid') === '1';
   const [step, setStep] = useState(paidReturn ? 2 : 0);
   const [delivery, setDelivery] = useState<Delivery>('pickup');
-  const [payMethod, setPayMethod] = useState<OnlinePaymentMethod>('card');
+  const [payMethod, setPayMethod] = useState<CheckoutPayMethod>('card');
+  // A domicilio no hay efectivo: si lo había elegido y cambió a domicilio,
+  // se cae a tarjeta en vez de mandar una combinación que el backend rechaza.
+  const method: CheckoutPayMethod = delivery === 'home' ? 'card' : payMethod;
+  const [address, setAddress] = useState<ShippingAddress>(EMPTY_SHIPPING_ADDRESS);
+  const [invalidFields, setInvalidFields] = useState<ShippingAddressField[]>([]);
   const { loading: placing, error, run } = useAsyncSubmit({
     errorMessage: t.checkout.errorPlacingOrder,
     connectionErrorMessage: t.common.connectionError,
@@ -66,16 +62,26 @@ function CheckoutFlow() {
     // el servidor desde el catálogo (ver IUserRepository.createOrder).
     const items: NewOrderLine[] = cart.map(({ id, qty }) => ({ productId: id, qty }));
 
+    // A domicilio, la dirección se valida aquí (mismas reglas que el backend)
+    // para marcar el campo sin ir al servidor; el backend la vuelve a validar.
+    let orderDelivery: OrderDelivery = { method: 'pickup' };
+    if (delivery === 'home') {
+      const parsed = parseShippingAddress(address);
+      setInvalidFields(parsed.invalid);
+      if (parsed.invalid.length > 0) return;
+      orderDelivery = { method: 'home', address: parsed.address };
+    }
+
     // Con pasarela el flujo se parte en dos: aquí solo se abre la sesión de
     // cobro y el socio se va a pagar fuera del sitio. El pedido queda
     // pendiente y lo confirma el webhook, no el regreso del usuario — puede
     // pagar y cerrar la pestaña.
-    if (GATEWAY_METHODS.includes(payMethod)) {
+    if (method === 'card') {
       await run(async () => {
         const origin = window.location.origin;
         const { url } = await postJson<{ orderId: string; url: string }>('/api/checkout', {
           items,
-          delivery,
+          delivery: orderDelivery,
           lang,
           successUrl: `${origin}/${lang}/checkout?paid=1`,
           cancelUrl: `${origin}/${lang}/checkout`,
@@ -86,8 +92,10 @@ function CheckoutFlow() {
       return;
     }
 
+    // Sin pasarela solo hay efectivo al recoger: el pedido queda pendiente y
+    // lo cobra mostrador al entregarlo.
     await run(async () => {
-      await postJson<Order>('/api/orders', { items, paymentMethod: payMethod, delivery, lang });
+      await postJson<Order>('/api/orders', { items, paymentMethod: 'cash', delivery: orderDelivery, lang });
       clear();
       setStep(2);
     });
@@ -116,7 +124,10 @@ function CheckoutFlow() {
             t={t}
             lang={lang}
             delivery={delivery}
-            payMethod={payMethod}
+            address={address}
+            onAddressChange={(field, value) => setAddress((current) => ({ ...current, [field]: value }))}
+            invalidFields={invalidFields}
+            payMethod={method}
             setPayMethod={setPayMethod}
             placing={placing}
             error={error}

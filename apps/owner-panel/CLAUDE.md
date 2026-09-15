@@ -86,6 +86,12 @@ Cero errores de consola.
 
 **Un bug de CORS salió de aquí**: el backend solo permitía `localhost:5173`, y los dos apps de Vite piden ese mismo puerto, así que el segundo cae en `5174` y el navegador le bloqueaba TODO. El default del backend ahora incluye ambos.
 
+## Envíos a domicilio — bodega central (`/shipments`, 2026-09-14)
+
+Los pedidos a domicilio se guardaban con dirección pero nadie del staff los veía. Ahora la bodega (que opera HQ, por eso vive aquí) tiene su pantalla: tres secciones — **por enviar**, **en camino** y **entregados** — con socio, productos, total, dirección completa, teléfono y referencias. "Marcar enviado" acepta una guía opcional; "Marcar entregado" solo aparece en lo que ya salió. Solo se listan pedidos cobrados (el backend no manda los `pending_payment`).
+
+Mismo patrón que transferencias: `shipments.repository.ts` / `.errors.ts` / `datasources/{mock,http}/shipments.*` / `stores/shipments.store.ts`, con `SHIPMENTS` en `lib/data.ts` para el mock. Nace con los dos datasources — ya son **5 repositorios** detrás de `VITE_DATA_SOURCE=http`. `ShipmentStateError` (con `reason`) es el error tipado del contrato: la pantalla solo ofrece la acción válida, pero con dos pestañas la lista puede estar vieja; el error vuelve a pedir la lista. El HTTP lo traduce de `ORDER_ALREADY_SHIPPED`/`ORDER_NOT_SHIPPED`/`ORDER_ALREADY_DELIVERED`/`ORDER_NOT_PAID`. Tests en `shipments.repository.test.ts` y `hq.http.test.ts`.
+
 ## Comandos
 
 ```bash

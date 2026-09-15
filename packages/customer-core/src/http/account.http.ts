@@ -6,9 +6,11 @@ import type {
   MembershipInfo,
   MembershipPlanChoice,
   NewOrderLine,
-  OnlinePaymentMethod,
+  OfflinePaymentMethod,
   Order,
+  OrderDelivery,
   PerformanceStat,
+  ShippingAddress,
   PersonalRecord,
   UserProfile,
   Visit,
@@ -32,6 +34,17 @@ import type {
 // Sigue en la firma porque el mock lo necesita.
 
 const ACCOUNT = { auth: true } as const;
+
+/**
+ * En el cable `delivery` sigue siendo 'pickup' | 'home' y la dirección viaja
+ * aparte (ver CreateOrderDto del backend); en el contrato es una unión para
+ * que "a domicilio sin dirección" no compile.
+ */
+function deliveryBody(
+  delivery: OrderDelivery,
+): { delivery: 'pickup' } | { delivery: 'home'; address: ShippingAddress } {
+  return delivery.method === 'home' ? { delivery: 'home', address: delivery.address } : { delivery: 'pickup' };
+}
 
 /** `/users/me/*`. */
 export class UserHttpDatasource implements IUserRepository {
@@ -62,11 +75,15 @@ export class UserHttpDatasource implements IUserRepository {
   createOrder(
     _email: string,
     lines: NewOrderLine[],
-    paymentMethod: OnlinePaymentMethod,
-    delivery: 'pickup' | 'home',
+    paymentMethod: OfflinePaymentMethod,
+    delivery: OrderDelivery,
     lang: Lang,
   ): Promise<Order> {
-    return this.api.post<Order>('/users/me/orders', { items: lines, paymentMethod, delivery, lang }, ACCOUNT);
+    return this.api.post<Order>(
+      '/users/me/orders',
+      { items: lines, paymentMethod, ...deliveryBody(delivery), lang },
+      ACCOUNT,
+    );
   }
 }
 
@@ -139,14 +156,14 @@ export class PaymentHttpDatasource implements IPaymentRepository {
   createCheckoutSession(
     _email: string,
     lines: NewOrderLine[],
-    delivery: 'pickup' | 'home',
+    delivery: OrderDelivery,
     lang: Lang,
     successUrl: string,
     cancelUrl: string,
   ): Promise<CheckoutSession> {
     return this.api.post<CheckoutSession>(
       '/payments/checkout-sessions',
-      { items: lines, delivery, lang, successUrl, cancelUrl },
+      { items: lines, ...deliveryBody(delivery), lang, successUrl, cancelUrl },
       ACCOUNT,
     );
   }

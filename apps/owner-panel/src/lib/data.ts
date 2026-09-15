@@ -1,4 +1,4 @@
-import type { AttendanceSummary, BranchInventoryLevel, BranchStatsSummary, Employee, Expense, InventoryTransfer, Payslip, PayrollPeriod } from '@mucho-loco/types';
+import type { AttendanceSummary, BranchInventoryLevel, BranchStatsSummary, Employee, Expense, InventoryTransfer, Payslip, PayrollPeriod, ShipmentOrder } from '@mucho-loco/types';
 
 export const BRANCH_STATS: BranchStatsSummary[] = [
   { branchId: 1, branchName: 'Roma Sur', revenue: 186400, activeCustomers: 312 },
@@ -111,4 +111,42 @@ export const EXPENSES: Expense[] = [
   { id: 'exp-5', branchId: 5, category: 'supplies', description: 'Papelería y artículos de limpieza', amount: 3100, date: '2026-08-06' },
   { id: 'exp-6', branchId: null, category: 'marketing', description: 'Campaña de redes sociales nacional', amount: 22000, date: '2026-08-02' },
   { id: 'exp-7', branchId: null, category: 'other', description: 'Nómina de oficina corporativa', amount: 65000, date: '2026-08-01' },
+];
+
+// Pedidos a domicilio ya cobrados, vistos por la bodega central. Mutado en
+// sitio por shipments.mock.ts (por enviar → en camino → entregado), mismo
+// patrón que EXPENSES.
+export const SHIPMENTS: ShipmentOrder[] = [
+  {
+    id: 'ord-ship-1',
+    customerName: 'DIEGO RAMÍREZ',
+    items: [{ name: 'Whey Protein 5LBS', flav: 'Fresa', img: '/assets/prod-whey-strawberry.jpg', qty: 1 }],
+    total: 1389,
+    status: 'to_ship',
+    address: { street: 'Av. Insurgentes Sur 1234, int. 5', neighborhood: 'Roma Sur', city: 'Cuauhtémoc', state: 'CDMX', postalCode: '06760', phone: '+525512345678', references: 'Portón negro, entre Medellín y Monterrey' },
+    placedAt: '2026-09-13T16:20:00.000Z',
+  },
+  {
+    id: 'ord-ship-2',
+    customerName: 'VALERIA TORRES',
+    items: [{ name: 'Pre-Entreno Bestia', flav: 'Mango Chamoy', img: '/assets/prod-pre-mango.jpg', qty: 2 }],
+    total: 1679,
+    status: 'shipped',
+    address: { street: 'Ámsterdam 210', neighborhood: 'Hipódromo Condesa', city: 'Cuauhtémoc', state: 'CDMX', postalCode: '06100', phone: '+525598765432' },
+    trackingNumber: '1Z999AA10123456784',
+    placedAt: '2026-09-11T19:05:00.000Z',
+    shippedAt: '2026-09-12T15:00:00.000Z',
+  },
+  {
+    id: 'ord-ship-3',
+    customerName: 'MARIANA LÓPEZ',
+    items: [{ name: 'Shaker Loco', flav: '700ml', img: '/assets/mucho-loco-logo.jpg', qty: 1 }],
+    total: 389,
+    status: 'delivered',
+    address: { street: 'Av. Universidad 1500', neighborhood: 'Axotla', city: 'Álvaro Obregón', state: 'CDMX', postalCode: '01030', phone: '+525511122233' },
+    trackingNumber: '1Z999AA10198765432',
+    placedAt: '2026-09-08T12:30:00.000Z',
+    shippedAt: '2026-09-09T10:00:00.000Z',
+    deliveredAt: '2026-09-10T18:40:00.000Z',
+  },
 ];
