@@ -237,7 +237,7 @@ Probado: unit (`charges.service.spec.ts` + el spec de cada canal) y e2e contra P
 
 ### Pendiente
 
-- **Paso 2**: `FiscalIssuer` + `FiscalProfile` + `Cfdi` + outbox con worker (`FOR UPDATE SKIP LOCKED`), contra el modo test de Facturapi. Bloqueado por una decisión de negocio: ¿un RFC para las 15 sucursales, o varios? El outbox se dejó fuera del paso 1 a propósito: sin PAC que lo consuma, solo acumularía filas muertas.
+- **Paso 2**: `FiscalProfile` + `Cfdi` + outbox con worker (`FOR UPDATE SKIP LOCKED`), contra el modo test de Facturapi. **Desbloqueado (2026-09-15): un solo RFC para las 15 sucursales** → un emisor, una organización de Facturapi, una API key, un CSD. `FiscalIssuer` como tabla sobra: el emisor es configuración, no un dato por sucursal. La sucursal sigue importando para el lugar de expedición: Facturapi maneja sucursales dentro de la organización (el recibo lleva `branch`), así que cada `Branch` necesita su código postal y el id de su sucursal en Facturapi; lo vendido en línea sale de la matriz. La factura global es una para todo el RFC. El outbox se dejó fuera del paso 1 a propósito: sin PAC que lo consuma, solo acumularía filas muertas.
 - Mostrador: capturar crédito vs débito (el SAT los distingue: 04 vs 28).
 - ~~Hueco: mostrador podía entregar un pedido de Stripe en `pending_payment` (checkout abandonado).~~ ✅ Corregido (2026-09-15): `getByBranch` ya no lista pedidos en línea sin pagar, y `markDelivered` los rechaza con `ORDER_NOT_PAID`, como `shipments`. El efectivo pendiente se sigue entregando: ahí es donde se cobra. e2e en `branch-ops.e2e-spec.ts`.
 
