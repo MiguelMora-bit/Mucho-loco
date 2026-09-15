@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return -- jest.fn() sin generics: el `tx` de Prisma es deliberadamente `any`. */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return -- jest.fn() sin generics: el `tx` de Prisma es deliberadamente `any`. */
 import { ChargesService } from './charges.service';
 
 // Claves de mentira a propósito: el test comprueba que se COPIAN al renglón.
@@ -62,6 +62,7 @@ function fakeTx() {
     },
     charge: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
     chargeLine: { createMany: jest.fn() },
+    fiscalReceipt: { create: jest.fn() },
   };
 }
 

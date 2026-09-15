@@ -1085,3 +1085,86 @@ export interface PersonalRecord {
 }
 
 export type HeatmapLevel = '' | 'l1' | 'l2' | 'l3';
+
+/* ── Facturación CFDI 4.0 (2026-09-15) ─────────────────────────────────────
+ * Un solo RFC emite para las 15 sucursales (ver CLAUDE.md raíz). El PAC es
+ * Facturapi; lo que aquí se llama CFDI es la factura timbrada ante el SAT, no
+ * el "invoice" de Stripe Billing, que es un cobro. */
+
+/** c_UsoCFDI que se ofrecen: gastos en general, adquisición de mercancías, sin efectos fiscales. */
+export type CfdiUse = 'G01' | 'G03' | 'S01';
+
+/** Datos fiscales del socio, tal cual su Constancia de Situación Fiscal. */
+export interface FiscalProfile {
+  /** RFC, en mayúsculas. */
+  taxId: string;
+  /** Nombre o razón social, sin el régimen societario ("SA DE CV"). */
+  legalName: string;
+  /** c_RegimenFiscal del SAT: 601, 605, 612, 626… */
+  taxSystem: string;
+  /** Código postal del domicilio fiscal. */
+  zip: string;
+  cfdiUse: CfdiUse;
+  /** A dónde llegan el PDF y el XML. null = el correo de la cuenta. */
+  email: string | null;
+}
+
+/**
+ * Si un cobro se puede facturar todavía:
+ * - `available`: sí.
+ * - `invoiced`: ya tiene su CFDI (desde la app o el portal de autofactura).
+ * - `closed`: ya entró a la factura global del periodo; ya no se puede.
+ * - `unavailable`: el recibo se canceló.
+ */
+export type ChargeInvoiceStatus = 'available' | 'invoiced' | 'closed' | 'unavailable';
+
+/** Un cobro del socio, visto desde "Facturar". */
+export interface MemberCharge {
+  id: string;
+  /** ISO. */
+  paidAt: string;
+  /** Pesos, IVA incluido — con centavos. */
+  total: number;
+  description: string;
+  invoice: {
+    status: ChargeInvoiceStatus;
+    cfdiId: string | null;
+  };
+}
+
+export type CfdiKind = 'individual' | 'global';
+
+export interface Cfdi {
+  id: string;
+  /** Folio fiscal que asigna el SAT. */
+  uuid: string;
+  kind: CfdiKind;
+  status: 'valid' | 'canceled';
+  /** Estado de la solicitud de cancelación ante el SAT, tal cual lo reporta el PAC ('none' si no se ha pedido). */
+  cancellationStatus: string;
+  /** Pesos, con centavos. */
+  total: number;
+  customerTaxId: string;
+  customerLegalName: string;
+  /** ISO. */
+  issuedAt: string;
+}
+
+/**
+ * Motivos de cancelación del SAT que se aceptan hoy: 02 (errores sin
+ * relación) y 03 (la operación no se llevó a cabo). 01 exige la factura que
+ * la sustituye, y 04 es para operaciones de la factura global.
+ */
+export type CfdiCancellationMotive = '02' | '03';
+
+/** Cuántos recibos hay en cada estado: `failed` es lo que HQ tiene que revisar. */
+export interface InvoicingSummary {
+  receipts: {
+    pending: number;
+    open: number;
+    invoicedToCustomer: number;
+    invoicedGlobally: number;
+    canceled: number;
+    failed: number;
+  };
+}

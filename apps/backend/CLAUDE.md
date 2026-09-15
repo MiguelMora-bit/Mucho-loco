@@ -237,9 +237,57 @@ Probado: unit (`charges.service.spec.ts` + el spec de cada canal) y e2e contra P
 
 ### Pendiente
 
-- **Paso 2**: `FiscalProfile` + `Cfdi` + outbox con worker (`FOR UPDATE SKIP LOCKED`), contra el modo test de Facturapi. **Desbloqueado (2026-09-15): un solo RFC para las 15 sucursales** → un emisor, una organización de Facturapi, una API key, un CSD. `FiscalIssuer` como tabla sobra: el emisor es configuración, no un dato por sucursal. La sucursal sigue importando para el lugar de expedición: Facturapi maneja sucursales dentro de la organización (el recibo lleva `branch`), así que cada `Branch` necesita su código postal y el id de su sucursal en Facturapi; lo vendido en línea sale de la matriz. La factura global es una para todo el RFC. El outbox se dejó fuera del paso 1 a propósito: sin PAC que lo consuma, solo acumularía filas muertas.
+- ~~**Paso 2**: emitir CFDI.~~ ✅ Backend (2026-09-15), con un solo RFC para las 15 sucursales — ver "Facturación CFDI" abajo.
 - Mostrador: capturar crédito vs débito (el SAT los distingue: 04 vs 28).
 - ~~Hueco: mostrador podía entregar un pedido de Stripe en `pending_payment` (checkout abandonado).~~ ✅ Corregido (2026-09-15): `getByBranch` ya no lista pedidos en línea sin pagar, y `markDelivered` los rechaza con `ORDER_NOT_PAID`, como `shipments`. El efectivo pendiente se sigue entregando: ahí es donde se cobra. e2e en `branch-ops.e2e-spec.ts`.
+
+## Facturación CFDI (2026-09-15) — paso 2
+
+Un solo RFC para las 15 sucursales (CLAUDE.md raíz) → una organización de Facturapi, una llave (`FACTURAPI_KEY`), un certificado (CSD). Módulo `invoicing`. Todo lo que se factura sale del registro de cobros de arriba.
+
+### Cómo fluye
+
+1. Cada `Charge` nace con su `FiscalReceipt` en `pending`, en la misma transacción (`ChargesService.insert`). El cobro nunca llama al PAC: un Facturapi caído no tumba una venta de mostrador ni un webhook de Stripe.
+2. `FiscalReceiptsService` (cron cada minuto, nombre `fiscal-receipts`) toma hasta 20 pendientes y los da de alta en Facturapi como **recibo** (`receipts.create`, `idempotency_key` = id del cobro). Si falla: reintento con backoff de 2ⁿ minutos (tope 6 h); a los 10 intentos queda `failed`, y HQ lo ve en `/invoicing/summary`.
+3. El recibo trae `key` y `selfInvoiceUrl` (el portal de autofactura de Facturapi, `factura.space/<dominio>/<clave>`): el ticket de mostrador los imprime y el cliente se factura ahí, sin cuenta en la app. No hace falta página `/facturar` propia.
+4. El socio con app factura desde "Facturar": `POST /users/me/charges/:id/invoice` convierte su recibo en CFDI (`receipts.invoice`) con sus datos fiscales guardados. Si llega antes que el worker, el recibo se da de alta en ese momento.
+5. Lo que nadie facturó entra solo a la **factura global** que Facturapi emite al cierre del periodo (se configura una vez en su panel: periodicidad mensual + factura global automática). Llega por webhook.
+6. Webhook `POST /invoicing/facturapi/webhook` (público; firma en `facturapi-signature`, verificada con `FACTURAPI_WEBHOOK_SECRET` por el SDK): autofacturas del portal, cambios de estado de recibos, factura global y cancelaciones. Mismo criterio que Stripe: no se aplica el evento, se vuelve a leer el recibo o la factura.
+
+| Endpoint | |
+|---|---|
+| `GET`/`PUT /users/me/fiscal-profile` | Datos fiscales: RFC, razón social, régimen, CP, uso de CFDI, correo. 404 `FISCAL_PROFILE_NOT_FOUND` si no hay. Solo se valida la forma; el SAT valida el resto al timbrar. |
+| `GET /users/me/charges` | Sus cobros de cualquier canal, con `invoice.status`: `available` / `invoiced` / `closed` (ya en la global) / `unavailable`. |
+| `POST /users/me/charges/:id/invoice` | Emite su CFDI. Facturapi le manda PDF y XML por correo. |
+| `GET /users/me/invoices/:cfdiId/pdf` (o `xml`) | Solo facturas individuales suyas — pedidas en la app o en el portal con un ticket de un cobro suyo. |
+| `GET /invoicing/cfdis`, `/invoicing/summary`, `/invoicing/cfdis/:id/pdf` | Dueño. |
+| `POST /invoicing/cfdis/:id/cancel` | Dueño. Motivos `02` y `03`; `01` (con sustitución) y `04` todavía no. |
+
+### Decisiones
+
+- **Recibos y no facturas directas.** El modelo de recibos de Facturapi resuelve de un jalón la autofactura del ticket y la factura global de lo no facturado. Hacer la global a mano es armar `InformacionGlobal` y excluir lo ya facturado — justo lo que el PAC ya hace.
+- **El recibo ES la cola (outbox)**, sin tabla genérica. Tomar y arrendar es una sola sentencia (`UPDATE … WHERE "chargeId" IN (SELECT … FOR UPDATE SKIP LOCKED) RETURNING`): dos instancias de ECS nunca toman el mismo, y la llamada a Facturapi va FUERA de la transacción — el arriendo son 5 minutos en `nextAttemptAt`.
+- **`now() AT TIME ZONE 'UTC'`** en ese SQL, no `now()`: Prisma guarda UTC en columnas sin zona, y una sesión en hora de México compararía 6 h corrido. Por lo mismo `ChargesService` escribe `nextAttemptAt` explícito en vez de dejar el default de la base. El e2e lo prueba en los dos sentidos: un recibo nuevo se toma, uno en espera no.
+- **Lugar de expedición = domicilio de la matriz** (el de la organización en Facturapi). El SAT acepta "matriz o sucursal", y así no hay que dar de alta 15 sucursales en el PAC. El recibo no manda `branch`.
+- **Forma de pago** (`PAYMENT_FORM`): efectivo `01` (OXXO también: el cliente paga en efectivo), SPEI/transferencia `03`, crédito `04`, débito `28`. `card` sin distinguir (mostrador) va como `04` — provisional hasta capturar crédito vs débito.
+- **Si el PAC rechaza, primero se pregunta por qué.** Un 4xx al facturar relee el recibo: si ya se autofacturó en el portal o entró a la global, responde ese conflicto (409); solo si sigue abierto es culpa de los datos — 422 `FISCAL_DATA_REJECTED` con el motivo del SAT tal cual, que es lo que el socio tiene que corregir.
+- **Sin backfill**: los cobros anteriores a la migración no tienen recibo (`unavailable`). Darlos de alta hoy los fecharía en este mes, y su ingreso pertenece a otro periodo.
+- **Conceptos** = los renglones del cobro con su clave del SAT congelada, precio con IVA incluido (`tax_included: true`) e IVA a la tasa del renglón. IEPS, cuando el contador lo confirme.
+- **El PDF y el XML no se guardan**: viven en Facturapi y se piden al descargar.
+
+Probado: unit (`fiscal-mapping`, `fiscal-receipts.service`, `invoicing.service`) y e2e contra Postgres real con Facturapi sobreescrito (`test/invoicing.e2e-spec.ts`): cobro → cola → el worker lo manda una vez (y si el PAC no contesta, espera su turno) → datos fiscales → factura → nunca dos veces, nunca la de otro → un recibo pendiente se da de alta al facturar → webhook con firma mala da 400 → la global cierra lo no facturado → cada quien descarga lo suyo → el dueño lista, cuenta, cancela, y el cobro vuelve a quedar facturable.
+
+**Sin probar contra Facturapi** — no hay cuenta todavía. Por verificar en su sandbox:
+- el nombre de la cabecera de la firma (`facturapi-signature`);
+- si al emitir la global Facturapi manda `receipt.status_updated` por cada recibo. Si no, el recibo local sigue `open` hasta que alguien intenta facturarlo — entonces se relee y responde `INVOICING_WINDOW_CLOSED`;
+- que el recibo acepte los conceptos en línea, sin productos dados de alta en Facturapi.
+
+### Pendiente
+
+- Frontends: `customer-app`/`mobile-app` (datos fiscales + "Facturar"), `branch-app` (clave o QR de autofactura en el ticket — el recibo se crea en segundo plano, así que el ticket tiene que pedirlo), `owner-panel` (CFDI, cancelaciones, resumen, export para el contador).
+- Cuenta de Facturapi: organización, CSD, domicilio fiscal de la matriz, periodicidad de la global, alta del webhook.
+- Contador: claves SAT reales, IEPS, y el plazo para facturar (es la vigencia del recibo en Facturapi).
+- Cancelación con sustitución (motivo `01`) y notas de crédito, cuando exista la política de devoluciones.
 
 ## Notificaciones por WhatsApp (2026-09-12)
 
