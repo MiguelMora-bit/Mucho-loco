@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { userRepository } from '../../../lib/repositories/user.repository';
 import { getCurrentUserEmail } from '../../../lib/session';
 import { orderErrorStatus } from '../../../lib/order-errors';
-import type { NewOrderLine, OnlinePaymentMethod, Lang } from '@mucho-loco/types';
+import type { NewOrderLine, Lang, OrderDelivery } from '@mucho-loco/types';
 
 // Runs server-side so the order lands in the same userRepository instance the
 // dashboard reads from on its next server-rendered request. Calling
@@ -24,13 +24,20 @@ export async function POST(request: Request) {
   // cliente que mande un total inventado no cambia nada — no se lee.
   const { items, paymentMethod, delivery, lang } = (await request.json()) as {
     items: NewOrderLine[];
-    paymentMethod: OnlinePaymentMethod;
-    delivery: 'pickup' | 'home';
+    paymentMethod: string;
+    delivery: OrderDelivery;
     lang: Lang;
   };
+  // El body viene del browser: forma inválida = pedido inválido, no un 500.
+  // Sin pasarela solo hay efectivo; lo demás se cobra en /api/checkout
+  // (Stripe). Antes 'card', 'transfer', 'paypal'... creaban el pedido como
+  // pagado sin cobrar nada.
+  if (paymentMethod !== 'cash' || (delivery?.method !== 'pickup' && delivery?.method !== 'home')) {
+    return NextResponse.json({ error: 'INVALID_ORDER' }, { status: 400 });
+  }
 
   try {
-    const order = await userRepository.createOrder(email, items, paymentMethod, delivery, lang);
+    const order = await userRepository.createOrder(email, items, 'cash', delivery, lang);
     return NextResponse.json(order);
   } catch (e) {
     // Mock y backend rechazan lo mismo (efectivo a domicilio, producto

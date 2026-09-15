@@ -3,6 +3,8 @@ import { StatsHttpDatasource } from './stats.http';
 import { InventoryTransferHttpDatasource } from './inventoryTransfer.http';
 import { ExpensesHttpDatasource } from './expenses.http';
 import { PayrollHttpDatasource } from './payroll.http';
+import { ShipmentsHttpDatasource } from './shipments.http';
+import { ShipmentStateError } from '../../repositories/shipments.errors';
 import { ApiRequestError } from './client';
 import {
   InsufficientStockError,
@@ -196,5 +198,48 @@ describe('PayrollHttpDatasource', () => {
     stubFetch(400, { code: 'PERIOD_ALREADY_CLOSED', periodId: 'period-1' });
     const closed = await ds.runPayroll('period-1').catch((e: unknown) => e);
     expect(closed).toBeInstanceOf(PeriodAlreadyClosedError);
+  });
+});
+
+describe('ShipmentsHttpDatasource', () => {
+  const ds = new ShipmentsHttpDatasource();
+
+  it('maps every method to its backend route, with the owner token', async () => {
+    const spy = stubFetch(200, {});
+
+    await ds.getAll();
+    await ds.markShipped('order-1', '1Z999');
+    await ds.markDelivered('order-1');
+
+    expect(call(spy, 0).url).toContain('/shipments');
+    expect(call(spy, 0).auth).toBe('Bearer owner-token');
+    expect(call(spy, 1).url).toContain('/shipments/order-1/ship');
+    expect(call(spy, 1).init.method).toBe('POST');
+    expect(call(spy, 1).body).toEqual({ trackingNumber: '1Z999' });
+    expect(call(spy, 2).url).toContain('/shipments/order-1/deliver');
+  });
+
+  it('does not send an empty tracking number', async () => {
+    const spy = stubFetch(200, {});
+    await ds.markShipped('order-1');
+
+    expect(call(spy).body).toEqual({});
+  });
+
+  it('translates the state error codes into the contract type', async () => {
+    stubFetch(400, { code: 'ORDER_ALREADY_SHIPPED', orderId: 'order-1' });
+    const twice = await ds.markShipped('order-1').catch((e: unknown) => e);
+    expect(twice).toBeInstanceOf(ShipmentStateError);
+    expect((twice as ShipmentStateError).reason).toBe('already_shipped');
+
+    stubFetch(400, { code: 'ORDER_NOT_SHIPPED', orderId: 'order-1' });
+    const early = await ds.markDelivered('order-1').catch((e: unknown) => e);
+    expect((early as ShipmentStateError).reason).toBe('not_shipped');
+  });
+
+  it('lets any other failure through untouched', async () => {
+    stubFetch(500, { message: 'boom' });
+    const failure = await ds.getAll().catch((e: unknown) => e);
+    expect(failure).not.toBeInstanceOf(ShipmentStateError);
   });
 });

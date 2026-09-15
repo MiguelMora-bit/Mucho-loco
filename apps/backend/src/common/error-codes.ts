@@ -31,7 +31,12 @@ export type ApiErrorCode =
   | 'ALREADY_SUBSCRIBED'
   | 'MEMBERSHIP_STILL_ACTIVE'
   | 'NOTHING_TO_PAY'
-  | 'PICKUP_REQUIRES_MEMBERSHIP';
+  | 'PICKUP_REQUIRES_MEMBERSHIP'
+  | 'ADDRESS_REQUIRED'
+  | 'NOT_A_HOME_ORDER'
+  | 'ORDER_NOT_PAID'
+  | 'ORDER_ALREADY_SHIPPED'
+  | 'ORDER_NOT_SHIPPED';
 
 export interface ApiErrorBody {
   code: ApiErrorCode;
@@ -164,4 +169,34 @@ export const nothingToPay = (): ApiErrorBody => ({
 export const pickupRequiresMembership = (): ApiErrorBody => ({
   code: 'PICKUP_REQUIRES_MEMBERSHIP',
   message: 'Sin membresía no hay sucursal donde recoger',
+});
+
+export const addressRequired = (): ApiErrorBody => ({
+  code: 'ADDRESS_REQUIRED',
+  message: 'Un pedido a domicilio necesita dirección de envío',
+});
+
+export const notAHomeOrder = (orderId: string): ApiErrorBody => ({
+  code: 'NOT_A_HOME_ORDER',
+  message: `Order ${orderId} no es a domicilio`,
+  orderId,
+});
+
+/** Mandar un pedido sin cobrar sería regalarlo. */
+export const orderNotPaid = (orderId: string): ApiErrorBody => ({
+  code: 'ORDER_NOT_PAID',
+  message: `Order ${orderId} todavía no está cobrado`,
+  orderId,
+});
+
+export const orderAlreadyShipped = (orderId: string): ApiErrorBody => ({
+  code: 'ORDER_ALREADY_SHIPPED',
+  message: `Order ${orderId} ya se envió`,
+  orderId,
+});
+
+export const orderNotShipped = (orderId: string): ApiErrorBody => ({
+  code: 'ORDER_NOT_SHIPPED',
+  message: `Order ${orderId} todavía no se envía`,
+  orderId,
 });

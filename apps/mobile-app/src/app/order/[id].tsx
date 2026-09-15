@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { formatDate } from '@mucho-loco/customer-core/dates';
 import { orderStatusLabel } from '@mucho-loco/customer-core/order-status';
+import { shippingAddressLines } from '@mucho-loco/customer-core/shipping';
 import { formatPrice } from '@mucho-loco/customer-core/pricing';
 import { Body, Button, Card, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
 import { useT } from '@/lib/i18n';
@@ -52,7 +53,7 @@ export default function OrderScreen() {
             <Mono>
               {state.data.id} · {formatDate(state.data.date, lang)}
             </Mono>
-            <Mono style={styles.status}>{orderStatusLabel(state.data.status, t)}</Mono>
+            <Mono style={styles.status}>{orderStatusLabel(state.data.status, t, state.data.delivery)}</Mono>
           </View>
 
           {state.data.items.map((item, i) => (
@@ -85,7 +86,27 @@ export default function OrderScreen() {
               </Body>
             </View>
           )}
-          {state.data.status === 'done' && (
+          {/* A domicilio no hay QR ni sucursal: se muestra a dónde se envía. */}
+          {state.data.delivery === 'home' && (
+            <View style={styles.shipTo}>
+              <Mono>{o.shipToLabel}</Mono>
+              {state.data.shippingAddress ? (
+                shippingAddressLines(state.data.shippingAddress).map((line, i) => (
+                  <Body key={i} style={i === 0 ? styles.cream : undefined}>
+                    {line}
+                  </Body>
+                ))
+              ) : (
+                <Body>—</Body>
+              )}
+              {state.data.trackingNumber && (
+                <Mono>
+                  {o.trackingLabel}: {state.data.trackingNumber}
+                </Mono>
+              )}
+            </View>
+          )}
+          {state.data.status === 'done' && state.data.delivery === 'pickup' && (
             <Body>
               {o.deliveredBranchPrefix} <Body style={styles.cream}>{state.data.branch}</Body> {o.deliveredAtPrefix}{' '}
               <Body style={styles.cream}>
@@ -118,6 +139,7 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 18 },
   method: { fontSize: 18 },
   pickup: { alignItems: 'center', gap: space.sm, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space.md },
+  shipTo: { gap: space.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space.md },
   qr: { backgroundColor: '#ffffff', padding: space.md },
   center: { textAlign: 'center' },
 });

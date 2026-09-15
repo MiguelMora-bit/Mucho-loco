@@ -20,6 +20,7 @@ import type {
   Payslip,
   PickupOrder,
   ShiftTransaction,
+  ShipmentOrder,
 } from '@mucho-loco/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -110,6 +111,9 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
     await prisma.order.deleteMany({ where: { user: { email: { startsWith: 'pickup-e2e' } } } });
     await prisma.membership.deleteMany({ where: { user: { email: { startsWith: 'pickup-e2e' } } } });
     await prisma.user.deleteMany({ where: { email: { startsWith: 'pickup-e2e' } } });
+    await prisma.orderItem.deleteMany({ where: { order: { user: { email: { startsWith: 'shipment-e2e' } } } } });
+    await prisma.order.deleteMany({ where: { user: { email: { startsWith: 'shipment-e2e' } } } });
+    await prisma.user.deleteMany({ where: { email: { startsWith: 'shipment-e2e' } } });
     await prisma.payslip.deleteMany();
     await prisma.attendanceEntry.deleteMany();
     await prisma.payrollPeriod.updateMany({ where: { id: 'period-2' }, data: { status: 'open' } });
@@ -665,6 +669,122 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
 
   // El cruce que dos mocks aislados nunca pudieron hacer: el pedido lo crea el
   // socio desde la tienda (customer-app) y lo entrega mostrador (branch-app).
+  // El MISMO pedido que el socio pagó en la tienda, visto desde la bodega
+  // central (owner-panel, "Envíos").
+  describe('shipments (tienda → bodega)', () => {
+    const SHOPPER = 'shipment-e2e@mucholoco.mx';
+    const ADDRESS = {
+      street: 'Av. Insurgentes Sur 1234',
+      neighborhood: 'Roma Sur',
+      city: 'Cuauhtémoc',
+      state: 'CDMX',
+      postalCode: '06760',
+      phone: '+525512345678',
+    };
+    let paidId: string;
+    let unpaidId: string;
+    let pickupId: string;
+
+    beforeAll(async () => {
+      await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer :${SHOPPER}`)
+        .expect(200);
+      const shopper = await prisma.user.findUniqueOrThrow({ where: { email: SHOPPER } });
+      const order = (status: 'ready' | 'pending_payment', delivery: 'home' | 'pickup') =>
+        prisma.order.create({
+          data: {
+            userId: shopper.id,
+            status,
+            total: 389,
+            paymentMethod: 'stripe',
+            delivery,
+            ...(delivery === 'home' ? { shippingAddress: ADDRESS } : { branchId: 1 }),
+            items: { create: [{ name: 'Shaker Loco', flav: '700ml', img: '/assets/mucho-loco-logo.jpg', qty: 1 }] },
+          },
+        });
+      // Lo que deja el webhook de Stripe al cobrar, una sesión abandonada, y
+      // un pedido de recoger (ese sale por mostrador, no por bodega).
+      paidId = (await order('ready', 'home')).id;
+      unpaidId = (await order('pending_payment', 'home')).id;
+      pickupId = (await order('ready', 'pickup')).id;
+    });
+
+    const memberOrder = async (id: string): Promise<Order | undefined> => {
+      const res = await request(app.getHttpServer())
+        .get('/users/me/orders')
+        .set('Authorization', `Bearer :${SHOPPER}`)
+        .expect(200);
+      return body<Order[]>(res).find((o) => o.id === id);
+    };
+
+    // Bodega ve la dirección y el teléfono de cualquier socio de la cadena.
+    it('is for the owner only', async () => {
+      await request(app.getHttpServer()).get('/shipments').set(...auth('staff')).expect(403);
+    });
+
+    it('lists only paid home orders, with the address to ship to', async () => {
+      const res = await request(app.getHttpServer()).get('/shipments').set(...auth('owner')).expect(200);
+      const shipments = body<ShipmentOrder[]>(res);
+
+      expect(shipments.find((s) => s.id === paidId)).toMatchObject({
+        status: 'to_ship',
+        customerName: 'SHIPMENT-E2E',
+        address: ADDRESS,
+      });
+      // Sin cobrar, mandarlo sería regalarlo.
+      expect(shipments.some((s) => s.id === unpaidId)).toBe(false);
+      expect(shipments.some((s) => s.id === pickupId)).toBe(false);
+    });
+
+    it('ships with a tracking number, and the member sees it on its way', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/shipments/${paidId}/ship`)
+        .set(...auth('owner'))
+        .send({ trackingNumber: '1Z999AA1' })
+        .expect(200);
+      expect(body<ShipmentOrder>(res)).toMatchObject({ status: 'shipped', trackingNumber: '1Z999AA1' });
+
+      expect(await memberOrder(paidId)).toMatchObject({ status: 'shipped', trackingNumber: '1Z999AA1' });
+    });
+
+    it('refuses to ship the same order twice', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/shipments/${paidId}/ship`)
+        .set(...auth('owner'))
+        .send({})
+        .expect(400);
+      expect(body<{ code: string }>(res).code).toBe('ORDER_ALREADY_SHIPPED');
+    });
+
+    it('marks it delivered, and the member sees it done', async () => {
+      await request(app.getHttpServer())
+        .post(`/shipments/${paidId}/deliver`)
+        .set(...auth('owner'))
+        .expect(200);
+
+      expect((await memberOrder(paidId))?.status).toBe('done');
+    });
+
+    it('never ships an order that has not been paid', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/shipments/${unpaidId}/ship`)
+        .set(...auth('owner'))
+        .send({})
+        .expect(400);
+      expect(body<{ code: string }>(res).code).toBe('ORDER_NOT_PAID');
+    });
+
+    it('refuses a pickup order — that one leaves through the branch counter', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/shipments/${pickupId}/ship`)
+        .set(...auth('owner'))
+        .send({})
+        .expect(400);
+      expect(body<{ code: string }>(res).code).toBe('NOT_A_HOME_ORDER');
+    });
+  });
+
   describe('pickup orders (tienda → mostrador)', () => {
     const CUSTOMER = 'pickup-e2e@mucholoco.mx';
     let orderId: string;

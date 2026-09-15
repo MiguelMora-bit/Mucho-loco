@@ -17,6 +17,7 @@ import { colors, space } from '@/theme';
 const STATUS_COLOR: Record<OrderStatus, string> = {
   pending_payment: colors.yellow,
   ready: colors.green,
+  shipped: colors.orange,
   done: colors.creamDim,
 };
 
@@ -221,7 +222,7 @@ export function Dashboard({ email }: { email: string }) {
             <Mono>
               {order.id} · {formatDate(order.date, lang)}
             </Mono>
-            <Mono style={{ color: STATUS_COLOR[order.status] }}>{orderStatusLabel(order.status, t)}</Mono>
+            <Mono style={{ color: STATUS_COLOR[order.status] }}>{orderStatusLabel(order.status, t, order.delivery)}</Mono>
           </View>
           {order.items.map((item, i) => (
             <Body key={i}>

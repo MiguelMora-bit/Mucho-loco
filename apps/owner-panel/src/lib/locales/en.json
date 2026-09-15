@@ -23,7 +23,31 @@
     "expenses": "Expenses",
     "transfers": "Transfers",
     "payroll": "Payroll",
-    "reports": "Reports"
+    "reports": "Reports",
+    "shipments": "Shipments"
+  },
+  "shipments": {
+    "title": "Home deliveries",
+    "subtitle": "Paid orders that leave the central warehouse. Mark them when you hand them to the courier and when they arrive.",
+    "toShipTitle": "To ship",
+    "inTransitTitle": "On its way",
+    "deliveredTitle": "Delivered",
+    "empty": "Nothing here.",
+    "placedAt": "Ordered {{date}}",
+    "shippedAt": "Shipped {{date}}",
+    "deliveredAt": "Delivered {{date}}",
+    "total": "Total",
+    "phone": "Phone",
+    "noAddress": "Order without an address (from before checkout sent it): contact the member.",
+    "trackingLabel": "Tracking number (optional)",
+    "trackingPlaceholder": "e.g. 1Z999AA10123456784",
+    "tracking": "Tracking: {{number}}",
+    "markShipped": "Mark shipped",
+    "markDelivered": "Mark delivered",
+    "working": "Saving...",
+    "loadError": "Couldn't load shipments",
+    "errorStale": "That order had already changed; the list was refreshed.",
+    "errorGeneric": "Couldn't save. Try again."
   },
   "expenses": {
     "title": "Expenses",

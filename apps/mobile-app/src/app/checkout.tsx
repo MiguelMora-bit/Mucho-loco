@@ -3,8 +3,10 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import type { OnlinePaymentMethod, Translations } from '@mucho-loco/types';
+import type { OnlinePaymentMethod, OrderDelivery, ShippingAddress, Translations } from '@mucho-loco/types';
 import { formatPrice } from '@mucho-loco/customer-core/pricing';
+import { EMPTY_SHIPPING_ADDRESS, parseShippingAddress, type ShippingAddressField } from '@mucho-loco/customer-core/shipping';
+import { Field } from '@/components/Field';
 import { Body, Button, Card, Display, Heading, Mono, Screen } from '@/components/ui';
 import { checkoutTotals, orderLines, paymentMethodsFor, usesGateway, type Delivery } from '@/lib/checkout';
 import { useT } from '@/lib/i18n';
@@ -37,6 +39,10 @@ export default function CheckoutScreen() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [placed, setPlaced] = useState<Delivery | null>(null);
+  const [address, setAddress] = useState<ShippingAddress>(EMPTY_SHIPPING_ADDRESS);
+  const [invalidFields, setInvalidFields] = useState<ShippingAddressField[]>([]);
+  const setAddressField = (field: ShippingAddressField, value: string) =>
+    setAddress((current) => ({ ...current, [field]: value }));
 
   const methods = paymentMethodsFor(delivery);
   // Efectivo elegido y luego cambia a domicilio: efectivo deja de valer, se
@@ -83,6 +89,15 @@ export default function CheckoutScreen() {
 
   async function placeOrder() {
     if (!session) return;
+    // A domicilio, la dirección se valida aquí (mismas reglas que el backend)
+    // para marcar el error sin ir al servidor; el backend la vuelve a validar.
+    let orderDelivery: OrderDelivery = { method: 'pickup' };
+    if (delivery === 'home') {
+      const parsed = parseShippingAddress(address);
+      setInvalidFields(parsed.invalid);
+      if (parsed.invalid.length > 0) return;
+      orderDelivery = { method: 'home', address: parsed.address };
+    }
     setPlacing(true);
     setError(null);
     setNotice(null);
@@ -96,7 +111,7 @@ export default function CheckoutScreen() {
         const { url } = await paymentRepository.createCheckoutSession(
           session.email,
           lines,
-          delivery,
+          orderDelivery,
           lang,
           successUrl,
           returnBase,
@@ -113,7 +128,9 @@ export default function CheckoutScreen() {
           }
         }
       } else {
-        await userRepository.createOrder(session.email, lines, activeMethod, delivery, lang);
+        // Sin pasarela solo hay efectivo al recoger: queda pendiente y lo
+        // cobra mostrador al entregarlo.
+        await userRepository.createOrder(session.email, lines, 'cash', orderDelivery, lang);
       }
       clear();
       setPlaced(delivery);
@@ -125,6 +142,7 @@ export default function CheckoutScreen() {
   }
 
   const cartT = t.checkout.cart;
+  const p = t.checkout.payment;
 
   return (
     <Screen safeTop={false}>
@@ -149,6 +167,66 @@ export default function CheckoutScreen() {
           </Pressable>
         ))}
       </View>
+
+      {delivery === 'home' && (
+        <View style={styles.address}>
+          <Heading>{p.shippingAddress}</Heading>
+          <Field
+            label={p.streetLabel}
+            value={address.street}
+            onChangeText={(v) => setAddressField('street', v)}
+            placeholder="Av. Insurgentes Sur 1234, int. 5"
+            autoComplete="address-line1"
+            textContentType="streetAddressLine1"
+          />
+          <Field
+            label={p.neighborhoodLabel}
+            value={address.neighborhood}
+            onChangeText={(v) => setAddressField('neighborhood', v)}
+            placeholder="Roma Sur"
+          />
+          <Field
+            label={p.cityLabel}
+            value={address.city}
+            onChangeText={(v) => setAddressField('city', v)}
+            placeholder="Cuauhtémoc"
+            textContentType="addressCity"
+          />
+          <Field
+            label={p.stateLabel}
+            value={address.state}
+            onChangeText={(v) => setAddressField('state', v)}
+            placeholder="CDMX"
+            textContentType="addressState"
+          />
+          <Field
+            label={p.zipLabel}
+            value={address.postalCode}
+            onChangeText={(v) => setAddressField('postalCode', v)}
+            placeholder="06760"
+            keyboardType="number-pad"
+            maxLength={5}
+            autoComplete="postal-code"
+            textContentType="postalCode"
+          />
+          <Field
+            label={p.phoneLabel}
+            value={address.phone}
+            onChangeText={(v) => setAddressField('phone', v)}
+            placeholder="55 1234 5678"
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+          />
+          <Field
+            label={p.referencesLabel}
+            value={address.references ?? ''}
+            onChangeText={(v) => setAddressField('references', v)}
+            placeholder="Entre Medellín y Monterrey, portón negro"
+          />
+          {invalidFields.length > 0 && <Body style={styles.error}>{p.addressInvalid}</Body>}
+        </View>
+      )}
 
       <Heading>{m.checkout.paymentMethod}</Heading>
       <View style={styles.options}>
@@ -215,4 +293,5 @@ const styles = StyleSheet.create({
   note: { textTransform: 'none', color: colors.orange, lineHeight: 16 },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: space.sm },
   lineName: { flex: 1 },
+  address: { gap: space.sm },
 });

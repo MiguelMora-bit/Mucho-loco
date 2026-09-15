@@ -2086,6 +2086,7 @@ button, a, input, select { -webkit-tap-highlight-color: rgba(225,20,28,0.2); }
   .order-card .status.ready { background: rgba(109,213,109,0.18); color: #6dd56d; border: 1px solid #6dd56d; }
   .order-card .status.pending_payment { background: rgba(255,182,39,0.18); color: #ffb627; border: 1px solid #ffb627; }
   .order-card .status.done { background: var(--card-2); color: var(--cream-dim); border: 1px solid var(--border); }
+  .order-card .status.shipped { background: rgba(255,140,26,0.16); color: var(--orange); border: 1px solid var(--orange); }
   .qr-full { position: fixed; inset: 0; z-index: 200; background: rgba(5,2,2,0.97); backdrop-filter: blur(12px); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
   .acc-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
   .acc-row:last-child { border: none; }

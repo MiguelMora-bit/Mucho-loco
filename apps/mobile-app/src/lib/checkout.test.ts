@@ -20,18 +20,17 @@ describe('paymentMethodsFor', () => {
     expect(paymentMethodsFor('home')).not.toContain('cash');
   });
 
-  it('does not offer gateways the backend cannot charge yet', () => {
-    for (const delivery of ['pickup', 'home'] as const) {
-      expect(paymentMethodsFor(delivery)).not.toContain('mercadopago');
-      expect(paymentMethodsFor(delivery)).not.toContain('paypal');
-    }
+  // Transferencia, Mercado Pago y PayPal creaban el pedido como pagado sin
+  // cobrar nada. En línea, todo pasa por Stripe (tarjeta, OXXO, SPEI).
+  it('offers only Stripe and cash', () => {
+    expect(paymentMethodsFor('pickup')).toEqual(['card', 'cash']);
+    expect(paymentMethodsFor('home')).toEqual(['card']);
   });
 });
 
 describe('usesGateway', () => {
   it('sends only card through Stripe', () => {
     expect(usesGateway('card')).toBe(true);
-    expect(usesGateway('transfer')).toBe(false);
     expect(usesGateway('cash')).toBe(false);
   });
 });

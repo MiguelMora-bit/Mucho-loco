@@ -1,4 +1,4 @@
-import type { Lang, MembershipPlanChoice, NewOrderLine } from '@mucho-loco/types';
+import type { Lang, MembershipPlanChoice, NewOrderLine, OrderDelivery } from '@mucho-loco/types';
 import type { CheckoutSession, IPaymentRepository, RedirectSession } from '../contract';
 import { UserMockDatasource } from './user.mock';
 import { delay } from './delay';
@@ -23,12 +23,12 @@ export class PaymentMockDatasource implements IPaymentRepository {
   async createCheckoutSession(
     email: string,
     lines: NewOrderLine[],
-    delivery: 'pickup' | 'home',
+    delivery: OrderDelivery,
     lang: Lang,
     successUrl: string,
   ): Promise<CheckoutSession> {
     await delay(300);
-    const order = await new UserMockDatasource().createOrder(email, lines, 'card', delivery, lang);
+    const order = new UserMockDatasource().placePaidOrder(email, lines, delivery, lang);
     return { orderId: order.id, url: successUrl };
   }
 

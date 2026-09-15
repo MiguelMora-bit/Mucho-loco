@@ -92,6 +92,11 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
     // exact: "ENVÍO A DOMICILIO" de la pantalla de producto (oculta) también contiene "Envío".
     await expect(page.getByText('Envío', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'EFECTIVO EN SUCURSAL' })).toHaveCount(0);
+    // A domicilio pide la dirección, y sin ella no se manda nada: el error
+    // sale antes de ir al servidor.
+    await expect(page.getByLabel('Colonia')).toBeVisible();
+    await page.getByRole('button', { name: /CONFIRMAR PEDIDO/ }).click();
+    await expect(page.getByText(/Revisa la dirección/)).toBeVisible();
     await page.getByRole('button', { name: 'SUCURSAL', exact: true }).click();
   });
 

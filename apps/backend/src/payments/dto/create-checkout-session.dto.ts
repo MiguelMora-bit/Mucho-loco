@@ -1,7 +1,8 @@
-import { ArrayMinSize, IsIn, IsString, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsDefined, IsIn, IsString, ValidateIf, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { Lang } from '@mucho-loco/types';
 import { CreateOrderItemDto } from '../../users/dto/create-order.dto';
+import { ShippingAddressDto } from '../../users/dto/shipping-address.dto';
 
 const LANGS: Lang[] = ['es', 'en'];
 
@@ -19,6 +20,13 @@ export class CreateCheckoutSessionDto {
 
   @IsIn(['pickup', 'home'])
   delivery!: 'pickup' | 'home';
+
+  /** Obligatoria a domicilio, igual que en `CreateOrderDto`. */
+  @ValidateIf((o: CreateCheckoutSessionDto) => o.delivery === 'home')
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => ShippingAddressDto)
+  address?: ShippingAddressDto;
 
   @IsIn(LANGS)
   lang!: Lang;

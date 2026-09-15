@@ -22,8 +22,9 @@ import type {
   MembershipPlanChoice,
   MembershipTier,
   NewOrderLine,
-  OnlinePaymentMethod,
+  OfflinePaymentMethod,
   Order,
+  OrderDelivery,
   PerformanceStat,
   PersonalRecord,
   Product,
@@ -79,7 +80,7 @@ export interface IPaymentRepository {
   createCheckoutSession(
     email: string,
     lines: NewOrderLine[],
-    delivery: 'pickup' | 'home',
+    delivery: OrderDelivery,
     lang: Lang,
     successUrl: string,
     cancelUrl: string,
@@ -146,6 +147,12 @@ export interface IUserRepository {
    * (ver "Seguridad" en apps/backend/CLAUDE.md). `lang` dice en qué idioma
    * congelar el recibo — un pedido no se retraduce después.
    *
+   * Solo efectivo al recoger: el pedido nace pendiente de pago y lo cobra
+   * mostrador. Todo pago en línea (y todo envío a domicilio) va por
+   * `IPaymentRepository.createCheckoutSession` — Stripe. Antes esta ruta
+   * aceptaba tarjeta/transferencia/Mercado Pago/PayPal y creaba el pedido como
+   * pagado sin cobrar nada.
+   *
    * `email` sigue en la firma porque el mock lo necesita para saber de quién
    * es el pedido; los datasources HTTP lo ignoran y mandan el ID token de la
    * sesión, que es la única identidad en la que el backend confía.
@@ -153,8 +160,8 @@ export interface IUserRepository {
   createOrder(
     email: string,
     lines: NewOrderLine[],
-    paymentMethod: OnlinePaymentMethod,
-    delivery: 'pickup' | 'home',
+    paymentMethod: OfflinePaymentMethod,
+    delivery: OrderDelivery,
     lang: Lang,
   ): Promise<Order>;
 }

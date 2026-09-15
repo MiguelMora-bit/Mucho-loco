@@ -5,8 +5,19 @@ import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL, OrderValidationError } from
 import { membershipErrorCode } from '@mucho-loco/customer-core/membership-errors';
 import { PRODUCTS } from '../data';
 import { HOME_SHIPPING_FEE } from '../pricing';
+import type { OrderDelivery, ShippingAddress } from '@mucho-loco/types';
 
 const WHEY = PRODUCTS.find((p) => p.id === 'p1')!;
+
+const HOME_ADDRESS: ShippingAddress = {
+  street: 'Av. Insurgentes Sur 1234',
+  neighborhood: 'Roma Sur',
+  city: 'Cuauhtémoc',
+  state: 'CDMX',
+  postalCode: '06760',
+  phone: '+525512345678',
+};
+const HOME: OrderDelivery = { method: 'home', address: HOME_ADDRESS };
 
 describe('paymentRepository (mock)', () => {
   // Sin pasarela en modo mock el "cobro" es instantáneo, pero el pedido tiene
@@ -18,7 +29,7 @@ describe('paymentRepository (mock)', () => {
     const session = await paymentRepository.createCheckoutSession(
       ALL_GYMS_TEST_EMAIL,
       [{ productId: WHEY.id, qty: 2 }],
-      'pickup',
+      { method: 'pickup' },
       'es',
       'http://localhost:3000/es/checkout?paid=1',
       'http://localhost:3000/es/checkout',
@@ -36,7 +47,7 @@ describe('paymentRepository (mock)', () => {
     const session = await paymentRepository.createCheckoutSession(
       ALL_GYMS_TEST_EMAIL,
       [{ productId: WHEY.id, qty: 1 }],
-      'pickup',
+      { method: 'pickup' },
       'es',
       successUrl,
       'http://localhost:3000/es/checkout',
@@ -49,7 +60,7 @@ describe('paymentRepository (mock)', () => {
     const session = await paymentRepository.createCheckoutSession(
       ALL_GYMS_TEST_EMAIL,
       [{ productId: WHEY.id, qty: 1 }],
-      'home',
+      HOME,
       'es',
       'http://x',
       'http://y',
@@ -60,12 +71,58 @@ describe('paymentRepository (mock)', () => {
     expect(created?.total).toBe(WHEY.price + HOME_SHIPPING_FEE);
   });
 
+  // En modo mock no hay Stripe: el pedido nace pagado, que es lo que en el
+  // backend hace el webhook al confirmar el cobro.
+  it('creates the order already paid — what the Stripe webhook does in the backend', async () => {
+    const session = await paymentRepository.createCheckoutSession(
+      ALL_GYMS_TEST_EMAIL,
+      [{ productId: WHEY.id, qty: 1 }],
+      { method: 'pickup' },
+      'es',
+      'http://x',
+      'http://y',
+    );
+
+    const created = (await userRepository.getOrders(ALL_GYMS_TEST_EMAIL)).find((o) => o.id === session.orderId);
+    expect(created?.status).toBe('ready');
+  });
+
+  // Antes el checkout pedía la dirección y nunca la mandaba: el pedido a
+  // domicilio se creaba sin destino.
+  it('keeps the shipping address on a home order — the courier needs to know where to go', async () => {
+    const session = await paymentRepository.createCheckoutSession(
+      ALL_GYMS_TEST_EMAIL,
+      [{ productId: WHEY.id, qty: 1 }],
+      HOME,
+      'es',
+      'http://x',
+      'http://y',
+    );
+
+    const created = (await userRepository.getOrders(ALL_GYMS_TEST_EMAIL)).find((o) => o.id === session.orderId);
+    expect(created?.shippingAddress).toEqual(HOME_ADDRESS);
+    expect(created?.branch).toBeUndefined();
+  });
+
+  it('rejects a home order with an address the backend would reject', async () => {
+    await expect(
+      paymentRepository.createCheckoutSession(
+        ALL_GYMS_TEST_EMAIL,
+        [{ productId: WHEY.id, qty: 1 }],
+        { method: 'home', address: { ...HOME_ADDRESS, postalCode: '123' } },
+        'es',
+        'http://x',
+        'http://y',
+      ),
+    ).rejects.toBeInstanceOf(OrderValidationError);
+  });
+
   it('rejects a pickup order from an account without a membership', async () => {
     await expect(
       paymentRepository.createCheckoutSession(
         `sin-membresia-${Date.now()}@mucholoco.mx`,
         [{ productId: WHEY.id, qty: 1 }],
-        'pickup',
+        { method: 'pickup' },
         'es',
         'http://x',
         'http://y',
@@ -78,7 +135,7 @@ describe('paymentRepository (mock)', () => {
       paymentRepository.createCheckoutSession(
         ALL_GYMS_TEST_EMAIL,
         [{ productId: 'no-existe', qty: 1 }],
-        'pickup',
+        { method: 'pickup' },
         'es',
         'http://x',
         'http://y',

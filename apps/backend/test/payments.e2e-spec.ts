@@ -22,6 +22,15 @@ import type { IdTokenClaims } from '../src/auth/cognito';
  */
 const CUSTOMER = 'pagos-e2e@mucholoco.mx';
 
+const HOME_ADDRESS = {
+  street: 'Av. Insurgentes Sur 1234',
+  neighborhood: 'Roma Sur',
+  city: 'Cuauhtémoc',
+  state: 'CDMX',
+  postalCode: '06760',
+  phone: '+525512345678',
+};
+
 function body<T>(res: Response): T {
   return res.body as T;
 }
@@ -166,6 +175,37 @@ describe('Payments (e2e)', () => {
           cancelUrl: 'http://y',
         })
         .expect(401);
+    });
+
+    // Antes el checkout pedía la dirección y nunca la mandaba: el pedido a
+    // domicilio se creaba sin destino.
+    it('saves the shipping address of a home order, and refuses one without a usable address', async () => {
+      const home = {
+        items: [{ productId: 'p1', qty: 1 }],
+        delivery: 'home',
+        lang: 'es',
+        successUrl: 'http://x',
+        cancelUrl: 'http://y',
+      };
+      sessionsCreate.mockResolvedValue({ id: `cs_test_home_${Date.now()}`, url: 'https://checkout.stripe.com/c/pay/h' });
+
+      const res = await request(app.getHttpServer())
+        .post('/payments/checkout-sessions')
+        .set(...auth())
+        .send({ ...home, address: HOME_ADDRESS })
+        .expect(201);
+      const order = await prisma.order.findUniqueOrThrow({
+        where: { id: body<{ orderId: string }>(res).orderId },
+      });
+      expect(order.shippingAddress).toEqual(HOME_ADDRESS);
+      expect(order.total).toBe(1290 + 99);
+
+      await request(app.getHttpServer()).post('/payments/checkout-sessions').set(...auth()).send(home).expect(400);
+      await request(app.getHttpServer())
+        .post('/payments/checkout-sessions')
+        .set(...auth())
+        .send({ ...home, address: { ...HOME_ADDRESS, postalCode: '123' } })
+        .expect(400);
     });
 
     describe('webhook', () => {

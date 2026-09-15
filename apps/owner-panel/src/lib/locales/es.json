@@ -23,7 +23,31 @@
     "expenses": "Gastos",
     "transfers": "Transferencias",
     "payroll": "Nómina",
-    "reports": "Reportes"
+    "reports": "Reportes",
+    "shipments": "Envíos"
+  },
+  "shipments": {
+    "title": "Envíos a domicilio",
+    "subtitle": "Pedidos ya cobrados que salen de la bodega central. Márcalos cuando se los des a la paquetería y cuando lleguen.",
+    "toShipTitle": "Por enviar",
+    "inTransitTitle": "En camino",
+    "deliveredTitle": "Entregados",
+    "empty": "Nada por aquí.",
+    "placedAt": "Pedido el {{date}}",
+    "shippedAt": "Enviado el {{date}}",
+    "deliveredAt": "Entregado el {{date}}",
+    "total": "Total",
+    "phone": "Tel.",
+    "noAddress": "Pedido sin dirección (de antes de que el checkout la pidiera): contacta al socio.",
+    "trackingLabel": "Guía de rastreo (opcional)",
+    "trackingPlaceholder": "Ej. 1Z999AA10123456784",
+    "tracking": "Guía: {{number}}",
+    "markShipped": "Marcar enviado",
+    "markDelivered": "Marcar entregado",
+    "working": "Guardando...",
+    "loadError": "No se pudieron cargar los envíos",
+    "errorStale": "Ese pedido ya había cambiado de estado; la lista se actualizó.",
+    "errorGeneric": "No se pudo guardar. Intenta de nuevo."
   },
   "expenses": {
     "title": "Gastos",

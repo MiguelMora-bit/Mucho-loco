@@ -124,6 +124,32 @@ Sin esas dos variables el resto del backend funciona igual; solo `/payments/*` f
 - ~~**Membresía recurrente.**~~ ✅ Hecho (2026-09-13) — ver "Membresías con Stripe Billing" abajo.
 - **Reembolsos.** `providerPaymentIntentId` se guarda justo para eso, pero no hay endpoint todavía (y la política de devoluciones sigue sin decidirse — ver "Pendiente de decidir" en el CLAUDE.md raíz).
 
+## Dirección de envío (2026-09-14)
+
+Los pedidos a domicilio se creaban **sin dirección**: el checkout web la pedía y nunca la mandaba. Ahora `CreateOrderDto` y `CreateCheckoutSessionDto` exigen `address` (`ShippingAddressDto`: calle, colonia, alcaldía o municipio, estado, CP de 5 dígitos, teléfono en E.164 y referencias opcionales) cuando `delivery = 'home'`, y la ignoran al recoger. En el cable `delivery` sigue siendo el string y la dirección va aparte; en el contrato de customer-core es la unión `OrderDelivery`.
+
+- Se guarda como JSON en `orders.shippingAddress` (migración `20260914120000_order_shipping_address`): una copia congelada, así un pedido viejo no cambia de destino si el socio se muda. Vuelve en `Order.shippingAddress`.
+- Con Stripe también va a `payment_intent_data.shipping`: Radar (el antifraude) la usa y queda junto al cobro en el dashboard.
+- Sin dirección → 400 del DTO; `ADDRESS_REQUIRED` si alguien llama al service sin pasar por él.
+
+## Solo Stripe + efectivo (2026-09-14)
+
+`POST /users/me/orders` aceptaba `card`, `transfer`, `mercadopago` y `paypal` y creaba el pedido **como pagado sin cobrar nada** — se podía recoger en mostrador sin pagar. Ahora `CreateOrderDto` solo acepta `cash` (`OfflinePaymentMethod`), solo al recoger, y el pedido nace `pending_payment`: lo cobra mostrador. Todo lo demás, incluido todo pedido a domicilio, entra por `POST /payments/checkout-sessions`, y solo el webhook de Stripe lo deja `ready`. Stripe cubre tarjeta, OXXO y SPEI con los métodos de pago dinámicos (activarlos en el dashboard; OXXO y SPEI son de notificación diferida y ya se manejan con `async_payment_succeeded`).
+
+## Envíos a domicilio — bodega (2026-09-14)
+
+Módulo `shipments`, solo rol `owner` (la bodega central la opera HQ; no existe un rol de bodega):
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /shipments` | Pedidos a domicilio **cobrados** (`ready`/`shipped`/`done`), el más viejo primero, con nombre del socio y dirección. `pending_payment` no aparece: mandarlo sería regalarlo. |
+| `POST /shipments/:id/ship` | `ready` → `shipped`, con `trackingNumber` opcional y `shippedAt`. |
+| `POST /shipments/:id/deliver` | `shipped` → `done`, con `deliveredAt`. |
+
+Estado nuevo `shipped` en `OrderStatus` (migración `20260914130000_order_shipment_tracking`, que además agrega `shippedAt` y `trackingNumber`). Errores con código: `ORDER_NOT_PAID`, `ORDER_ALREADY_SHIPPED`, `ORDER_NOT_SHIPPED`, `ORDER_ALREADY_DELIVERED`, `NOT_A_HOME_ORDER`. El socio ve `shipped` y la guía en `GET /users/me/orders`. e2e en `test/branch-ops.e2e-spec.ts` ("shipments (tienda → bodega)").
+
+**Pendiente**: aviso de WhatsApp "tu pedido va en camino" (necesita una plantilla aprobada por Meta), y un rol de bodega si algún día la opera alguien que no sea el dueño.
+
 ## Membresías con Stripe Billing (2026-09-13)
 
 Antes: todo socio nuevo nacía con una mensual de 15 sucursales **regalada**, `retry-payment` "cobraba" sin tocar pasarela, y nada pasaba una membresía a `grace`/`expired` — una vencida abría la puerta para siempre. Ahora la membresía existe desde su primer cobro confirmado.

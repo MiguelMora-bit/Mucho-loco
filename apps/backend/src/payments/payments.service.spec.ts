@@ -24,6 +24,15 @@ const baseDto = {
   cancelUrl: 'https://mucholoco.mx/checkout',
 };
 
+const HOME_ADDRESS = {
+  street: 'Av. Insurgentes Sur 1234',
+  neighborhood: 'Roma Sur',
+  city: 'Cuauhtémoc',
+  state: 'CDMX',
+  postalCode: '06760',
+  phone: '+525512345678',
+};
+
 function sessionEvent(
   type: string,
   overrides: Record<string, unknown> = {},
@@ -39,6 +48,7 @@ describe('PaymentsService', () => {
   let prisma: {
     product: { findMany: jest.Mock };
     membership: { findUnique: jest.Mock };
+    user: { findUniqueOrThrow: jest.Mock };
     order: { create: jest.Mock; update: jest.Mock };
     payment: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
     $transaction: jest.Mock;
@@ -52,6 +62,7 @@ describe('PaymentsService', () => {
     prisma = {
       product: { findMany: jest.fn().mockResolvedValue([whey]) },
       membership: { findUnique: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ name: 'DIEGO RAMÍREZ' }) },
       order: { create: jest.fn().mockResolvedValue({ id: 'order-1' }), update: jest.fn() },
       payment: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
       $transaction: jest.fn().mockResolvedValue([]),
@@ -86,7 +97,7 @@ describe('PaymentsService', () => {
     });
 
     it('adds the shipping fee as its own line for a home delivery', async () => {
-      await service.createCheckoutSession('u1', { ...baseDto, delivery: 'home' });
+      await service.createCheckoutSession('u1', { ...baseDto, delivery: 'home', address: HOME_ADDRESS });
 
       const params = sessionsCreate.mock.calls[0][0] as Stripe.Checkout.SessionCreateParams;
       expect(params.line_items).toHaveLength(2);
@@ -167,6 +178,43 @@ describe('PaymentsService', () => {
       await expect(service.createCheckoutSession('u1', baseDto)).rejects.toBeInstanceOf(
         BadRequestException,
       );
+    });
+
+    // Antes el pedido a domicilio se creaba sin destino.
+    it('saves the shipping address on the order and hands it to Stripe', async () => {
+      await service.createCheckoutSession('u1', { ...baseDto, delivery: 'home', address: HOME_ADDRESS });
+
+      expect(prisma.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ shippingAddress: HOME_ADDRESS }) }),
+      );
+      // Radar (antifraude de Stripe) usa la dirección, y queda junto al cobro en el dashboard.
+      const params = sessionsCreate.mock.calls[0][0] as Stripe.Checkout.SessionCreateParams;
+      expect(params.payment_intent_data?.shipping).toEqual({
+        name: 'DIEGO RAMÍREZ',
+        phone: '+525512345678',
+        address: {
+          line1: 'Av. Insurgentes Sur 1234',
+          line2: 'Roma Sur',
+          city: 'Cuauhtémoc',
+          state: 'CDMX',
+          postal_code: '06760',
+          country: 'MX',
+        },
+      });
+    });
+
+    it('rejects a home order without an address before touching Stripe', async () => {
+      await expect(
+        service.createCheckoutSession('u1', { ...baseDto, delivery: 'home' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+
+    it('does not send a shipping address to Stripe for a pickup order', async () => {
+      await service.createCheckoutSession('u1', baseDto);
+
+      const params = sessionsCreate.mock.calls[0][0] as Stripe.Checkout.SessionCreateParams;
+      expect(params.payment_intent_data).toBeUndefined();
     });
   });
 

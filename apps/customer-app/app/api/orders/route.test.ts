@@ -11,6 +11,15 @@ vi.mock('../../../lib/repositories/user.repository', () => ({
 const { POST } = await import('./route');
 const { OrderValidationError } = await import('@mucho-loco/customer-core/mock');
 
+const HOME_ADDRESS = {
+  street: 'Av. Insurgentes Sur 1234',
+  neighborhood: 'Roma Sur',
+  city: 'Cuauhtémoc',
+  state: 'CDMX',
+  postalCode: '06760',
+  phone: '+525512345678',
+};
+
 function req(body: unknown) {
   return new Request('http://localhost/api/orders', { method: 'POST', body: JSON.stringify(body) });
 }
@@ -23,7 +32,7 @@ beforeEach(() => {
 describe('POST /api/orders', () => {
   it('rejects with 401 UNAUTHORIZED when there is no verified session (middleware does not cover /api/*)', async () => {
     getCurrentUserEmailMock.mockResolvedValue(null);
-    const res = await POST(req({ items: [], paymentMethod: 'card', delivery: 'pickup', lang: 'es' }));
+    const res = await POST(req({ items: [], paymentMethod: 'cash', delivery: { method: 'pickup' }, lang: 'es' }));
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'UNAUTHORIZED' });
     expect(createOrderMock).not.toHaveBeenCalled();
@@ -35,7 +44,7 @@ describe('POST /api/orders', () => {
     createOrderMock.mockResolvedValue(order);
 
     const res = await POST(
-      req({ items: [{ productId: 'p1', qty: 2 }], paymentMethod: 'card', delivery: 'pickup', lang: 'es' }),
+      req({ items: [{ productId: 'p1', qty: 2 }], paymentMethod: 'cash', delivery: { method: 'pickup' }, lang: 'es' }),
     );
 
     expect(res.status).toBe(200);
@@ -43,8 +52,8 @@ describe('POST /api/orders', () => {
     expect(createOrderMock).toHaveBeenCalledWith(
       'diego@mucholoco.mx',
       [{ productId: 'p1', qty: 2 }],
-      'card',
-      'pickup',
+      'cash',
+      { method: 'pickup' },
       'es',
     );
   });
@@ -56,7 +65,7 @@ describe('POST /api/orders', () => {
     createOrderMock.mockResolvedValue({ id: 'o1' });
 
     await POST(
-      req({ items: [{ productId: 'p1', qty: 1 }], total: 1, paymentMethod: 'card', delivery: 'pickup', lang: 'es' }),
+      req({ items: [{ productId: 'p1', qty: 1 }], total: 1, paymentMethod: 'cash', delivery: { method: 'pickup' }, lang: 'es' }),
     );
 
     expect(createOrderMock.mock.calls[0]).not.toContain(1);
@@ -69,11 +78,41 @@ describe('POST /api/orders', () => {
     );
 
     const res = await POST(
-      req({ items: [{ productId: 'p1', qty: 1 }], paymentMethod: 'cash', delivery: 'home', lang: 'es' }),
+      req({
+        items: [{ productId: 'p1', qty: 1 }],
+        paymentMethod: 'cash',
+        delivery: { method: 'home', address: HOME_ADDRESS },
+        lang: 'es',
+      }),
     );
 
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: 'INVALID_ORDER' });
+  });
+
+  // Sin pasarela solo hay efectivo. Antes 'transfer', 'paypal' o 'card'
+  // creaban el pedido como pagado sin cobrar nada.
+  it('rejects an online payment method with 400 without reaching the repository', async () => {
+    getCurrentUserEmailMock.mockResolvedValue('diego@mucholoco.mx');
+
+    for (const paymentMethod of ['transfer', 'paypal', 'mercadopago', 'stripe']) {
+      const res = await POST(
+        req({ items: [{ productId: 'p1', qty: 1 }], paymentMethod, delivery: { method: 'pickup' }, lang: 'es' }),
+      );
+      expect(res.status).toBe(400);
+    }
+    expect(createOrderMock).not.toHaveBeenCalled();
+  });
+
+  // El body lo arma el browser: un `delivery` con otra forma (el string de
+  // antes, o nada) es un pedido inválido, no un 500 dentro del repositorio.
+  it('rejects a malformed delivery with 400 without reaching the repository', async () => {
+    getCurrentUserEmailMock.mockResolvedValue('diego@mucholoco.mx');
+
+    const res = await POST(req({ items: [{ productId: 'p1', qty: 1 }], paymentMethod: 'cash', delivery: 'home', lang: 'es' }));
+
+    expect(res.status).toBe(400);
+    expect(createOrderMock).not.toHaveBeenCalled();
   });
 
   it('lets an unexpected failure bubble up as a 500 rather than masking it as a bad request', async () => {
@@ -81,7 +120,7 @@ describe('POST /api/orders', () => {
     createOrderMock.mockRejectedValue(new Error('backend caído'));
 
     await expect(
-      POST(req({ items: [{ productId: 'p1', qty: 1 }], paymentMethod: 'card', delivery: 'pickup', lang: 'es' })),
+      POST(req({ items: [{ productId: 'p1', qty: 1 }], paymentMethod: 'cash', delivery: { method: 'pickup' }, lang: 'es' })),
     ).rejects.toThrow('backend caído');
   });
 });

@@ -171,16 +171,29 @@ export interface CommunityPost {
   comments: CommunityComment[];
 }
 
-/** 'pending_payment' only applies to cash + pickup (the online checkout lets
- *  you choose "efectivo" only when delivery is pickup — see CLAUDE.md raíz,
- *  "Pagos en línea"): the order isn't paid yet, cash is collected in person
- *  when the member picks it up at the branch. Every other payment method
- *  starts at 'ready' since it was already charged online. */
-export type OrderStatus = 'pending_payment' | 'ready' | 'done';
+/**
+ * - `pending_payment`: todavía sin cobrar — efectivo al recoger (se cobra en
+ *   mostrador), o una sesión de Stripe que no se ha pagado.
+ * - `ready`: cobrado. Al recoger: listo en la sucursal. A domicilio: bodega
+ *   lo tiene que mandar. Solo el webhook de Stripe (o mostrador, en efectivo)
+ *   deja un pedido cobrado — nunca el cliente.
+ * - `shipped`: solo a domicilio — va en camino con la paquetería.
+ * - `done`: entregado.
+ */
+export type OrderStatus = 'pending_payment' | 'ready' | 'shipped' | 'done';
 
 /** Online checkout methods (customer-app). Distinct from the in-person
  *  `PaymentMethod` below (counter sales) — see that type's comment. */
 export type OnlinePaymentMethod = 'card' | 'transfer' | 'mercadopago' | 'stripe' | 'paypal' | 'cash';
+
+/**
+ * Lo único que se puede pedir sin pasar por la pasarela: efectivo al recoger.
+ * Todo lo demás se cobra en Stripe (tarjeta, OXXO, SPEI). Antes
+ * "transferencia", Mercado Pago y PayPal creaban el pedido como pagado sin
+ * cobrar nada. `OnlinePaymentMethod` sigue existiendo para pintar pedidos
+ * viejos.
+ */
+export type OfflinePaymentMethod = 'cash';
 
 export interface OrderItem {
   name: string;
@@ -201,6 +214,33 @@ export interface NewOrderLine {
   qty: number;
 }
 
+/**
+ * Dirección de entrega a domicilio (México). Se congela en el pedido: si el
+ * socio se muda, un pedido viejo no cambia de destino. `phone` va en E.164
+ * (`+525512345678`): es a quien llama el repartidor.
+ */
+export interface ShippingAddress {
+  /** Calle, número exterior e interior. */
+  street: string;
+  /** Colonia. */
+  neighborhood: string;
+  /** Alcaldía o municipio. */
+  city: string;
+  state: string;
+  /** 5 dígitos. */
+  postalCode: string;
+  phone: string;
+  /** Entre calles, fachada… */
+  references?: string;
+}
+
+/**
+ * Cómo se entrega un pedido nuevo. Una unión y no dos campos sueltos: así "a
+ * domicilio sin dirección" no compila — antes el checkout pedía la dirección
+ * y nunca la mandaba, y los pedidos a domicilio se creaban sin destino.
+ */
+export type OrderDelivery = { method: 'pickup' } | { method: 'home'; address: ShippingAddress };
+
 export interface Order {
   id: string;
   date: string;
@@ -211,6 +251,10 @@ export interface Order {
   delivery: 'pickup' | 'home';
   /** Pickup branch — set only when delivery is 'pickup' (home orders ship from the central warehouse, no branch involved). */
   branch?: string;
+  /** A dónde se envía — solo cuando delivery es 'home'. */
+  shippingAddress?: ShippingAddress;
+  /** Guía de la paquetería, si bodega la capturó al enviarlo. */
+  trackingNumber?: string;
   /** ISO datetime — set once status becomes 'done'. */
   deliveredAt?: string;
 }
@@ -519,6 +563,11 @@ export interface Translations {
       deliveredAtPrefix: string;
       paymentMethodLabel: string;
       close: string;
+      /** Estado 'ready' de un pedido a domicilio: pagado, falta mandarlo. */
+      preparingShipment: string;
+      shipToLabel: string;
+      shipped: string;
+      trackingLabel: string;
     };
     profile: {
       personalData: string;
@@ -589,6 +638,11 @@ export interface Translations {
       streetLabel: string;
       cityLabel: string;
       zipLabel: string;
+      neighborhoodLabel: string;
+      stateLabel: string;
+      phoneLabel: string;
+      referencesLabel: string;
+      addressInvalid: string;
       paymentMethod: string;
       payCard: string;
       payTransfer: string;
@@ -667,6 +721,30 @@ export interface PickupOrder {
   total: number;
   status: PickupOrderStatus;
   placedAt: string;
+}
+
+// --- owner-panel: envíos a domicilio (bodega central) ---
+
+/** Un envío visto por bodega: por mandar, en camino o entregado. */
+export type ShipmentStatus = 'to_ship' | 'shipped' | 'delivered';
+
+/**
+ * Un pedido a domicilio visto por bodega. Mismo criterio que `PickupOrder`:
+ * no extiende `Order`, porque bodega necesita el nombre del socio y la
+ * dirección completa. Solo aparecen pedidos ya cobrados.
+ */
+export interface ShipmentOrder {
+  id: string;
+  customerName: string;
+  items: OrderItem[];
+  total: number;
+  status: ShipmentStatus;
+  /** null solo en pedidos de antes de que el checkout mandara la dirección. */
+  address: ShippingAddress | null;
+  trackingNumber?: string;
+  placedAt: string;
+  shippedAt?: string;
+  deliveredAt?: string;
 }
 
 export interface CounterSaleItem {

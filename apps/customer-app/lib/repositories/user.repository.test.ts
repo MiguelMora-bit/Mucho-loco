@@ -2,20 +2,36 @@ import { describe, it, expect } from 'vitest';
 import { userRepository } from './user.repository';
 import { ALL_GYMS_TEST_EMAIL, SINGLE_GYM_TEST_EMAIL, OrderValidationError } from '@mucho-loco/customer-core/mock';
 import { PRODUCTS } from '../data';
-import { HOME_SHIPPING_FEE } from '../pricing';
+import type { OfflinePaymentMethod, OrderDelivery } from '@mucho-loco/types';
 
 const WHEY = PRODUCTS.find((p) => p.id === 'p1')!;   // 'Whey Protein 5LBS'
 const PRE = PRODUCTS.find((p) => p.id === 'p7')!;    // nombre distinto en es/en
 
+const PICKUP: OrderDelivery = { method: 'pickup' };
+const HOME: OrderDelivery = {
+  method: 'home',
+  address: {
+    street: 'Av. Insurgentes Sur 1234',
+    neighborhood: 'Roma Sur',
+    city: 'Cuauhtémoc',
+    state: 'CDMX',
+    postalCode: '06760',
+    phone: '+525512345678',
+  },
+};
+
+// createOrder es el pedido SIN pasarela: solo efectivo al recoger. Lo que se
+// paga en línea (y todo envío a domicilio) va por paymentRepository — ver
+// payment.repository.test.ts.
 describe('userRepository', () => {
-  it('createOrder adds an order that then shows up in getOrders', async () => {
+  it('createOrder adds a cash order that then shows up in getOrders', async () => {
     const before = await userRepository.getOrders(ALL_GYMS_TEST_EMAIL);
 
     const created = await userRepository.createOrder(
       ALL_GYMS_TEST_EMAIL,
       [{ productId: WHEY.id, qty: 2 }],
-      'card',
-      'pickup',
+      'cash',
+      PICKUP,
       'es',
     );
 
@@ -25,9 +41,8 @@ describe('userRepository', () => {
       { name: WHEY.name.es, flav: WHEY.flav.es, img: WHEY.img, qty: 2 },
     ]);
     expect(created.total).toBe(WHEY.price * 2);
-    expect(created.status).toBe('ready');
     expect(created.id).toMatch(/^#ML-/);
-    expect(created.paymentMethod).toBe('card');
+    expect(created.paymentMethod).toBe('cash');
     expect(created.delivery).toBe('pickup');
     expect(created.branch).toBeTruthy();
 
@@ -41,24 +56,29 @@ describe('userRepository', () => {
   // en mostrador, no "listo para retiro" como si ya estuviera pagado.
   it('creates cash orders as pending payment instead of ready', async () => {
     const created = await userRepository.createOrder(
-      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'cash', 'pickup', 'es');
+      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'cash', PICKUP, 'es');
     expect(created.status).toBe('pending_payment');
   });
 
-  it('creates non-cash orders as ready immediately', async () => {
-    const created = await userRepository.createOrder(
-      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'transfer', 'pickup', 'es');
-    expect(created.status).toBe('ready');
+  // Antes 'card', 'transfer', 'mercadopago' y 'paypal' creaban el pedido como
+  // pagado sin cobrar nada. El backend responde 400; el mock rechaza igual.
+  it('refuses an online payment method — those go through the Stripe checkout', async () => {
+    for (const method of ['card', 'transfer', 'mercadopago', 'paypal']) {
+      await expect(
+        userRepository.createOrder(
+          ALL_GYMS_TEST_EMAIL,
+          [{ productId: WHEY.id, qty: 1 }],
+          method as unknown as OfflinePaymentMethod,
+          PICKUP,
+          'es',
+        ),
+      ).rejects.toBeInstanceOf(OrderValidationError);
+    }
   });
 
-  it('adds the shipping fee only when the order is delivered home', async () => {
-    const home = await userRepository.createOrder(
-      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'card', 'home', 'es');
-    expect(home.total).toBe(WHEY.price + HOME_SHIPPING_FEE);
-    expect(home.branch).toBeUndefined();
-
+  it('does not charge shipping on a pickup order', async () => {
     const pickup = await userRepository.createOrder(
-      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'card', 'pickup', 'es');
+      ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'cash', PICKUP, 'es');
     expect(pickup.total).toBe(WHEY.price);
   });
 
@@ -67,13 +87,13 @@ describe('userRepository', () => {
   // tiene que rechazarlo igual o el swap de datasource cambiaría el checkout.
   it('rejects cash payment for a home delivery', async () => {
     await expect(
-      userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'cash', 'home', 'es'),
+      userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [{ productId: WHEY.id, qty: 1 }], 'cash', HOME, 'es'),
     ).rejects.toBeInstanceOf(OrderValidationError);
   });
 
   it('rejects an order that references a product outside the catalog', async () => {
     await expect(
-      userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [{ productId: 'no-existe', qty: 1 }], 'card', 'pickup', 'es'),
+      userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [{ productId: 'no-existe', qty: 1 }], 'cash', PICKUP, 'es'),
     ).rejects.toBeInstanceOf(OrderValidationError);
   });
 
@@ -81,9 +101,9 @@ describe('userRepository', () => {
   // (ver CLAUDE.md de este app) — por eso lang es parte del contrato.
   it('freezes the receipt text in the language the order was placed in', async () => {
     const es = await userRepository.createOrder(
-      ALL_GYMS_TEST_EMAIL, [{ productId: PRE.id, qty: 1 }], 'card', 'pickup', 'es');
+      ALL_GYMS_TEST_EMAIL, [{ productId: PRE.id, qty: 1 }], 'cash', PICKUP, 'es');
     const en = await userRepository.createOrder(
-      ALL_GYMS_TEST_EMAIL, [{ productId: PRE.id, qty: 1 }], 'card', 'pickup', 'en');
+      ALL_GYMS_TEST_EMAIL, [{ productId: PRE.id, qty: 1 }], 'cash', PICKUP, 'en');
 
     expect(es.items[0].name).toBe(PRE.name.es);
     expect(en.items[0].name).toBe(PRE.name.en);
@@ -132,7 +152,7 @@ describe('userRepository', () => {
   // dónde. El backend responde 400 (PICKUP_REQUIRES_MEMBERSHIP).
   it('rejects a pickup order from an account without a membership', async () => {
     await expect(
-      userRepository.createOrder('sin-membresia@mucholoco.mx', [{ productId: WHEY.id, qty: 1 }], 'card', 'pickup', 'es'),
+      userRepository.createOrder('sin-membresia@mucholoco.mx', [{ productId: WHEY.id, qty: 1 }], 'cash', PICKUP, 'es'),
     ).rejects.toBeInstanceOf(OrderValidationError);
   });
 
@@ -158,7 +178,7 @@ describe('userRepository', () => {
     expect(second?.accessCode).toBe(first?.accessCode);
 
     // Sobrevive también a una acción no relacionada sobre el mismo usuario.
-    await userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [], 'card', 'pickup', 'es');
+    await userRepository.createOrder(ALL_GYMS_TEST_EMAIL, [], 'cash', PICKUP, 'es');
     const afterUnrelatedAction = await userRepository.getMembership(ALL_GYMS_TEST_EMAIL);
     expect(afterUnrelatedAction?.accessCode).toBe(first?.accessCode);
   });

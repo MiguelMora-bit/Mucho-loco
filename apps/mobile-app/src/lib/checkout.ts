@@ -5,11 +5,11 @@ import { cartSubtotal } from './cart';
 export type Delivery = 'pickup' | 'home';
 
 /**
- * Lo que ofrece el móvil. La web muestra además Mercado Pago y PayPal, pero
- * el backend todavía no los cobra (ver punto 6 de "Metodología" en el
- * CLAUDE.md raíz): aquí no se promete lo que no existe.
+ * Tarjeta = Stripe (que en su página también ofrece OXXO y SPEI) y efectivo
+ * al recoger. Nada más, igual que la web: "transferencia" creaba el pedido
+ * como pagado sin cobrar nada.
  */
-const PAYMENT_METHODS: OnlinePaymentMethod[] = ['card', 'transfer', 'cash'];
+const PAYMENT_METHODS: OnlinePaymentMethod[] = ['card', 'cash'];
 
 /** Efectivo solo al recoger en gym — regla de negocio del CLAUDE.md raíz. */
 export function paymentMethodsFor(delivery: Delivery): OnlinePaymentMethod[] {

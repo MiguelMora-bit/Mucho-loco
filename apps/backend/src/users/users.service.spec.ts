@@ -279,8 +279,8 @@ describe('UsersService', () => {
   describe('createOrder', () => {
     const dto = (overrides: Partial<CreateOrderDto> = {}): CreateOrderDto => ({
       items: [{ productId: 'p7', qty: 2 }],
-      paymentMethod: 'card',
-      delivery: 'home',
+      paymentMethod: 'cash',
+      delivery: 'pickup',
       lang: 'es',
       ...overrides,
     });
@@ -295,21 +295,55 @@ describe('UsersService', () => {
           price: 790,
         },
       ]);
+      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
       prisma.order.create.mockImplementation(({ data }) =>
         Promise.resolve({
           ...data,
           id: 'order-1',
           createdAt: new Date(),
           items: data.items.create,
-          branch: null,
+          branch: { name: 'ROMA SUR' },
         }),
       );
     });
 
     it('computes total from real catalog prices server-side, ignoring anything the client might have claimed', async () => {
       const order = await service.createOrder('user-1', dto());
-      // 2 * 790 + 99 (envío a domicilio) = 1679 — nunca viene del cliente, el DTO no tiene campo `total`.
-      expect(order.total).toBe(1679);
+      // 2 * 790 = 1580 — nunca viene del cliente, el DTO no tiene campo `total`.
+      expect(order.total).toBe(1580);
+    });
+
+    // Sin pasarela no se cobra nada: el pedido queda pendiente hasta que
+    // mostrador cobra el efectivo al entregarlo.
+    it('leaves a cash order pending payment until the counter collects it', async () => {
+      const order = await service.createOrder('user-1', dto());
+      expect(order.status).toBe('pending_payment');
+    });
+
+    it('is picked up at the branch of the membership', async () => {
+      await service.createOrder('user-1', dto());
+      expect(prisma.order.create.mock.calls[0][0].data.branchId).toBe(1);
+    });
+
+    // Antes esta ruta aceptaba tarjeta, transferencia, Mercado Pago y PayPal
+    // y creaba el pedido como pagado sin cobrar nada.
+    it('never creates an order as paid: online methods have to go through Stripe', async () => {
+      for (const method of ['card', 'transfer', 'paypal', 'mercadopago']) {
+        await expect(
+          service.createOrder(
+            'user-1',
+            dto({ paymentMethod: method as unknown as CreateOrderDto['paymentMethod'] }),
+          ),
+        ).rejects.toThrow(BadRequestException);
+      }
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects cash combined with home delivery — home orders are paid through Stripe', async () => {
+      await expect(
+        service.createOrder('user-1', dto({ delivery: 'home' })),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.order.create).not.toHaveBeenCalled();
     });
 
     // "Recoger en gym" sale de la sucursal de la membresía. Un socio recién
@@ -317,19 +351,10 @@ describe('UsersService', () => {
     // explicado, no un 500 de Prisma.
     it('rejects a pickup order from a member without a membership', async () => {
       prisma.membership.findUnique.mockResolvedValue(null);
-      await expect(
-        service.createOrder('user-1', dto({ delivery: 'pickup' })),
-      ).rejects.toThrow(BadRequestException);
-      expect(prisma.order.create).not.toHaveBeenCalled();
-    });
-
-    it('does not charge shipping for pickup', async () => {
-      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
-      const order = await service.createOrder(
-        'user-1',
-        dto({ delivery: 'pickup' }),
+      await expect(service.createOrder('user-1', dto())).rejects.toThrow(
+        BadRequestException,
       );
-      expect(order.total).toBe(1580); // 2 * 790, sin envío
+      expect(prisma.order.create).not.toHaveBeenCalled();
     });
 
     it('freezes the item name/flav in the requested language', async () => {
@@ -343,34 +368,6 @@ describe('UsersService', () => {
         NotFoundException,
       );
       expect(prisma.order.create).not.toHaveBeenCalled();
-    });
-
-    it('rejects cash payment combined with home delivery', async () => {
-      await expect(
-        service.createOrder(
-          'user-1',
-          dto({ paymentMethod: 'cash', delivery: 'home' }),
-        ),
-      ).rejects.toThrow(BadRequestException);
-      expect(prisma.order.create).not.toHaveBeenCalled();
-    });
-
-    it('allows cash payment for pickup, but leaves it pending payment until collected in person', async () => {
-      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
-      const order = await service.createOrder(
-        'user-1',
-        dto({ paymentMethod: 'cash', delivery: 'pickup' }),
-      );
-      expect(order.status).toBe('pending_payment');
-    });
-
-    it('marks non-cash orders ready immediately, since they were already charged online', async () => {
-      prisma.membership.findUnique.mockResolvedValue({ branchId: 1 });
-      const order = await service.createOrder(
-        'user-1',
-        dto({ paymentMethod: 'card', delivery: 'pickup' }),
-      );
-      expect(order.status).toBe('ready');
     });
   });
 });

@@ -21,6 +21,7 @@ import {
   pickupRequiresMembership,
   productNotFound,
 } from '../common/error-codes';
+import { shippingAddressFromJson } from './shipping-address';
 
 /**
  * Quién es el socio según su ID token. Estructuralmente es un subconjunto de
@@ -39,11 +40,6 @@ function isUniqueViolation(err: unknown): boolean {
     err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
   );
 }
-
-// Mismo cargo fijo que hoy vive hardcodeado en CheckoutClient.tsx del
-// frontend — duplicado a propósito (sin runtime compartido entre back/front
-// todavía, ver CLAUDE.md raíz sobre esa misma decisión entre apps).
-const HOME_SHIPPING_FEE = 99;
 
 function toVisit(row: VisitRow & { branch: Branch }): Visit {
   return {
@@ -70,6 +66,8 @@ function toOrder(
     paymentMethod: row.paymentMethod,
     delivery: row.delivery,
     branch: row.branch?.name,
+    shippingAddress: shippingAddressFromJson(row.shippingAddress),
+    trackingNumber: row.trackingNumber ?? undefined,
     deliveredAt: row.deliveredAt?.toISOString(),
   };
 }
@@ -205,8 +203,16 @@ export class UsersService {
     return rows.map(toOrder);
   }
 
+  /**
+   * Pedido SIN pasarela: solo efectivo al recoger, y nace pendiente de pago —
+   * lo cobra mostrador al entregarlo. Todo lo que se paga en línea (y todo lo
+   * que va a domicilio) entra por POST /payments/checkout-sessions, y solo el
+   * webhook de Stripe lo marca pagado. Antes esta ruta aceptaba 'card',
+   * 'transfer', 'mercadopago' y 'paypal' y creaba el pedido como pagado sin
+   * cobrar nada.
+   */
   async createOrder(userId: string, dto: CreateOrderDto): Promise<Order> {
-    if (dto.paymentMethod === 'cash' && dto.delivery !== 'pickup') {
+    if (dto.paymentMethod !== 'cash' || dto.delivery !== 'pickup') {
       // Efectivo online solo aplica cuando la entrega es "recoger en gym" — ver CLAUDE.md raíz.
       throw new BadRequestException(cashRequiresPickup());
     }
@@ -233,30 +239,21 @@ export class UsersService {
     });
 
     const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
-    const shipping = dto.delivery === 'home' ? HOME_SHIPPING_FEE : 0;
 
-    let branchId: number | null = null;
-    if (dto.delivery === 'pickup') {
-      const membership = await this.prisma.membership.findUnique({
-        where: { userId },
-      });
-      if (!membership) throw new BadRequestException(pickupRequiresMembership());
-      branchId = membership.branchId;
-    }
-
-    // Efectivo solo aplica con pickup (ya validado arriba) — el pedido queda
-    // pendiente de pago hasta que se cobra en mostrador, no "listo" como si
-    // ya estuviera pagado (ver CLAUDE.md raíz, "Pagos en línea").
-    const status = dto.paymentMethod === 'cash' ? 'pending_payment' : 'ready';
+    // "Recoger en gym" sale de la sucursal de la membresía.
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId },
+    });
+    if (!membership) throw new BadRequestException(pickupRequiresMembership());
 
     const order = await this.prisma.order.create({
       data: {
         userId,
-        status,
-        total: subtotal + shipping,
+        status: 'pending_payment',
+        total: subtotal,
         paymentMethod: dto.paymentMethod,
         delivery: dto.delivery,
-        branchId,
+        branchId: membership.branchId,
         items: {
           create: items.map(({ name, flav, img, qty }) => ({
             name,

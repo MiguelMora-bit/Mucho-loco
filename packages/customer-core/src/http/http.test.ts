@@ -13,6 +13,17 @@ import {
   SocialHttpDatasource,
   UserHttpDatasource,
 } from './index';
+import type { OrderDelivery, ShippingAddress } from '@mucho-loco/types';
+
+const HOME_ADDRESS: ShippingAddress = {
+  street: 'Av. Insurgentes Sur 1234',
+  neighborhood: 'Roma Sur',
+  city: 'Cuauhtémoc',
+  state: 'CDMX',
+  postalCode: '06760',
+  phone: '+525512345678',
+};
+const HOME: OrderDelivery = { method: 'home', address: HOME_ADDRESS };
 
 // El comportamiento genérico del cliente (URL, errores, timeout) lo prueba
 // @mucho-loco/api-client. Aquí importa lo que cada datasource decide: a qué
@@ -174,8 +185,8 @@ describe('UserHttpDatasource', () => {
     await new UserHttpDatasource(client().api).createOrder(
       'diego@mucholoco.mx',
       [{ productId: 'p1', qty: 2 }],
-      'card',
-      'pickup',
+      'cash',
+      { method: 'pickup' },
       'es',
     );
 
@@ -184,7 +195,7 @@ describe('UserHttpDatasource', () => {
     expect(init.method).toBe('POST');
     expect(JSON.parse(String(init.body))).toEqual({
       items: [{ productId: 'p1', qty: 2 }],
-      paymentMethod: 'card',
+      paymentMethod: 'cash',
       delivery: 'pickup',
       lang: 'es',
     });
@@ -294,7 +305,7 @@ describe('PaymentHttpDatasource', () => {
     await new PaymentHttpDatasource(client().api).createCheckoutSession(
       'diego@mucholoco.mx',
       [{ productId: 'p1', qty: 2 }],
-      'home',
+      HOME,
       'es',
       'mucholoco://checkout?paid=1',
       'mucholoco://checkout',
@@ -303,9 +314,12 @@ describe('PaymentHttpDatasource', () => {
     const { url, init, auth } = call(spy);
     expect(url).toBe('http://api.test/payments/checkout-sessions');
     expect(auth).toBe('Bearer id-token');
+    // En el cable, `delivery` sigue siendo el string y la dirección va aparte
+    // — la forma que valida CreateCheckoutSessionDto.
     expect(JSON.parse(String(init.body))).toEqual({
       items: [{ productId: 'p1', qty: 2 }],
       delivery: 'home',
+      address: HOME_ADDRESS,
       lang: 'es',
       successUrl: 'mucholoco://checkout?paid=1',
       cancelUrl: 'mucholoco://checkout',
@@ -319,7 +333,7 @@ describe('PaymentHttpDatasource', () => {
     await new PaymentHttpDatasource(client().api).createCheckoutSession(
       'diego@mucholoco.mx',
       [{ productId: 'p1', qty: 1 }],
-      'pickup',
+      { method: 'pickup' },
       'es',
       'http://x',
       'http://y',
