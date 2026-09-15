@@ -63,6 +63,28 @@ describe('Membership billing (e2e)', () => {
         configured: true,
         stripe: {
           checkout: { sessions: { create: sessionsCreate } },
+          paymentIntents: {
+            retrieve: jest.fn().mockResolvedValue({
+              latest_charge: {
+                payment_method_details: {
+                  type: 'card',
+                  card: { funding: 'credit' },
+                },
+              },
+            }),
+          },
+          invoicePayments: {
+            list: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  payment: {
+                    type: 'payment_intent',
+                    payment_intent: 'pi_e2e_renewal',
+                  },
+                },
+              ],
+            }),
+          },
           products: {
             retrieve: jest.fn().mockResolvedValue({}),
             create: jest.fn(),
@@ -92,6 +114,8 @@ describe('Membership billing (e2e)', () => {
 
   afterAll(async () => {
     const where = { user: { email: MEMBER } };
+    // Primero los cobros: una compra que originó un ingreso no se deja borrar.
+    await prisma.charge.deleteMany({ where });
     await prisma.membershipPurchase.deleteMany({ where });
     await prisma.membership.deleteMany({ where });
     await prisma.user.deleteMany({ where: { email: MEMBER } });
@@ -280,6 +304,8 @@ describe('Membership billing (e2e)', () => {
     const nextPeriodEnd = periodEnd + 30 * DAY_S;
     currentSub = activeSub(nextPeriodEnd);
     await deliver('invoice.paid', {
+      id: 'in_e2e_renewal',
+      amount_paid: 109000,
       parent: { subscription_details: { subscription: SUB } },
     });
 
@@ -288,6 +314,40 @@ describe('Membership billing (e2e)', () => {
     expect(membership.expiresAt).toBe(
       new Date(nextPeriodEnd * 1000).toISOString(),
     );
+
+    // Cada cobro de la suscripción queda registrado. Antes, del mes 2 en
+    // adelante no quedaba rastro del dinero en ninguna tabla.
+    const charge = await prisma.charge.findUniqueOrThrow({
+      where: { stripeInvoiceId: 'in_e2e_renewal' },
+      include: { lines: true },
+    });
+    expect(charge).toMatchObject({
+      source: 'membership_subscription',
+      method: 'card_credit',
+      totalCents: 109000,
+      userId,
+      branchId: 1,
+    });
+    expect(charge.lines).toEqual([
+      expect.objectContaining({
+        unitPriceCents: 109000,
+        taxCategoryId: 'gym_membership',
+      }),
+    ]);
+  });
+
+  it('a redelivered paid invoice is recorded only once', async () => {
+    await deliver('invoice.paid', {
+      id: 'in_e2e_renewal',
+      amount_paid: 109000,
+      parent: { subscription_details: { subscription: SUB } },
+    });
+
+    expect(
+      await prisma.charge.count({
+        where: { stripeInvoiceId: 'in_e2e_renewal' },
+      }),
+    ).toBe(1);
   });
 
   it('a redelivered stale event cannot undo it: the backend re-reads Stripe', async () => {
@@ -338,6 +398,7 @@ describe('Membership billing (e2e)', () => {
       mode: 'payment',
       payment_status: 'paid',
       customer: 'cus_e2e_membresia',
+      payment_intent: 'pi_e2e_visit',
       metadata: { kind: 'membership' },
     };
     await deliver('checkout.session.completed', completed);
@@ -355,6 +416,20 @@ describe('Membership billing (e2e)', () => {
     // Stripe reentrega el mismo evento: no suma otro día.
     await deliver('checkout.session.completed', completed);
     expect((await getMembership()).expiresAt).toBe(first.expiresAt);
+
+    // Y tampoco registra el cobro dos veces.
+    const purchase = await prisma.membershipPurchase.findUniqueOrThrow({
+      where: { providerSessionId: visitSession },
+    });
+    const charges = await prisma.charge.findMany({
+      where: { membershipPurchaseId: purchase.id },
+    });
+    expect(charges).toHaveLength(1);
+    expect(charges[0]).toMatchObject({
+      source: 'membership_visit',
+      method: 'card_credit',
+      totalCents: purchase.amount * 100,
+    });
   });
 
   it('refuses a day pass while the membership is still valid', async () => {

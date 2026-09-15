@@ -52,6 +52,7 @@ Esto NO es solo una tienda: es el sistema completo de "Mucho Loco Gym", cadena d
 - **Inventario por sucursal**: cada sucursal sabe su stock físico real. Venta de mostrador descuenta del stock LOCAL de esa sucursal. Envíos a domicilio siempre salen de una bodega central única. "Recoger en gym" = la sucursal que el cliente elige al comprar.
 - **Pagos en línea (revisado 2026-09-14)**: todo pago en línea pasa por **Stripe**, que en su página ofrece tarjeta, OXXO y transferencia SPEI (hay que tenerlos activados en el dashboard de Stripe). También se puede elegir "efectivo", pero solo cuando la entrega es "recoger en gym" (decidido 2026-09-08) — el pedido queda pendiente de pago y se cobra al recoger; no aplica a domicilio. Fuera de esto, efectivo sigue siendo exclusivo de venta de mostrador. **Transferencia manual, Mercado Pago y PayPal se quitaron del checkout**: creaban el pedido como pagado sin cobrar nada (se podía recoger en mostrador sin pagar). Vuelven cuando exista su cobro de verdad. Un pedido solo queda "pagado" por el webhook de Stripe o porque mostrador cobró el efectivo.
 - **Envíos a domicilio (2026-09-14)**: salen de la bodega central, que hoy opera HQ desde `owner-panel` (`/shipments`): por enviar → en camino (con guía opcional) → entregado. Solo aparecen pedidos cobrados. El socio ve el estado y la guía en su panel.
+- **Facturación CFDI 4.0 (decidido 2026-09-14)**: sí, desde el sistema, vía un PAC con API (candidato: Facturapi, que tiene recibos para autofacturar y factura global de lo que nadie facturó). Stripe NO emite CFDI — lo que el código llama "factura" en membresías es un invoice de Stripe Billing, un cobro. Reparto: `backend` es el núcleo; `customer-app` y `mobile-app` capturan datos fiscales y dejan "Facturar" (la web además tiene una página pública `/facturar` para tickets de mostrador); `branch-app` solo imprime la clave de autofacturación en el ticket (no captura RFC); `owner-panel` lista CFDI, factura global, cancelaciones y exporta para el contador. **Paso 1 ✅ (2026-09-14)**: registro único de cobros (`Charge`) — ver "Registro de cobros" en `apps/backend/CLAUDE.md`. Paso 2 (emitir) pendiente.
 - **Control de dinero en sucursal**: corte de caja por turno/día, auditable desde el panel del dueño.
 - **Roles en sucursal**: diferenciados — gerente (caja, reportes, inventario local) vs. mostrador (pedidos, cobro, QR).
 - **Nómina**: cálculo completo (asistencia, deducciones, recibos), no solo registro de gasto.
@@ -96,7 +97,9 @@ Orden de fases:
 ### Pendiente de decidir
 
 - Qué pasa con socios/empleados si cierra una sucursal.
-- Política de devoluciones/cancelaciones.
+- Política de devoluciones/cancelaciones (también decide cómo se cancela o corrige un CFDI).
+- ¿Las 15 sucursales facturan con UN RFC o cada una es razón social distinta? Bloquea el paso 2 de facturación.
+- Con el contador: clave SAT real (ClaveProdServ) de cada categoría fiscal, IEPS de las bebidas energizantes, y el plazo para que un cliente pida factura.
 
 ### Convención: fechas en ISO (2026-09-12)
 

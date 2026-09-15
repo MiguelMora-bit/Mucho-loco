@@ -14,10 +14,17 @@ import { StripeService } from './stripe.provider';
 import { MembershipsService } from '../memberships/memberships.service';
 import {
   PERIOD_DAYS,
+  PERIOD_NAME,
   addDays,
   calculateMembershipPrice,
 } from '../memberships/membership-plans';
 import { effectiveStatus } from '../memberships/membership-status';
+import { ChargesService } from '../charges/charges.service';
+import {
+  eventTime,
+  invoiceMethod,
+  paymentIntentMethod,
+} from './stripe-payment-method';
 import {
   alreadySubscribed,
   branchNotFound,
@@ -65,14 +72,6 @@ const PRODUCT: Record<TierKey, { id: string; name: string }> = {
     id: 'ml_membership_all',
     name: 'Membresía Mucho Loco · 15 sucursales',
   },
-};
-
-const PERIOD_NAME: Record<PlanKey, string> = {
-  visit: 'Visita',
-  weekly: 'Semanal',
-  monthly: 'Mensual',
-  quarterly: 'Trimestral',
-  annual: 'Anual',
 };
 
 /**
@@ -150,6 +149,7 @@ export class MembershipBillingService {
     private prisma: PrismaService,
     private stripe: StripeService,
     private memberships: MembershipsService,
+    private charges: ChargesService,
   ) {}
 
   /**
@@ -299,7 +299,7 @@ export class MembershipBillingService {
       case 'checkout.session.async_payment_succeeded': {
         const session = event.data.object;
         if (session.metadata?.kind !== MEMBERSHIP_KIND) return false;
-        await this.completeCheckout(session);
+        await this.completeCheckout(session, eventTime(event));
         return true;
       }
       case 'checkout.session.async_payment_failed':
@@ -312,7 +312,16 @@ export class MembershipBillingService {
         });
         return true;
       }
-      case 'invoice.paid':
+      case 'invoice.paid': {
+        const invoice = event.data.object;
+        const subscriptionId = idOf(
+          invoice.parent?.subscription_details?.subscription,
+        );
+        if (!subscriptionId) return false;
+        await this.syncSubscription(subscriptionId);
+        await this.recordInvoice(invoice, subscriptionId, eventTime(event));
+        return true;
+      }
       case 'invoice.payment_failed': {
         const subscriptionId = idOf(
           event.data.object.parent?.subscription_details?.subscription,
@@ -384,6 +393,7 @@ export class MembershipBillingService {
 
   private async completeCheckout(
     session: Stripe.Checkout.Session,
+    paidAt: Date,
   ): Promise<void> {
     // Con pago diferido (OXXO, transferencia) la sesión se completa sin
     // dinero; llega después como async_payment_succeeded. `no_payment_required`
@@ -424,10 +434,16 @@ export class MembershipBillingService {
       return;
     }
 
-    // Visita. Marcar la compra y dar el acceso van en UNA transacción, con la
-    // marca primero: si el evento llega dos veces, el segundo encuentra la
-    // compra ya pagada y no suma otro día; y si dar el acceso falla, la marca
-    // se revierte y el reintento de Stripe lo vuelve a intentar.
+    // Visita. Marcar la compra, dar el acceso y registrar el cobro van en UNA
+    // transacción, con la marca primero: si el evento llega dos veces, el
+    // segundo encuentra la compra ya pagada y no suma otro día; y si dar el
+    // acceso falla, la marca se revierte y el reintento de Stripe lo vuelve a
+    // intentar.
+    if (purchase.status === 'paid') return;
+    const method = await paymentIntentMethod(
+      this.stripe.stripe,
+      idOf(session.payment_intent),
+    );
     await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.membershipPurchase.updateMany({
         where: { id: purchase.id, status: { not: 'paid' } },
@@ -448,7 +464,72 @@ export class MembershipBillingService {
         },
         tx,
       );
+      await this.charges.recordMembership(tx, {
+        source: 'membership_visit',
+        method,
+        paidAt,
+        userId: purchase.userId,
+        branchId: purchase.branchId,
+        tierKey: purchase.tierKey,
+        periodKey: purchase.periodKey,
+        totalCents: session.amount_total ?? toCents(purchase.amount),
+        origin: { membershipPurchaseId: purchase.id },
+      });
     });
+  }
+
+  /**
+   * Cada cobro de la suscripción — el primero incluido — es un ingreso, y éste
+   * es el único lugar donde queda: la membresía solo guarda hasta cuándo está
+   * pagada. Por eso el primer cobro NO se registra en completeCheckout aunque
+   * también llegue por ahí: se contaría dos veces.
+   *
+   * Una factura en $0 (renovación adelantada, con trial_end) no cobró nada.
+   */
+  private async recordInvoice(
+    invoice: Stripe.Invoice,
+    subscriptionId: string,
+    eventAt: Date,
+  ): Promise<void> {
+    const invoiceId = invoice.id;
+    if (!invoiceId || !(invoice.amount_paid > 0)) return;
+    // Reentregado: ya está, y así no se repiten las llamadas a Stripe de abajo.
+    const existing = await this.prisma.charge.findUnique({
+      where: { stripeInvoiceId: invoiceId },
+    });
+    if (existing) return;
+
+    // La metadata congelada en la factura es el plan que se cobró; la de la
+    // suscripción hoy podría ser otro. Solo falta en facturas viejas.
+    const plan =
+      planFromMetadata(invoice.parent?.subscription_details?.metadata) ??
+      planFromMetadata(
+        (await this.stripe.stripe.subscriptions.retrieve(subscriptionId))
+          .metadata,
+      );
+    if (!plan) {
+      this.logger.warn(
+        `Factura ${invoiceId} sin plan de membresía — no se registra el cobro`,
+      );
+      return;
+    }
+
+    const method = await invoiceMethod(this.stripe.stripe, invoiceId);
+    const paidAtSeconds = invoice.status_transitions?.paid_at;
+    await this.prisma.$transaction((tx) =>
+      this.charges.recordMembership(tx, {
+        source: 'membership_subscription',
+        method,
+        paidAt: paidAtSeconds ? new Date(paidAtSeconds * 1000) : eventAt,
+        userId: plan.userId,
+        branchId: plan.branchId,
+        tierKey: plan.tierKey,
+        periodKey: plan.periodKey,
+        // Stripe ya cobra en centavos.
+        totalCents: invoice.amount_paid,
+        origin: { stripeInvoiceId: invoiceId },
+      }),
+    );
   }
 
   /**

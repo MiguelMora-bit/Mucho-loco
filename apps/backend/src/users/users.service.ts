@@ -234,6 +234,7 @@ export class UsersService {
         flav,
         img: product.img,
         qty: line.qty,
+        productId: product.id,
         unitPrice: product.price,
       };
     });
@@ -254,14 +255,8 @@ export class UsersService {
         paymentMethod: dto.paymentMethod,
         delivery: dto.delivery,
         branchId: membership.branchId,
-        items: {
-          create: items.map(({ name, flav, img, qty }) => ({
-            name,
-            flav,
-            img,
-            qty,
-          })),
-        },
+        // Precio congelado: se cobra al entregar, y ese día el catálogo pudo cambiar.
+        items: { create: items },
       },
       include: { items: true, branch: true },
     });

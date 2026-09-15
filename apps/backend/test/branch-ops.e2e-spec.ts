@@ -98,6 +98,8 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
   // hace que la suite dé el mismo resultado corra las veces que corra, incluso
   // si una corrida anterior se cayó a la mitad y no alcanzó a limpiar.
   async function resetOperationalState(): Promise<void> {
+    // Primero: un cobro no deja borrar la venta, el pago o el pedido que lo originó.
+    await prisma.charge.deleteMany();
     await prisma.counterSaleItem.deleteMany();
     await prisma.counterSale.deleteMany();
     await prisma.inventoryTransfer.deleteMany();
@@ -864,6 +866,17 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
 
       expect(order?.status).toBe('done');
       expect(order?.deliveredAt).toBeTruthy();
+
+      // En efectivo, entregar es cobrar: el ingreso queda registrado, con el
+      // precio que se le cotizó al hacer el pedido.
+      const charge = await prisma.charge.findUniqueOrThrow({
+        where: { orderId },
+        include: { lines: true },
+      });
+      expect(charge).toMatchObject({ source: 'order', method: 'cash', totalCents: 79000, branchId: 1 });
+      expect(charge.lines).toEqual([
+        expect.objectContaining({ qty: 1, unitPriceCents: 79000, taxCategoryId: 'supplement' }),
+      ]);
     });
 
     it('refuses to deliver the same order twice', async () => {
@@ -871,6 +884,37 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         .post(`/pickup-orders/${orderId}/deliver`)
         .set(...auth('staff'))
         .expect(400);
+    });
+
+    // Un checkout de Stripe abandonado también es un pedido "recoger en gym"
+    // en pending_payment. Antes salía en la cola como listo y mostrador podía
+    // entregarlo sin que nadie hubiera pagado.
+    it('never hands over an online order whose payment never went through', async () => {
+      const member = await prisma.user.findUniqueOrThrow({ where: { email: CUSTOMER } });
+      const abandoned = await prisma.order.create({
+        data: {
+          userId: member.id,
+          status: 'pending_payment',
+          total: 790,
+          paymentMethod: 'stripe',
+          delivery: 'pickup',
+          branchId: 1,
+          items: { create: [{ name: 'Pre-Entreno Bestia', flav: 'Mango Chamoy', img: '/assets/prod-pre-mango.jpg', qty: 1 }] },
+        },
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/branches/1/pickup-orders')
+        .set(...auth('staff'))
+        .expect(200);
+      expect(body<PickupOrder[]>(res).some((o) => o.id === abandoned.id)).toBe(false);
+
+      const refused = await request(app.getHttpServer())
+        .post(`/pickup-orders/${abandoned.id}/deliver`)
+        .set(...auth('staff'))
+        .expect(400);
+      expect(body<{ code: string }>(refused).code).toBe('ORDER_NOT_PAID');
+      expect(await prisma.charge.count({ where: { orderId: abandoned.id } })).toBe(0);
     });
 
     // El efectivo lo cobra mostrador al entregar, así que el corte de caja de
@@ -899,6 +943,30 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
       expect(report.totalRevenue).toBeGreaterThan(0);
       expect(report.byDay.map((d) => d.date)).toEqual([...report.byDay.map((d) => d.date)].sort());
       expect(report.topProducts.length).toBeLessThanOrEqual(5);
+    });
+
+    // El reporte y el registro de cobros no pueden contar historias distintas:
+    // venta, membresía y pedido recogido de esta suite, todos por el mismo lado.
+    it('a branch report adds up to exactly what the charges ledger holds for it', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/branches/1/reports/sales?days=7')
+        .set(...auth('manager'))
+        .expect(200);
+      const report = body<BranchSalesReport>(res);
+      const ledger = await prisma.charge.aggregate({
+        where: { branchId: 1 },
+        _sum: { totalCents: true },
+        _count: true,
+      });
+      const sources = await prisma.charge.findMany({
+        where: { branchId: 1 },
+        distinct: ['source'],
+        select: { source: true },
+      });
+
+      expect(Math.round(report.totalRevenue * 100)).toBe(ledger._sum.totalCents);
+      expect(report.transactionCount).toBe(ledger._count);
+      expect(sources.map((s) => s.source).sort()).toEqual(['counter_membership', 'counter_sale', 'order']);
     });
 
     it('a report is not visible to counter staff', async () => {

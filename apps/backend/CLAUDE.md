@@ -203,8 +203,43 @@ Backend local + `stripe listen` + Postgres dev. Sin User Pool vivo no hay token 
 
 - **Portal de cliente de Stripe** (cambiar plan, actualizar tarjeta, cancelar): hoy el socio no puede cancelar desde la app.
 - `branch-app` renovando en mostrador a un socio con suscripción viva le cobraría dos veces — el mostrador no sabe de la suscripción.
-- Los reportes de `owner-panel` no suman las membresías cobradas en línea (solo `MembershipPayment` de mostrador).
+- ~~Los reportes de `owner-panel` no suman las membresías cobradas en línea~~ — ✅ resuelto (2026-09-14): los reportes leen el registro de cobros, ver abajo.
 - Al recrear el User Pool, diego/valeria entran SIN membresía (el seed no crea membresías): se contrata con la tarjeta `4242…`.
+
+## Registro de cobros (2026-09-14) — paso 1 de facturación
+
+Antes de emitir un solo CFDI hace falta saber, en UN lugar, cada peso que entró. El dinero vivía en cuatro tablas con formas distintas (`Payment`, `CounterSale`, `MembershipPayment`, `MembershipPurchase`), y una parte ni siquiera llegaba a una tabla: **los cobros de suscripción del mes 2 en adelante no dejaban fila en ningún lado** — `invoice.paid` solo movía `expiresAt`. Ahora cada cobro confirmado es una fila de `Charge` (con sus `ChargeLine`), venga del canal que venga. Las tablas de cada canal siguen siendo el detalle operativo.
+
+| Canal | Quién lo registra | `paidAt` | `method` |
+|---|---|---|---|
+| Pedido pagado en línea | `PaymentsService.markPaid` (webhook) | `event.created`: con OXXO/SPEI, el día que Stripe confirmó el dinero | del cargo del PaymentIntent |
+| Pedido en efectivo al recoger | `PickupOrdersService.markDelivered` | al entregar | `cash` |
+| Venta de mostrador | `CounterSalesService.createSale` | `createdAt` de la venta | el de mostrador |
+| Membresía de mostrador | `CounterMembershipsService.renew`/`signUp` | `createdAt` del pago | el de mostrador |
+| Visita en línea | `MembershipBillingService.completeCheckout` | `event.created` | del PaymentIntent |
+| Cada cobro de suscripción | `MembershipBillingService`, en `invoice.paid` | `status_transitions.paid_at` | InvoicePayment → PaymentIntent |
+
+### Decisiones
+
+- **Un solo escritor**: `ChargesService` (`src/charges/`). Cada canal lo llama DENTRO de la transacción que confirma su cobro: no existe un pedido pagado sin su cobro, ni el cobro de una venta que se revirtió. Cuando llegue el outbox del PAC (paso 2), se agrega ahí, en un solo lugar.
+- **Exactamente un origen**: `orderId`/`counterSaleId`/`membershipPaymentId`/`membershipPurchaseId`/`stripeInvoiceId`, todos `@unique`, más el CHECK `charges_exactly_one_source` escrito a mano en `20260914150000_charges_ledger` (Prisma no sabe declararlo). Los FKs de origen son `Restrict`: no se borra lo que originó un ingreso — por eso los e2e borran `charge` antes que pedidos, ventas o compras.
+- **Idempotente sin abortar la transacción**: `createMany({ skipDuplicates: true })` (ON CONFLICT DO NOTHING). Un `create` que choca con el índice único aborta la transacción ENTERA en Postgres, y un webhook reentregado haría fallar todo lo demás.
+- **Suscripciones solo por `invoice.paid`**, el primer cobro incluido. El primero también llega como `checkout.session.completed`; registrarlo por los dos lados lo contaría dos veces. Una factura en $0 (renovación adelantada con `trial_end`) no cobró nada y no se registra. El plan sale de `parent.subscription_details.metadata` (congelada en la factura), con la suscripción como respaldo.
+- **Centavos** en `Charge`/`ChargeLine`; el resto del schema sigue en pesos y `toCents` convierte al registrar. El desglose de IVA (total / 1.16) da decimales.
+- **Renglones con dato fiscal congelado**: `TaxCategory` es el catálogo fiscal, separado del comercial (`Product.taxCategoryId`, `MembershipTier.taxCategoryId`), y al cobrar se copia al renglón (`satProductKey`, `satUnitKey`, `taxRateBp`). Si los renglones no suman el total, `insert` truena — una factura lo exige, y mejor enterarse al registrar que al timbrar. El envío es renglón propio (`shipping`), calculado como total − productos.
+- **`OrderItem.productId`/`unitPrice`** (nuevos): el precio se congela al hacer el pedido, porque el cobro puede llegar días después. Un pedido anterior a esos campos va como un renglón `unclassified` por su total.
+- **`ChargeMethod` guarda lo que pasó, no la clave del SAT**: traducir a `c_FormaPago` es del paso 2. Mostrador registra `card` a secas porque su terminal no captura crédito vs débito todavía.
+- **Los reportes leen `Charge`** (`reports.service.ts`): ya suman membresías contratadas en línea y pedidos pagados en línea (al pagarse, no al entregarse). "Más vendidos" sigue saliendo solo de ventas de mostrador. `cash-register` no cambió: el corte de caja es sobre el cajón, no sobre ingresos.
+
+**Claves fiscales provisionales.** Todas las categorías traen `01010101` ("No existe en el catálogo": válida pero genérica); la real la define el contador antes de la primera factura. Categorías: `supplement`, `energy_drink` (aparte porque las bebidas energizantes llevan IEPS además de IVA — confirmar con el contador), `beverage`, `merch`, `gym_membership`, `shipping`, `unclassified`. Van en la migración (las columnas nuevas son NOT NULL sobre filas existentes) y en `seed.ts`.
+
+Probado: unit (`charges.service.spec.ts` + el spec de cada canal) y e2e contra Postgres real — cada canal deja su cobro con renglones, un webhook reentregado (pedido, visita, `invoice.paid`) no duplica, y el reporte de sucursal suma exactamente lo que el registro tiene para ella.
+
+### Pendiente
+
+- **Paso 2**: `FiscalIssuer` + `FiscalProfile` + `Cfdi` + outbox con worker (`FOR UPDATE SKIP LOCKED`), contra el modo test de Facturapi. Bloqueado por una decisión de negocio: ¿un RFC para las 15 sucursales, o varios? El outbox se dejó fuera del paso 1 a propósito: sin PAC que lo consuma, solo acumularía filas muertas.
+- Mostrador: capturar crédito vs débito (el SAT los distingue: 04 vs 28).
+- ~~Hueco: mostrador podía entregar un pedido de Stripe en `pending_payment` (checkout abandonado).~~ ✅ Corregido (2026-09-15): `getByBranch` ya no lista pedidos en línea sin pagar, y `markDelivered` los rechaza con `ORDER_NOT_PAID`, como `shipments`. El efectivo pendiente se sigue entregando: ahí es donde se cobra. e2e en `branch-ops.e2e-spec.ts`.
 
 ## Notificaciones por WhatsApp (2026-09-12)
 

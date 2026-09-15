@@ -5,6 +5,7 @@ import { InventoryService, displayName } from '../inventory/inventory.service';
 import { CreateCounterSaleDto } from './dto/create-counter-sale.dto';
 import type { CounterSale as SaleRow, CounterSaleItem as SaleItemRow } from '@prisma/client';
 import { productNotFound } from '../common/error-codes';
+import { ChargesService } from '../charges/charges.service';
 
 function toCounterSale(row: SaleRow & { items: SaleItemRow[] }): CounterSale {
   return {
@@ -27,13 +28,14 @@ export class CounterSalesService {
   constructor(
     private prisma: PrismaService,
     private inventory: InventoryService,
+    private charges: ChargesService,
   ) {}
 
   /**
    * Cobra en mostrador y descuenta stock LOCAL de esa sucursal (a diferencia
    * de un pedido a domicilio, que sale de la bodega central — ver CLAUDE.md
-   * raíz). Venta y descuento van en la misma transacción: si el stock no
-   * alcanza, no queda una venta cobrada sin producto que entregar.
+   * raíz). Venta, descuento y cobro registrado van en la misma transacción: si
+   * el stock no alcanza, no queda una venta cobrada sin producto que entregar.
    */
   async createSale(branchId: number, dto: CreateCounterSaleDto, lang: Lang): Promise<CounterSale> {
     const products = await this.prisma.product.findMany({
@@ -59,7 +61,7 @@ export class CounterSalesService {
           tx, branchId, item.productId, item.qty, item.productName,
         );
       }
-      return tx.counterSale.create({
+      const created = await tx.counterSale.create({
         data: {
           branchId,
           total,
@@ -68,6 +70,8 @@ export class CounterSalesService {
         },
         include: { items: true },
       });
+      await this.charges.recordCounterSale(tx, created);
+      return created;
     });
 
     return toCounterSale(sale);
