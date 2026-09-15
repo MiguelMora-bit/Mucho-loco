@@ -257,6 +257,8 @@ model User {
   visits              Visit[]
   orders              Order[]
   charges             Charge[]
+  fiscalProfile       FiscalProfile?
+  cfdis               Cfdi[]
 
   notifications     Notification[]
   communityPosts    CommunityPost[]
@@ -958,6 +960,8 @@ model Charge {
   stripeInvoiceId      String?             @unique
 
   lines ChargeLine[]
+  /// null = cobro anterior a la facturación (paso 2): no tiene recibo.
+  fiscalReceipt FiscalReceipt?
 
   createdAt DateTime @default(now())
 
@@ -984,4 +988,115 @@ model ChargeLine {
 
   @@index([chargeId])
   @@map("charge_lines")
+}
+
+// ─── Facturación CFDI 4.0 (2026-09-15) — paso 2 ─────────────────────────────
+// Ver "Facturación CFDI" en apps/backend/CLAUDE.md.
+
+/// Datos fiscales del socio, tal cual su Constancia de Situación Fiscal. Se
+/// COPIAN a la factura al emitirla: cambiarlos después no toca una ya timbrada.
+model FiscalProfile {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// RFC, en mayúsculas.
+  taxId     String
+  /// Nombre o razón social, sin el régimen societario ("SA DE CV").
+  legalName String
+  /// c_RegimenFiscal del SAT (601, 605, 612, 626…).
+  taxSystem String
+  /// Código postal del domicilio fiscal: CFDI 4.0 lo valida contra el SAT.
+  zip       String
+  /// c_UsoCFDI.
+  cfdiUse   String   @default("G03")
+  /// A dónde manda Facturapi el PDF y el XML. null = el correo de la cuenta.
+  email     String?
+  updatedAt DateTime @updatedAt
+
+  @@map("fiscal_profiles")
+}
+
+enum FiscalReceiptStatus {
+  /// En la cola: falta darlo de alta en Facturapi.
+  pending
+  /// Dado de alta: se puede facturar a un cliente.
+  open
+  /// Facturado a un cliente, desde la app o desde el portal de autofactura.
+  invoiced_to_customer
+  /// Entró a la factura global del periodo: ya no se puede facturar aparte.
+  invoiced_globally
+  canceled
+  /// Agotó los reintentos: alguien tiene que revisarlo.
+  failed
+}
+
+/// El recibo electrónico de Facturapi de un cobro — y a la vez la cola
+/// (outbox) que lo manda. Cada cobro nace con su fila en `pending`, en la
+/// misma transacción que lo registra (ChargesService); FiscalReceiptsService
+/// la da de alta en Facturapi y reintenta si falla.
+///
+/// Todo cobro pasa por aquí y no directo a una factura porque así funciona el
+/// PAC: el recibo se puede facturar a un cliente (desde la app o con la clave
+/// del ticket en el portal) y lo que nadie facturó entra solo a la factura
+/// global del periodo.
+model FiscalReceipt {
+  chargeId       String              @id
+  charge         Charge              @relation(fields: [chargeId], references: [id], onDelete: Cascade)
+  status         FiscalReceiptStatus @default(pending)
+  attempts       Int                 @default(0)
+  /// Cuándo lo vuelve a intentar el worker. También es el arriendo: al tomar
+  /// un recibo se empuja 5 minutos para que otra instancia no lo tome.
+  nextAttemptAt  DateTime            @default(now())
+  lastError      String?
+  facturapiId    String?             @unique
+  /// Clave de autofacturación: la que va impresa en el ticket.
+  key            String?             @unique
+  selfInvoiceUrl String?
+  /// Hasta cuándo deja autofacturar el portal. Por API se puede después.
+  expiresAt      DateTime?
+  cfdiId         String?
+  cfdi           Cfdi?               @relation(fields: [cfdiId], references: [id], onDelete: SetNull)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([cfdiId])
+  @@map("fiscal_receipts")
+}
+
+enum CfdiKind {
+  individual
+  global
+}
+
+enum CfdiStatus {
+  valid
+  canceled
+}
+
+/// Una factura timbrada ante el SAT. El dato vivo está en Facturapi; aquí va
+/// lo necesario para listarla y encontrarla sin pedírselo.
+model Cfdi {
+  id                 String     @id @default(uuid())
+  facturapiId        String     @unique
+  /// Folio fiscal que asigna el SAT.
+  uuid               String     @unique
+  kind               CfdiKind
+  status             CfdiStatus @default(valid)
+  /// Solicitud de cancelación ante el SAT tal cual la reporta el PAC: none,
+  /// pending, accepted, rejected, expired… (el receptor a veces tiene que aceptarla).
+  cancellationStatus String     @default("none")
+  totalCents         Int
+  customerTaxId      String
+  customerLegalName  String
+  /// Quién la pidió desde la app. null = factura global, o autofactura del portal.
+  userId             String?
+  user               User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  issuedAt           DateTime
+  receipts           FiscalReceipt[]
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([issuedAt])
+  @@index([userId])
+  @@map("cfdis")
 }

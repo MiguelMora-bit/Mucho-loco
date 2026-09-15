@@ -36,7 +36,19 @@ export type ApiErrorCode =
   | 'NOT_A_HOME_ORDER'
   | 'ORDER_NOT_PAID'
   | 'ORDER_ALREADY_SHIPPED'
-  | 'ORDER_NOT_SHIPPED';
+  | 'ORDER_NOT_SHIPPED'
+  | 'FISCAL_PROFILE_NOT_FOUND'
+  | 'FISCAL_PROFILE_REQUIRED'
+  | 'CHARGE_NOT_FOUND'
+  | 'CHARGE_ALREADY_INVOICED'
+  | 'INVOICING_WINDOW_CLOSED'
+  | 'CHARGE_NOT_INVOICEABLE'
+  | 'INVOICING_UNAVAILABLE'
+  | 'FISCAL_DATA_REJECTED'
+  | 'INVOICING_PROVIDER_ERROR'
+  | 'CFDI_NOT_FOUND'
+  | 'CFDI_ALREADY_CANCELED'
+  | 'CANCELLATION_REJECTED';
 
 export interface ApiErrorBody {
   code: ApiErrorCode;
@@ -65,7 +77,10 @@ export const insufficientStock = (
   requested,
 });
 
-export const branchDoesNotStockProduct = (branchId: number, productId: string): ApiErrorBody => ({
+export const branchDoesNotStockProduct = (
+  branchId: number,
+  productId: string,
+): ApiErrorBody => ({
   code: 'BRANCH_DOES_NOT_STOCK_PRODUCT',
   message: `La sucursal ${branchId} no maneja el producto ${productId}`,
   branchId,
@@ -199,4 +214,91 @@ export const orderNotShipped = (orderId: string): ApiErrorBody => ({
   code: 'ORDER_NOT_SHIPPED',
   message: `Order ${orderId} todavía no se envía`,
   orderId,
+});
+
+// ─── Facturación CFDI ────────────────────────────────────────────────────────
+
+export const fiscalProfileNotFound = (): ApiErrorBody => ({
+  code: 'FISCAL_PROFILE_NOT_FOUND',
+  message: 'Todavía no hay datos fiscales guardados',
+});
+
+export const fiscalProfileRequired = (): ApiErrorBody => ({
+  code: 'FISCAL_PROFILE_REQUIRED',
+  message: 'Para facturar, primero guarda tus datos fiscales',
+});
+
+export const chargeNotFound = (chargeId: string): ApiErrorBody => ({
+  code: 'CHARGE_NOT_FOUND',
+  message: `Charge not found: ${chargeId}`,
+  chargeId,
+});
+
+export const chargeAlreadyInvoiced = (
+  chargeId: string,
+  cfdiId: string | null,
+): ApiErrorBody => ({
+  code: 'CHARGE_ALREADY_INVOICED',
+  message: 'Este cobro ya tiene su factura',
+  chargeId,
+  cfdiId,
+});
+
+/** Lo que nadie facturó entra a la factura global del periodo, y de ahí ya no sale. */
+export const invoicingWindowClosed = (chargeId: string): ApiErrorBody => ({
+  code: 'INVOICING_WINDOW_CLOSED',
+  message:
+    'Este cobro ya entró a la factura global del periodo; ya no se puede facturar aparte',
+  chargeId,
+});
+
+export const chargeNotInvoiceable = (chargeId: string): ApiErrorBody => ({
+  code: 'CHARGE_NOT_INVOICEABLE',
+  message: 'Este cobro no se puede facturar',
+  chargeId,
+});
+
+export const invoicingUnavailable = (): ApiErrorBody => ({
+  code: 'INVOICING_UNAVAILABLE',
+  message:
+    'La facturación no está disponible en este momento; intenta más tarde',
+});
+
+/**
+ * El SAT, vía el PAC, rechazó los datos: un RFC que no existe, un nombre o
+ * régimen que no coinciden con la constancia, un uso de CFDI que ese régimen
+ * no admite. El mensaje del PAC viaja tal cual: es lo que el socio tiene que
+ * corregir, y ningún código genérico se lo diría mejor.
+ */
+export const fiscalDataRejected = (detail: string): ApiErrorBody => ({
+  code: 'FISCAL_DATA_REJECTED',
+  message: detail,
+  detail,
+});
+
+export const invoicingProviderError = (): ApiErrorBody => ({
+  code: 'INVOICING_PROVIDER_ERROR',
+  message: 'El proveedor de facturación no respondió; intenta más tarde',
+});
+
+export const cfdiNotFound = (cfdiId: string): ApiErrorBody => ({
+  code: 'CFDI_NOT_FOUND',
+  message: `CFDI not found: ${cfdiId}`,
+  cfdiId,
+});
+
+export const cfdiAlreadyCanceled = (cfdiId: string): ApiErrorBody => ({
+  code: 'CFDI_ALREADY_CANCELED',
+  message: 'Esta factura ya está cancelada',
+  cfdiId,
+});
+
+export const cancellationRejected = (
+  cfdiId: string,
+  detail: string,
+): ApiErrorBody => ({
+  code: 'CANCELLATION_REJECTED',
+  message: detail,
+  cfdiId,
+  detail,
 });

@@ -257,6 +257,13 @@ export class ChargesService {
         };
       }),
     });
+    // Su lugar en la cola hacia el PAC (ver FiscalReceiptsService): en la
+    // misma transacción, así que no existe un cobro sin su recibo por emitir.
+    // La fecha va explícita, en UTC como todo lo que escribe Prisma: el worker
+    // la compara contra `now() AT TIME ZONE 'UTC'`.
+    await tx.fiscalReceipt.create({
+      data: { chargeId: id, nextAttemptAt: new Date() },
+    });
     return true;
   }
 
