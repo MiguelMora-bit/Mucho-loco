@@ -1,7 +1,6 @@
 import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import { MEMBER_ACCESS_RECORDS, MEMBERSHIP_PAYMENTS } from '../../data';
-import { CURRENT_BRANCH_PRICE, PERIOD_DAYS, PERIOD_MULTIPLIERS, TIER_FACTORS } from '../../membershipPlans';
-import { calculateMembershipPrice } from '../../pricing';
+import { CURRENT_BRANCH_PRICE, PERIOD_DAYS, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '../../membershipPlans';
 import { delay } from './delay';
 import type { SignUpInput } from '../../repositories/membership.repository';
 import type { IMembershipRepository } from '../../repositories/membership.repository';
@@ -72,7 +71,7 @@ export class MembershipMockDatasource implements IMembershipRepository {
       phone: '',
       tierKey,
       periodKey,
-      amount: calculateMembershipPrice(CURRENT_BRANCH_PRICE, TIER_FACTORS[tierKey], PERIOD_MULTIPLIERS[periodKey]),
+      amount: resolveMembershipTierPrice(tierKey, CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS[periodKey]),
       paymentMethod,
       isNewMember: false,
       createdAt: new Date().toISOString(),
@@ -107,7 +106,7 @@ export class MembershipMockDatasource implements IMembershipRepository {
       phone: input.phone,
       tierKey: input.tierKey,
       periodKey: input.periodKey,
-      amount: calculateMembershipPrice(CURRENT_BRANCH_PRICE, TIER_FACTORS[input.tierKey], PERIOD_MULTIPLIERS[input.periodKey]),
+      amount: resolveMembershipTierPrice(input.tierKey, CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS[input.periodKey]),
       paymentMethod: input.paymentMethod,
       isNewMember: true,
       createdAt: new Date().toISOString(),

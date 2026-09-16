@@ -10,6 +10,16 @@ import type { PlanKey, TierKey } from '@mucho-loco/types';
  */
 export const TIER_FACTORS: Record<TierKey, number> = { single: 1, all: 1.5 };
 
+/**
+ * Mismo precio en las 15 sucursales para `all` (regla de negocio 2026-09-15)
+ * — deja de ser branch.price × factor. Provisional: promedio de las 15
+ * sucursales × el factor 1.5 anterior, redondeado a la decena; el monto
+ * final lo confirma el dueño del negocio. Espejo de TIER_BASE_PRICES en
+ * customer-core/data.ts y branch-app/lib/membershipPlans.ts — los tres
+ * tienen que mostrar y cobrar el mismo número.
+ */
+export const TIER_BASE_PRICES: Partial<Record<TierKey, number>> = { all: 1550 };
+
 export const PERIOD_MULTIPLIERS: Record<PlanKey, number> = {
   visit: 0.12,
   weekly: 0.35,
@@ -36,13 +46,18 @@ export const PERIOD_DAYS: Record<PlanKey, number> = {
   annual: 365,
 };
 
-/** Redondeado a la decena, igual que calculateMembershipPrice de los frontends. */
+/**
+ * Redondeado a la decena, igual que calculateMembershipPrice de los
+ * frontends. `basePrice` (el precio de la sucursal que cobra) se ignora para
+ * un tier que tenga entrada en TIER_BASE_PRICES — hoy solo `all`.
+ */
 export function calculateMembershipPrice(
   basePrice: number,
   tierKey: TierKey,
   periodKey: PlanKey,
 ): number {
-  return Math.round((basePrice * TIER_FACTORS[tierKey] * PERIOD_MULTIPLIERS[periodKey]) / 10) * 10;
+  const tierBase = TIER_BASE_PRICES[tierKey] ?? basePrice * TIER_FACTORS[tierKey];
+  return Math.round((tierBase * PERIOD_MULTIPLIERS[periodKey]) / 10) * 10;
 }
 
 export function addDays(base: Date, days: number): Date {

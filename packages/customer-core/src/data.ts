@@ -115,7 +115,13 @@ export const MEMBERSHIP_TIERS: MembershipTier[] = [
   {
     key: 'all',
     name: { es: 'TODAS LAS SUCURSALES', en: 'ALL GYMS' },
+    // Mismo precio en las 15 sucursales (regla de negocio 2026-09-15): deja
+    // de calcularse como branch.price × factor. `factor` se conserva solo
+    // como referencia de cómo se llegó a este número (promedio de las 15
+    // sucursales × 1.5, redondeado a la decena) — basePrice es el que manda.
+    // Provisional: el monto final lo confirma el dueño del negocio.
     factor: 1.5,
+    basePrice: 1550,
     popular: true,
     perks: {
       es: ['Acceso a las 15 sucursales', 'Todas las clases en cualquier sede', 'Locker incluido', 'Horario completo en todas', 'Invitado al mes', 'Asesoría nutricional', 'App con rutinas'],

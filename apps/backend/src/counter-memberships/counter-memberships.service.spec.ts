@@ -232,8 +232,26 @@ describe('CounterMembershipsService', () => {
 
     // El mock de branch-app cobraba CURRENT_BRANCH_PRICE = 1090 fijo, así que
     // Santa Fe ($1390) cobraba precio de Roma Sur. Aquí el precio sale de la
-    // sucursal que está cobrando.
+    // sucursal que está cobrando — regla que hoy solo aplica a `single`, ver
+    // el test de abajo para `all`.
     it('prices from the branch doing the charging, not from a fixed constant', async () => {
+      prisma.membership.findUnique.mockResolvedValue({ ...romaSurRow, tierKey: 'single' });
+      prisma.branch.findUnique.mockResolvedValue({ id: 5, price: 1390 });
+      prisma.membershipPayment.create.mockImplementation(({ data }: never) => ({
+        ...(data as object),
+        id: 'mp1',
+        createdAt: new Date(),
+      }));
+
+      const payment = await service.renew(5, { ...dto, tierKey: 'single' });
+
+      expect(payment.amount).toBe(calculateMembershipPrice(1390, 'single', 'monthly'));
+      expect(payment.amount).not.toBe(calculateMembershipPrice(1090, 'single', 'monthly'));
+    });
+
+    // Regla de negocio 2026-09-15: `all` es un precio fijo, igual sin importar
+    // qué sucursal esté cobrando — a diferencia de `single`, arriba.
+    it('charges the same fixed price for all, regardless of the branch charging', async () => {
       prisma.membership.findUnique.mockResolvedValue(romaSurRow);
       prisma.branch.findUnique.mockResolvedValue({ id: 5, price: 1390 });
       prisma.membershipPayment.create.mockImplementation(({ data }: never) => ({
@@ -245,7 +263,7 @@ describe('CounterMembershipsService', () => {
       const payment = await service.renew(5, dto);
 
       expect(payment.amount).toBe(calculateMembershipPrice(1390, 'all', 'monthly'));
-      expect(payment.amount).not.toBe(calculateMembershipPrice(1090, 'all', 'monthly'));
+      expect(payment.amount).toBe(calculateMembershipPrice(1090, 'all', 'monthly'));
     });
 
     // Renovar puede mover al socio de tier y de sucursal — si la membresía no

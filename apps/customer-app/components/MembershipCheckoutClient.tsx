@@ -5,7 +5,7 @@ import { useLocale } from 'next-intl';
 import type { Branch, Lang, MembershipInfo, MembershipPlanChoice, MembershipTier, PlanKey } from '@mucho-loco/types';
 import { useT } from '@/lib/hooks/useT';
 import { ApiError, postJson } from '@/lib/api-client';
-import { calculateMembershipPrice, formatPrice, PERIOD_MULTIPLIERS } from '@/lib/pricing';
+import { formatPrice, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '@/lib/pricing';
 import { formatDate } from '@/lib/dates';
 import { purchaseBlock } from '@mucho-loco/customer-core/membership-rules';
 
@@ -51,7 +51,7 @@ export default function MembershipCheckoutClient({
 
   const branch = branches.find((b) => b.id === plan.branchId) ?? branches[0];
   const tier = tiers.find((x) => x.key === plan.tierKey);
-  const price = calculateMembershipPrice(branch.price, tier?.factor ?? 1, PERIOD_MULTIPLIERS[plan.periodKey]);
+  const price = resolveMembershipTierPrice(tier ?? { factor: 1 }, branch.price, PERIOD_MULTIPLIERS[plan.periodKey]);
   const recurring = plan.periodKey !== 'visit';
 
   // Las mismas reglas que aplica el backend, solo para no ofrecer un botón que

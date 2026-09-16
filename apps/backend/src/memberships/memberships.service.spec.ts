@@ -227,6 +227,7 @@ describe('MembershipsService', () => {
           key: 'single',
           name: { es: 'A', en: 'B' },
           factor: 1,
+          basePrice: null,
           perks: { es: ['x'], en: ['y'] },
           badge: { es: 'C', en: 'D' },
           popular: false,
@@ -236,6 +237,25 @@ describe('MembershipsService', () => {
       expect(tiers).toHaveLength(1);
       expect(tiers[0].key).toBe('single');
       expect(tiers[0].name).toEqual({ es: 'A', en: 'B' });
+      expect(tiers[0].basePrice).toBeUndefined();
+    });
+
+    // `all` trae un precio fijo (2026-09-15) — el catálogo tiene que
+    // exponerlo para que los frontends dejen de calcularlo desde branch.price.
+    it('surfaces a fixed basePrice when the row has one', async () => {
+      prisma.membershipTier.findMany.mockResolvedValue([
+        {
+          key: 'all',
+          name: { es: 'A', en: 'B' },
+          factor: 1.5,
+          basePrice: 1550,
+          perks: { es: ['x'], en: ['y'] },
+          badge: { es: 'C', en: 'D' },
+          popular: true,
+        },
+      ]);
+      const tiers = await service.getTiers();
+      expect(tiers[0].basePrice).toBe(1550);
     });
   });
 });

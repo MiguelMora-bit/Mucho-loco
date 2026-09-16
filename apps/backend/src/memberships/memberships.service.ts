@@ -45,6 +45,7 @@ function toMembershipTier(row: MembershipTierRow): MembershipTier {
     key: row.key,
     name: row.name as unknown as LocalizedString,
     factor: row.factor,
+    basePrice: row.basePrice ?? undefined,
     perks: row.perks as unknown as Record<'es' | 'en', string[]>,
     badge: row.badge as unknown as LocalizedString,
     popular: row.popular,
