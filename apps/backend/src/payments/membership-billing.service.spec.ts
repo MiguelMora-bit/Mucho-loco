@@ -182,8 +182,9 @@ describe('MembershipBillingService', () => {
       expect(params.mode).toBe('payment');
       expect(params.line_items[0].price_data).not.toHaveProperty('recurring');
       expect(params).not.toHaveProperty('subscription_data');
-      // 1090 × 1.5 × 0.12 = 196.2 → redondeado a la decena.
-      expect(params.line_items[0].price_data.unit_amount).toBe(20000);
+      // `all` es precio fijo desde 2026-09-15 (TIER_BASE_PRICES), no depende
+      // de la sucursal del dto: 1550 × 0.12 = 186 → redondeado a la decena.
+      expect(params.line_items[0].price_data.unit_amount).toBe(19000);
     });
 
     it('reuses the member Stripe customer instead of creating a new one each time', async () => {

@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { membershipRepository } from '../../lib/repositories/membership.repository';
 import { getCurrentBranchId, getCurrentBranchName } from '../../lib/currentBranch';
-import { CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS, TIER_FACTORS } from '../../lib/membershipPlans';
-import { calculateMembershipPrice } from '../../lib/pricing';
+import { CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '../../lib/membershipPlans';
 import { captureFingerprint } from '../../lib/fingerprintScanner';
 import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import { formatDate, langOf } from '../../lib/dates';
@@ -189,7 +188,7 @@ export function MembershipTab() {
   // dato del cobro), así que este es el único registro de qué método se usó.
   const [successFingerprintId, setSuccessFingerprintId] = useState<string | null>(null);
 
-  const price = calculateMembershipPrice(CURRENT_BRANCH_PRICE, TIER_FACTORS[tierKey], PERIOD_MULTIPLIERS[periodKey]);
+  const price = resolveMembershipTierPrice(tierKey, CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS[periodKey]);
 
   function resetForm() {
     setMemberName(''); setPhone(''); setQrCode(''); setFoundMember(null); setSearchError(null);

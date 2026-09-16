@@ -4,7 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { MembershipPlanChoice, PlanKey } from '@mucho-loco/types';
-import { calculateMembershipPrice, formatPrice, PERIOD_MULTIPLIERS } from '@mucho-loco/customer-core/pricing';
+import { formatPrice, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '@mucho-loco/customer-core/pricing';
 import { formatDate } from '@mucho-loco/customer-core/dates';
 import { membershipErrorCode } from '@mucho-loco/customer-core/membership-errors';
 import { purchaseBlock, renewalStartsOn } from '@mucho-loco/customer-core/membership-rules';
@@ -74,7 +74,7 @@ export default function MembershipScreen() {
   };
   const branch = branches.find((b) => b.id === plan.branchId) ?? branches[0];
   const tier = tiers.find((x) => x.key === plan.tierKey);
-  const price = calculateMembershipPrice(branch.price, tier?.factor ?? 1, PERIOD_MULTIPLIERS[plan.periodKey]);
+  const price = resolveMembershipTierPrice(tier ?? { factor: 1 }, branch.price, PERIOD_MULTIPLIERS[plan.periodKey]);
   const recurring = plan.periodKey !== 'visit';
 
   // Las mismas reglas que aplica el backend, solo para no ofrecer un botón que va a rebotar.

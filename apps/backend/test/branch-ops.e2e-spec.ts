@@ -389,15 +389,15 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         .send({
           memberName: 'Socio De Mostrador',
           phone: '55 1111 2222',
-          tierKey: 'all',
+          tierKey: 'single',
           periodKey: 'monthly',
           paymentMethod: 'cash',
         })
         .expect(201);
       signedUp = body<MembershipPayment>(res);
 
-      // Roma Sur cuesta 1090, tier all x1.5, mensual x1 → 1640 (redondeo a decena).
-      expect(signedUp).toMatchObject({ branchId: 1, isNewMember: true, amount: 1640 });
+      // Roma Sur cuesta 1090, tier single x1, mensual x1 → 1090.
+      expect(signedUp).toMatchObject({ branchId: 1, isNewMember: true, amount: 1090 });
       expect(signedUp.qrCode).toMatch(/^ML-QR-[0-9A-F]{12}$/);
 
       const created = await prisma.user.findFirstOrThrow({
@@ -407,14 +407,14 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
       expect(created.email).toBeNull();
     });
 
-    it('charges a different branch a different price for the same plan', async () => {
+    it('charges a different branch a different price for the same single-gym plan', async () => {
       const res = await request(app.getHttpServer())
         .post('/branches/5/memberships/signup')
         .set(...auth('staff'))
         .send({
           memberName: 'Socio Santa Fe',
           phone: '55 3333 4444',
-          tierKey: 'all',
+          tierKey: 'single',
           periodKey: 'monthly',
           paymentMethod: 'card',
         })
@@ -422,7 +422,37 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
 
       // Santa Fe cuesta 1390, no 1090 — el mock cobraba precio de Roma Sur en
       // las 15 sucursales.
-      expect(body<MembershipPayment>(res).amount).toBe(2090);
+      expect(body<MembershipPayment>(res).amount).toBe(1390);
+    });
+
+    // Regla de negocio 2026-09-15: a diferencia de `single` (arriba), `all` es
+    // un precio fijo — Roma Sur y Santa Fe cobran lo mismo.
+    it('charges the same fixed price for the all-gyms plan at any branch', async () => {
+      const romaSur = await request(app.getHttpServer())
+        .post('/branches/1/memberships/signup')
+        .set(...auth('staff'))
+        .send({
+          memberName: 'Socio Todas Roma Sur',
+          phone: '55 9999 0000',
+          tierKey: 'all',
+          periodKey: 'monthly',
+          paymentMethod: 'cash',
+        })
+        .expect(201);
+      const santaFe = await request(app.getHttpServer())
+        .post('/branches/5/memberships/signup')
+        .set(...auth('staff'))
+        .send({
+          memberName: 'Socio Todas Santa Fe',
+          phone: '55 9999 0001',
+          tierKey: 'all',
+          periodKey: 'monthly',
+          paymentMethod: 'cash',
+        })
+        .expect(201);
+
+      expect(body<MembershipPayment>(romaSur).amount).toBe(1550);
+      expect(body<MembershipPayment>(santaFe).amount).toBe(1550);
     });
 
     it('rejects a signup that tries to set its own price', async () => {

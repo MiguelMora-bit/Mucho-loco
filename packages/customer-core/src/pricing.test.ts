@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateMembershipPrice, formatPrice } from './pricing';
+import { calculateMembershipPrice, formatPrice, resolveMembershipTierPrice } from './pricing';
 
 describe('calculateMembershipPrice', () => {
   it('multiplies base price by tier factor and period multiplier', () => {
@@ -15,6 +15,24 @@ describe('calculateMembershipPrice', () => {
   it('handles the annual multiplier', () => {
     // 890 * 1.0 * 9.5 = 8455 -> rounds to 8460
     expect(calculateMembershipPrice(890, 1.0, 9.5)).toBe(8460);
+  });
+});
+
+describe('resolveMembershipTierPrice', () => {
+  it('derives the price from branch price × factor when the tier has no basePrice', () => {
+    // single tier: 1090 (Roma Sur) * 1.0 * 1 (monthly) = 1090
+    expect(resolveMembershipTierPrice({ factor: 1.0 }, 1090, 1)).toBe(1090);
+  });
+
+  it('ignores branchPrice and factor when the tier has a fixed basePrice', () => {
+    const all = { factor: 1.5, basePrice: 1550 };
+    expect(resolveMembershipTierPrice(all, 890, 1)).toBe(1550);
+    expect(resolveMembershipTierPrice(all, 1390, 1)).toBe(1550);
+  });
+
+  it('still applies the period multiplier on top of a fixed basePrice', () => {
+    // 1550 (all, fixed) * 0.12 (visit) = 186 -> rounds to 190
+    expect(resolveMembershipTierPrice({ factor: 1.5, basePrice: 1550 }, 1090, 0.12)).toBe(190);
   });
 });
 

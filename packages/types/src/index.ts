@@ -84,6 +84,8 @@ export interface MembershipTier {
   key: TierKey;
   name: LocalizedString;
   factor: number;
+  /** Precio fijo, igual en cualquier sucursal. Si está presente, gana sobre `factor × branch.price`. */
+  basePrice?: number;
   perks: Record<Lang, string[]>;
   badge: LocalizedString;
   popular?: boolean;
@@ -348,6 +350,7 @@ export interface Translations {
     partnersSub: string;
     branchPriceNote: string;
     allGymsLocation: string;
+    allGymsFixedPrice: string;
     partnersEyebrow: string;
     partnersNote: string;
     totalPassNote: string;

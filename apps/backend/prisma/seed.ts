@@ -85,7 +85,10 @@ const membershipTiers = [
   {
     key: 'all' as const,
     name: { es: 'TODAS LAS SUCURSALES', en: 'ALL GYMS' },
+    // Mismo precio en las 15 sucursales (2026-09-15) — basePrice gana sobre
+    // factor × branch.price. Ver membership-plans.ts, TIER_BASE_PRICES.
     factor: 1.5,
+    basePrice: 1550,
     popular: true,
     perks: {
       es: ['Acceso a las 15 sucursales', 'Todas las clases en cualquier sede', 'Locker incluido', 'Horario completo en todas', 'Invitado al mes', 'Asesoría nutricional', 'App con rutinas'],

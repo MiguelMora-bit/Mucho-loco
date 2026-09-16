@@ -213,6 +213,9 @@ model MembershipTier {
   /// LocalizedString { es, en }
   name    Json
   factor  Float
+  /// Precio fijo, igual en cualquier sucursal (2026-09-15) — si está
+  /// presente gana sobre factor × branch.price. Hoy solo lo trae `all`.
+  basePrice Float?
   /// Record<Lang, string[]>
   perks   Json
   /// LocalizedString { es, en }

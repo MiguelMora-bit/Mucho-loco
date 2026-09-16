@@ -533,15 +533,8 @@ body.darker {
 /* ============ MEMBERSHIPS ============ */
 .memberships { padding-bottom: 0; }
 
-/* Branch picker (prices change per sucursal) */
-.memb-branch-pick {
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  padding: 0 60px; max-width: 1600px; margin: 0 auto 28px; text-align: center;
-}
-.memb-branch-pick > label {
-  font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.25em;
-  color: var(--orange); text-transform: uppercase;
-}
+/* Branch picker — vive dentro del header de la card "1 sucursal" (el precio
+   de esa card es el único que cambia con la sucursal elegida). */
 .memb-branch-select { position: relative; display: inline-block; }
 .memb-branch-select select {
   appearance: none; -webkit-appearance: none;
@@ -555,32 +548,35 @@ body.darker {
   position: absolute; right: 22px; top: 50%; transform: translateY(-50%);
   color: var(--red); font-size: 20px; pointer-events: none;
 }
-.memb-branch-note {
-  font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.15em;
-  color: var(--cream-dim); text-transform: uppercase;
-}
 
 .memb-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
   padding: 0 60px; max-width: 1600px; margin: 0 auto;
 }
+/* Asimétrico a propósito: "1 sucursal" es la protagonista (cambia con el
+   selector), "todas las sucursales" es el panel de upgrade — mismo precio
+   sin importar la sucursal, por eso no necesita el mismo ancho. */
 .memb-grid.memb-grid-2 {
-  grid-template-columns: repeat(2, minmax(0, 560px));
+  grid-template-columns: minmax(0, 720px) minmax(0, 460px);
   justify-content: center;
   gap: 28px;
-  position: relative;
 }
-@media (max-width: 1000px) { .memb-grid.memb-grid-2 { grid-template-columns: 1fr; } .memb-vs { display: none; } }
+@media (max-width: 1000px) { .memb-grid.memb-grid-2 { grid-template-columns: 1fr; } }
 
-/* VS divider between the two tiers — echoes the fight-card framing */
-.memb-vs {
-  position: absolute; top: 40px; left: 50%; transform: translateX(-50%); z-index: 2;
-  width: 72px; height: 72px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--orange), var(--red-deep) 70%);
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 0 6px var(--black), 0 0 36px rgba(255,107,26,0.5);
-  font-family: 'Anton', sans-serif; font-size: 24px; color: var(--cream);
+.memb-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
 }
+.memb-card-head .tier-badge { align-self: center; }
+.memb-price-row {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.memb-price-tag {
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.06em;
+  text-transform: uppercase; white-space: nowrap;
+}
+.memb-price-tag.dynamic { color: var(--red); }
+.memb-price-tag.fixed { color: var(--orange); }
 .memb-card {
   background: var(--card); border: 1px solid var(--border);
   padding: 30px 32px; position: relative; overflow: hidden;

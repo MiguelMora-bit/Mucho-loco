@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { calculateMembershipPrice, formatPrice } from '@mucho-loco/customer-core/pricing';
+import { formatPrice, resolveMembershipTierPrice } from '@mucho-loco/customer-core/pricing';
 import { Body, Button, Card, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
 import { useT } from '@/lib/i18n';
 import { announcementRepository, branchRepository, membershipRepository } from '@/lib/repositories';
@@ -92,7 +92,7 @@ export default function HomeScreen() {
             <Body>
               {t.branches.price}{' '}
               <Display style={styles.price}>
-                {formatPrice(calculateMembershipPrice(fromPrice, tier.factor, 1))}
+                {formatPrice(resolveMembershipTierPrice(tier, fromPrice, 1))}
               </Display>{' '}
               {m.branches.perMonth}
             </Body>

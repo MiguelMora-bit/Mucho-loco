@@ -1,4 +1,4 @@
-import type { PlanKey } from '@mucho-loco/types';
+import type { MembershipTier, PlanKey } from '@mucho-loco/types';
 
 /**
  * Membership price for a given branch, tier, and billing period, rounded to
@@ -10,6 +10,22 @@ export function calculateMembershipPrice(
   periodMultiplier: number
 ): number {
   return Math.round((basePrice * tierFactor * periodMultiplier) / 10) * 10;
+}
+
+/**
+ * Precio de un tier para un periodo dado. Si el tier trae `basePrice` (el
+ * caso de `all`: mismo precio en las 15 sucursales), ese número gana y
+ * `branchPrice`/`factor` se ignoran — si no, se calcula como siempre
+ * (`branchPrice × factor`). Punto único para no repetir el `?? ` en cada
+ * pantalla que muestra un precio de membresía.
+ */
+export function resolveMembershipTierPrice(
+  tier: Pick<MembershipTier, 'factor' | 'basePrice'>,
+  branchPrice: number,
+  periodMultiplier: number
+): number {
+  const base = tier.basePrice ?? branchPrice * tier.factor;
+  return calculateMembershipPrice(base, 1, periodMultiplier);
 }
 
 /**
