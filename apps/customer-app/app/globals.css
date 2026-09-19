@@ -392,6 +392,7 @@ body.darker {
 .map-wrap-empty { display: flex; align-items: center; justify-content: center; padding: 24px; }
 .map-wrap-empty p { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cream-dim); text-align: center; line-height: 1.8; }
 .map-wrap-empty code { color: var(--yellow); }
+
 .pin {
   position: relative; width: 32px; height: 32px;
   cursor: pointer;
@@ -418,6 +419,30 @@ body.darker {
 .pin.active .pin-body { background: var(--yellow); border-color: var(--red); }
 .pin.active .pin-glow { background: var(--yellow); }
 @keyframes ping { 0% { width: 10px; height: 10px; opacity: 0.6; } 100% { width: 32px; height: 32px; opacity: 0; } }
+
+/* Placeholder de mapa mientras no hay NEXT_PUBLIC_GOOGLE_MAPS_API_KEY — mismo
+   marco/grid que el mapa real (.map-wrap), con un contorno decorativo y un
+   pin por sucursal en su posición relativa (ver projectPin en BranchesMap).
+   Después de .pin/.pin:hover a propósito: misma especificidad, y necesita
+   ganar sobre el transform de .pin:hover para no perder el centrado. */
+.map-wrap-placeholder { padding: 0; }
+.map-placeholder-img { object-fit: cover; object-position: center; z-index: 1; filter: saturate(0.55) brightness(0.75) sepia(0.15); }
+.map-placeholder-note {
+  position: absolute; top: 14px; left: 14px; right: 14px; z-index: 3;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.04em;
+  color: var(--cream-dim); line-height: 1.6; opacity: 0.85;
+  background: rgba(10,6,6,0.7); display: inline-block; padding: 4px 8px; width: fit-content;
+}
+.map-placeholder-credit {
+  position: absolute; bottom: 16px; right: 16px; z-index: 3;
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.04em;
+  color: var(--cream-dim); background: rgba(10,6,6,0.7); padding: 3px 7px;
+}
+.pin-placeholder {
+  position: absolute; z-index: 2; transform: translate(-50%, -50%);
+  background: none; border: none; padding: 0; margin: 0;
+}
+.pin-placeholder:hover { transform: translate(-50%, -50%) scale(1.4); }
 
 .map-legend {
   position: absolute; bottom: 16px; left: 16px;

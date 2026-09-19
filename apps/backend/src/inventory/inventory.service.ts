@@ -49,6 +49,7 @@ export class InventoryService {
       productName: displayName(row.product, lang),
       unitPrice: row.product.price,
       qty: row.qty,
+      img: row.product.img,
     }));
   }
 

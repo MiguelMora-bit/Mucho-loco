@@ -114,7 +114,10 @@ export function ProductSaleTab() {
                     (outOfStock ? 'opacity-50' : '')
                   }
                 >
-                  <div className="font-medium text-sm">{item.productName}</div>
+                  <div className="flex items-center gap-3">
+                    <img src={item.img} alt="" className="w-12 h-12 rounded object-cover border border-ml-border shrink-0" />
+                    <div className="font-medium text-sm">{item.productName}</div>
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-ml-red font-bold">{formatPrice(item.unitPrice)}</span>
                     <span className="text-xs text-ml-cream-dim font-mono">
@@ -161,11 +164,12 @@ export function ProductSaleTab() {
         ) : (
           <ul className="space-y-2 mb-4">
             {cartLines.map((line) => (
-              <li key={line.productId} className="flex justify-between text-sm">
-                <span>
-                  {line.qty} × {line.productName}
+              <li key={line.productId} className="flex items-center justify-between text-sm gap-2">
+                <span className="flex items-center gap-2 min-w-0">
+                  <img src={line.img} alt="" className="w-6 h-6 rounded object-cover border border-ml-border shrink-0" />
+                  <span className="truncate">{line.qty} × {line.productName}</span>
                 </span>
-                <span className="font-medium">{formatPrice(line.qty * line.unitPrice)}</span>
+                <span className="font-medium shrink-0">{formatPrice(line.qty * line.unitPrice)}</span>
               </li>
             ))}
           </ul>

@@ -16,6 +16,29 @@ interface MembershipsProps {
   lang: Lang;
 }
 
+// Marcas propias (no son el logo oficial de cada partner) — un ticket para
+// "pass" y una red hub-and-spoke para "hub", en el color de cada marca.
+function TotalPassIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4Z" />
+      <path d="M12 7v10" strokeDasharray="2 2" />
+    </svg>
+  );
+}
+
+function WellhubIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="2.6" />
+      <circle cx="12" cy="4" r="1.6" />
+      <circle cx="19" cy="16" r="1.6" />
+      <circle cx="5" cy="16" r="1.6" />
+      <path d="M12 6.6V9.4M17.5 15.1l-3.1-1.8M6.5 15.1l3.1-1.8" />
+    </svg>
+  );
+}
+
 export function Memberships({ t, branches, branch, setBranchId, mult, label, lang }: MembershipsProps) {
   const [selPeriod, setSelPeriod] = useState<Record<TierKey, PlanKey>>({ single: 'monthly', all: 'monthly' });
   const [pulse, setPulse] = useState<Record<TierKey, boolean>>({ single: false, all: false });
@@ -146,7 +169,7 @@ export function Memberships({ t, branches, branch, setBranchId, mult, label, lan
         </div>
         <div className="partners-logos">
           <a href="#" className="partner-card tp">
-            <span className="ico">T</span>
+            <span className="ico"><TotalPassIcon /></span>
             <span className="pc-body">
               <b>TotalPass</b>
               <small>{t.memberships.totalPassNote}</small>
@@ -154,7 +177,7 @@ export function Memberships({ t, branches, branch, setBranchId, mult, label, lan
             <span className="pc-go">{t.memberships.partnerAccepted} ✓</span>
           </a>
           <a href="#" className="partner-card wh">
-            <span className="ico">W</span>
+            <span className="ico"><WellhubIcon /></span>
             <span className="pc-body">
               <b>Wellhub</b>
               <small>{t.memberships.wellhubNote}</small>

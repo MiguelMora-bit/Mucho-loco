@@ -46,7 +46,10 @@ FROM node:${NODE_VERSION} AS runtime
 # dumb-init reenvía SIGTERM correctamente al proceso node — sin esto, un
 # `docker stop`/despliegue en ECS Fargate mata el contenedor a la fuerza tras
 # el timeout en vez de dejar que Nest cierre conexiones (ver PrismaService.onModuleDestroy).
-RUN apk add --no-cache dumb-init
+# util-linux trae `script`, que el agente de ECS Exec necesita para abrir el
+# pseudo-terminal de `aws ecs execute-command` — sin él, la sesión interactiva
+# muere con "unable to generate log data" (Alpine no lo trae por default).
+RUN apk add --no-cache dumb-init util-linux
 WORKDIR /app
 ENV NODE_ENV=production
 # La cadena opera en CDMX y hay lógica que depende de qué día es "hoy" en la
@@ -57,6 +60,10 @@ ENV TZ=America/Mexico_City
 COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/apps/backend/node_modules ./apps/backend/node_modules
 COPY --from=build /repo/apps/backend/dist ./apps/backend/dist
+# `prisma migrate deploy`/`prisma db seed` (corridos a mano vía ECS Exec, ver
+# infra/README.md) buscan schema.prisma + migrations/ en disco — dist/ no los
+# trae porque tsc solo compila código, no copia este directorio.
+COPY --from=build /repo/apps/backend/prisma ./apps/backend/prisma
 # La imagen base "node:*-alpine" ya trae un usuario "node" (uid 1000) sin privilegios.
 USER node
 EXPOSE 3000

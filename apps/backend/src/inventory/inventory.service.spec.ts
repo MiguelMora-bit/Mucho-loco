@@ -9,12 +9,14 @@ const whey = {
   name: { es: 'Whey Protein 5LBS', en: 'Whey Protein 5LBS' },
   flav: { es: 'Fresa', en: 'Strawberry' },
   price: 1290,
+  img: '/assets/prod-whey-strawberry.jpg',
 };
 const shaker = {
   id: 'p18',
   name: { es: 'Shaker Loco', en: 'Shaker Loco' },
   flav: { es: '', en: '' },
   price: 290,
+  img: '/assets/mucho-loco-logo.jpg',
 };
 
 describe('InventoryService', () => {
@@ -58,7 +60,14 @@ describe('InventoryService', () => {
       const levels = await service.getLevels('es');
 
       expect(levels).toEqual([
-        { branchId: 1, productId: 'p1', productName: 'Whey Protein 5LBS · Fresa', unitPrice: 1290, qty: 30 },
+        {
+          branchId: 1,
+          productId: 'p1',
+          productName: 'Whey Protein 5LBS · Fresa',
+          unitPrice: 1290,
+          qty: 30,
+          img: '/assets/prod-whey-strawberry.jpg',
+        },
       ]);
     });
 

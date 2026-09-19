@@ -40,12 +40,12 @@ export const PICKUP_ORDERS: PickupOrder[] = [
 // ('Shaker Loco') y otros con él, así que prender VITE_DATA_SOURCE=http
 // cambiaba el texto en pantalla — el swap de datasource no debería notarse.
 export const BRANCH_INVENTORY: BranchInventoryLevel[] = [
-  { branchId: 1, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 12 },
-  { branchId: 1, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 18 },
-  { branchId: 1, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 40 },
-  { branchId: 1, productId: 'p13', productName: 'Goma de Mascar Energética · Energía Bestial', unitPrice: 95, qty: 25 },
-  { branchId: 1, productId: 'p11', productName: "BCAA's en polvo · Watermelon", unitPrice: 690, qty: 0 },
-  { branchId: 1, productId: 'p18', productName: 'Shaker Loco · 700ml', unitPrice: 290, qty: 9 },
+  { branchId: 1, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 12, img: '/assets/prod-whey-strawberry.jpg' },
+  { branchId: 1, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 18, img: '/assets/prod-pre-mango.jpg' },
+  { branchId: 1, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 40, img: '/assets/prod-energy.jpg' },
+  { branchId: 1, productId: 'p13', productName: 'Goma de Mascar Energética · Energía Bestial', unitPrice: 95, qty: 25, img: '/assets/prod-goma.jpg' },
+  { branchId: 1, productId: 'p11', productName: "BCAA's en polvo · Watermelon", unitPrice: 690, qty: 0, img: '/assets/prod-bcaa.jpg' },
+  { branchId: 1, productId: 'p18', productName: 'Shaker Loco · 700ml', unitPrice: 290, qty: 9, img: '/assets/mucho-loco-logo.jpg' },
 ];
 
 // Mutated by membership.mock.ts on sign-up or renewal — same pattern as

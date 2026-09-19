@@ -10,11 +10,11 @@ function daysAgoIso(days: number): string {
 
 describe('isLowStock', () => {
   it('flags quantities below the threshold', () => {
-    expect(isLowStock({ branchId: 1, productId: 'p1', productName: 'X', unitPrice: 100, qty: LOW_STOCK_THRESHOLD - 1 })).toBe(true);
+    expect(isLowStock({ branchId: 1, productId: 'p1', productName: 'X', unitPrice: 100, qty: LOW_STOCK_THRESHOLD - 1, img: '' })).toBe(true);
   });
 
   it('does not flag quantities at or above the threshold', () => {
-    expect(isLowStock({ branchId: 1, productId: 'p1', productName: 'X', unitPrice: 100, qty: LOW_STOCK_THRESHOLD })).toBe(false);
+    expect(isLowStock({ branchId: 1, productId: 'p1', productName: 'X', unitPrice: 100, qty: LOW_STOCK_THRESHOLD, img: '' })).toBe(false);
   });
 });
 

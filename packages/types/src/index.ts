@@ -780,6 +780,7 @@ export interface BranchInventoryLevel {
   productName: string;
   unitPrice: number;
   qty: number;
+  img: string;
 }
 
 export interface MemberAccessRecord {

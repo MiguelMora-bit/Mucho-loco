@@ -16,6 +16,9 @@ build/
 dist/
 coverage/
 
+# ── Credenciales de demo (contraseñas reales, nunca a git) ────
+DEMO_CREDENTIALS.md
+
 # ── Environment variables ─────────────────────────────
 .env
 .env.local

@@ -11,26 +11,26 @@ export const BRANCH_STATS: BranchStatsSummary[] = [
 // time (never a separately-tracked total), so a transfer between branches
 // can never leave the dashboard's total out of sync with reality.
 export const BRANCH_INVENTORY: BranchInventoryLevel[] = [
-  { branchId: 1, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 30 },
-  { branchId: 1, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 50 },
-  { branchId: 1, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 200 },
-  { branchId: 1, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 120 },
+  { branchId: 1, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 30, img: '/assets/prod-whey-strawberry.jpg' },
+  { branchId: 1, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 50, img: '/assets/prod-pre-mango.jpg' },
+  { branchId: 1, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 200, img: '/assets/prod-energy.jpg' },
+  { branchId: 1, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 120, img: '/assets/mucho-loco-logo.jpg' },
 
-  { branchId: 2, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 20 },
-  { branchId: 2, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 40 },
-  { branchId: 2, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 150 },
-  { branchId: 2, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 80 },
+  { branchId: 2, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 20, img: '/assets/prod-whey-strawberry.jpg' },
+  { branchId: 2, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 40, img: '/assets/prod-pre-mango.jpg' },
+  { branchId: 2, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 150, img: '/assets/prod-energy.jpg' },
+  { branchId: 2, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 80, img: '/assets/mucho-loco-logo.jpg' },
 
   // Condesa doesn't stock 'p1' yet — the level opens the first time a
   // transfer brings stock in, instead of every branch listing every SKU.
-  { branchId: 3, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 26 },
-  { branchId: 3, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 112 },
-  { branchId: 3, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 60 },
+  { branchId: 3, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 26, img: '/assets/prod-pre-mango.jpg' },
+  { branchId: 3, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 112, img: '/assets/prod-energy.jpg' },
+  { branchId: 3, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 60, img: '/assets/mucho-loco-logo.jpg' },
 
-  { branchId: 5, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 20 },
-  { branchId: 5, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 40 },
-  { branchId: 5, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 150 },
-  { branchId: 5, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 80 },
+  { branchId: 5, productId: 'p1', productName: 'Whey Protein 5LBS · Strawberry', unitPrice: 1290, qty: 20, img: '/assets/prod-whey-strawberry.jpg' },
+  { branchId: 5, productId: 'p7', productName: 'Pre-Entreno Bestia · Mango Chamoy', unitPrice: 790, qty: 40, img: '/assets/prod-pre-mango.jpg' },
+  { branchId: 5, productId: 'p9', productName: 'Mucho Loco Energy 473ml · Mora-Uva', unitPrice: 45, qty: 150, img: '/assets/prod-energy.jpg' },
+  { branchId: 5, productId: 'p18', productName: 'Shaker Loco', unitPrice: 290, qty: 80, img: '/assets/mucho-loco-logo.jpg' },
 ];
 
 // Mutated in place by inventoryTransfer.mock.ts on each transfer — same

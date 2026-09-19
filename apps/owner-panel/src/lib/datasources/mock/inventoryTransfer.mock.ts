@@ -37,7 +37,7 @@ export class InventoryTransferMockDatasource implements IInventoryTransferReposi
     if (destination) {
       destination.qty += input.qty;
     } else {
-      destination = { branchId: input.toBranchId, productId: source.productId, productName: source.productName, unitPrice: source.unitPrice, qty: input.qty };
+      destination = { branchId: input.toBranchId, productId: source.productId, productName: source.productName, unitPrice: source.unitPrice, qty: input.qty, img: source.img };
       BRANCH_INVENTORY.push(destination);
     }
 
