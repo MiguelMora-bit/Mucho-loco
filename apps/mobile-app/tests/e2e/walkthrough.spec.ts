@@ -144,7 +144,11 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
     const commentedBefore = await commented.count();
     await page.getByRole('button', { name: 'Comentarios (0)' }).first().click();
     await page.getByLabel('Escribe un comentario...').first().fill('¡Eso!');
-    await page.getByRole('button', { name: 'ENVIAR', exact: true }).first().click();
+    // ENVIAR está deshabilitado con el campo vacío y se habilita en el siguiente
+    // render: sin esperar, el click puede caer antes y no mandar nada (flaky).
+    const send = page.getByRole('button', { name: 'ENVIAR', exact: true }).first();
+    await expect(send).toBeEnabled();
+    await send.click();
     await expect(page.getByText('¡Eso!', { exact: true })).toBeVisible();
     await expect(commented).toHaveCount(commentedBefore + 1);
 
@@ -161,6 +165,74 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
     await expect(page.getByText('Push Day · Pecho & Hombros')).toBeVisible();
     await page.getByRole('button', { name: 'HEATMAP', exact: true }).click();
     await expect(page.getByText(/Últimas 52 semanas/)).toBeVisible();
+    await page.goBack();
+  });
+
+  // Facturar (spec 002). "FACTURAR" es a la vez el botón del panel y el de
+  // cada cobro: con las pantallas de abajo del Stack en el DOM, se filtra por visible.
+  const visibleButton = (name: string) => page.getByRole('button', { name, exact: true }).filter({ visible: true });
+  const chip = (prefix: string) => page.getByRole('button', { name: new RegExp(`^${prefix} — `) }).filter({ visible: true });
+
+  await test.step('facturar: los datos fiscales validan forma y filtran el uso por régimen', async () => {
+    await visibleButton('FACTURAR').first().click();
+    await expect(page.getByText('Primero, tus datos fiscales')).toBeVisible();
+    await page.getByLabel('RFC', { exact: true }).fill('abcd');
+    await visibleButton('GUARDAR DATOS').click();
+    await expect(page.getByText('Esto no tiene forma de RFC.')).toBeVisible();
+
+    await chip('612').click();
+    await chip('G01').click();
+    await chip('605').click();
+    await expect(chip('G01')).toHaveCount(0);
+    await expect(chip('S01')).toBeVisible();
+  });
+
+  await test.step('facturar: el SAT rechaza los datos, se corrigen y se emite la factura', async () => {
+    await page.getByLabel('RFC', { exact: true }).fill('xaxx010101000');
+    await page.getByLabel('Nombre o razón social').fill('diego ramírez');
+    await chip('616').click();
+    await page.getByLabel('Código postal').fill('06700');
+    await chip('S01').click();
+    await visibleButton('GUARDAR DATOS').click();
+    await expect(page.getByText('Datos fiscales guardados.')).toBeVisible();
+    await expect(page.getByText('XAXX010101000')).toBeVisible();
+    await expect(page.getByText('Ya no facturable')).toBeVisible();
+
+    await visibleButton('FACTURAR').first().click();
+    await expect(page.getByText('CONFIRMA TU FACTURA')).toBeVisible();
+    await visibleButton('EMITIR FACTURA').click();
+    await expect(page.getByText('El SAT rechazó tus datos fiscales:')).toBeVisible();
+    await expect(page.getByText(/RFC del receptor/)).toBeVisible();
+
+    await visibleButton('CORREGIR MIS DATOS').click();
+    await page.getByLabel('RFC', { exact: true }).fill('CUPU800825569');
+    await chip('612').click();
+    await chip('G03').click();
+    await visibleButton('GUARDAR DATOS').click();
+    await expect(page.getByText('CONFIRMA TU FACTURA')).toBeVisible();
+    await visibleButton('EMITIR FACTURA').click();
+    await expect(page.getByText(/ya está tu factura/)).toBeVisible();
+    await expect(page.getByText('diego@mucholoco.mx').first()).toBeVisible();
+  });
+
+  await test.step('facturar: PDF se descarga y "¿Datos incorrectos?" abre WhatsApp con el folio', async () => {
+    const [download] = await Promise.all([page.waitForEvent('download'), visibleButton('PDF').first().click()]);
+    expect(download.suggestedFilename()).toMatch(/\.pdf$/);
+
+    // En web, expo-linking navega en la misma pestaña (en el teléfono abre
+    // WhatsApp). Se intercepta esa navegación, se lee la URL y se responde 204:
+    // con "No Content" el navegador no navega (abortarla dejaba la página de
+    // error de Chrome), el app se queda donde estaba y no se sale a internet.
+    let whatsapp = '';
+    await page.route('https://wa.me/**', (route) => {
+      whatsapp = route.request().url();
+      return route.fulfill({ status: 204 });
+    });
+    await visibleButton('¿Datos incorrectos?').first().click();
+    await expect.poll(() => whatsapp).toContain('wa.me');
+    const url = new URL(whatsapp);
+    expect(url.searchParams.get('text')).toMatch(/Folio fiscal: [0-9A-F-]{36}/);
+    await page.unroute('https://wa.me/**');
     await page.goBack();
   });
 

@@ -207,6 +207,7 @@ export function Dashboard({ email }: { email: string }) {
           style={styles.fill}
         />
       </View>
+      <Button title={t.dashboard.nav.invoicing} variant="outline" onPress={() => router.push('/invoicing')} />
 
       <Heading>{t.dashboard.nav.orders}</Heading>
       {orders.length === 0 && <Body>{m.account.noOrders}</Body>}

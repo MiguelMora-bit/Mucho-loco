@@ -52,6 +52,11 @@ const es = {
     demoCode: 'Modo demo: el código es 123456.',
     backToLogin: 'YA TENGO CUENTA',
   },
+  invoicing: {
+    loginPrompt: 'Inicia sesión para facturar tus pagos.',
+    login: 'INICIAR SESIÓN',
+    shareError: 'No se pudo abrir el archivo. Te llegó también a tu correo.',
+  },
 } as const;
 
 type Widen<T> = { [K in keyof T]: T[K] extends string ? string : Widen<T[K]> };
@@ -102,6 +107,11 @@ const en: MobileMessages = {
     phoneNote: "We'll message you here when your membership is about to expire and when your order is ready.",
     demoCode: 'Demo mode: the code is 123456.',
     backToLogin: 'I ALREADY HAVE AN ACCOUNT',
+  },
+  invoicing: {
+    loginPrompt: 'Log in to invoice your payments.',
+    login: 'LOG IN',
+    shareError: "Couldn't open the file. It was also sent to your email.",
   },
 };
 

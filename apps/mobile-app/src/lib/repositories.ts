@@ -2,6 +2,7 @@ import type {
   IAnnouncementRepository,
   IBranchRepository,
   ICommunityRepository,
+  IInvoicingRepository,
   IMembershipRepository,
   IPaymentRepository,
   IPerformanceRepository,
@@ -12,6 +13,7 @@ import {
   AnnouncementHttpDatasource,
   BranchHttpDatasource,
   CommunityHttpDatasource,
+  InvoicingHttpDatasource,
   MembershipHttpDatasource,
   PaymentHttpDatasource,
   PerformanceHttpDatasource,
@@ -22,6 +24,7 @@ import {
   AnnouncementMockDatasource,
   BranchMockDatasource,
   CommunityMockDatasource,
+  InvoicingMockDatasource,
   MembershipMockDatasource,
   PaymentMockDatasource,
   PerformanceMockDatasource,
@@ -46,6 +49,9 @@ export const branchRepository: IBranchRepository = http ? new BranchHttpDatasour
 export const communityRepository: ICommunityRepository = http
   ? new CommunityHttpDatasource(api)
   : new CommunityMockDatasource();
+export const invoicingRepository: IInvoicingRepository = http
+  ? new InvoicingHttpDatasource(api)
+  : new InvoicingMockDatasource();
 export const membershipRepository: IMembershipRepository = http
   ? new MembershipHttpDatasource(api)
   : new MembershipMockDatasource();

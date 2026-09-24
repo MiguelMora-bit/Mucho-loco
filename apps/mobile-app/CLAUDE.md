@@ -105,6 +105,17 @@ EXPO_PUBLIC_COGNITO_DOMAIN=<terraform output cognito_domain>    # solo login soc
 
 Un socio nuevo nace **sin membresía** (`getMembership()` → `null`) hasta su primer cobro — antes el mock y el backend le regalaban una. El panel lo dice y lleva a la pantalla `membership`: sucursal, tier y periodo → `paymentRepository.createMembershipCheckout` → Stripe con `WebBrowser.openAuthSessionAsync` y regreso por deep link (`mucholoco://membership?paid=1`), el mismo patrón del checkout. En gracia, "REINTENTAR PAGO" abre la factura pendiente de Stripe (`openMembershipInvoice`) con `WebBrowser.openBrowserAsync`. Las reglas (qué rechazaría el backend, respetar lo ya pagado) salen de `@mucho-loco/customer-core/membership-rules`, las mismas que la web; `renewalStartsOn()` se llama al cargar datos, no al pintar (el lint prohíbe `Date.now()` en el render). Detalle del cobro en "Membresías con Stripe Billing" de `apps/backend/CLAUDE.md`. El walkthrough de Playwright cubre la compra: cuenta nueva sin membresía → elige plan → paga (mock) → vuelve con QR y "se renueva sola".
 
+## Facturar (CFDI) — 2026-09-24
+
+Spec en `specs/002-mobile-cfdi-invoicing/`. Misma funcionalidad que `/invoicing` de la web, sobre el MISMO contrato de customer-core (`IInvoicingRepository`, mock/HTTP, `invoicingErrorOf`, catálogo `./fiscal`, textos `invoicing`) — aquí solo hay UI.
+
+- **Pantalla `invoicing`** (Stack), botón FACTURAR en el panel de Cuenta. Componentes en `src/components/invoicing/` (`FiscalForm`, `ChargeRow`, `ConfirmCard`). Régimen y uso de CFDI son `Chip` (no hay `<select>` nativo); el uso solo ofrece lo que el SAT admite para el régimen.
+- **Sin Route Handlers**: el app llama al repositorio directo (el token vive en el llavero). Tras un rechazo por cambio de estado, recarga la lista.
+- **PDF/XML** con la hoja de compartir del sistema (`src/lib/share-file.ts`: `expo-file-system` escribe en `Paths.cache`, `expo-sharing` abre el compartir con `mimeType` + UTI). En web, `share-file.web.ts` descarga. Una URL en el navegador no serviría: la descarga necesita el token.
+- **`expo-sharing` fijado en 57.0.21**: `npx expo install` eligió 57.0.22 (publicada ese mismo día) y agregó una excepción a `minimumReleaseAgeExclude` del workspace. Se quitó la excepción y se fijó la anterior para no saltarse el candado de antigüedad. Subir a `~57.0.x` cuando cumpla la antigüedad.
+- **WhatsApp de soporte** sale de `@mucho-loco/customer-core/contact` (movido desde customer-app para compartirlo).
+- **Verificado**: walkthrough de Playwright en Expo web, modo mock (datos fiscales con errores y filtro 605 → rechazo del SAT → corregir → facturar → descarga PDF → WhatsApp con folio). **Solo en teléfono real**: la hoja de compartir nativa.
+
 ## Decisiones
 
 - **Sesión en `expo-secure-store`** (Keychain/Keystore), nunca AsyncStorage (texto plano). `secure-storage.web.ts` usa localStorage: la versión web solo existe para desarrollar y probar, no se publica. Metro elige el archivo por plataforma (`.web.ts` vs `.ts`).
@@ -135,6 +146,7 @@ pnpm --filter @mucho-loco/mobile-app test:e2e   # recorrido completo en Playwrig
 
 - **Vitest** para lógica pura de `src/lib` sin imports de React Native (`cart.ts`, `checkout.ts`, `auth/`). Incluye la regresión de seguridad de la web: las líneas de un pedido solo llevan `productId` + `qty`, nunca precio.
 - **Flujos** (`pnpm test:e2e`, `tests/e2e/walkthrough.spec.ts`): esta máquina no tiene Xcode ni Android SDK (no hay simulador), así que el recorrido corre en Expo web + Playwright en viewport de teléfono, siempre en modo mock (`playwright.config.ts` levanta Expo si no está corriendo): tienda → carrito → login → checkout con tarjeta → pedido y QR de retiro → QR de acceso → comunidad → rendimiento → sucursales → idioma → recarga con sesión restaurada → logout. Un solo test con `test.step`, porque cada paso depende del estado del anterior. No corre en CI todavía (necesita Chromium + Metro en el runner).
+- **Inestabilidad conocida del walkthrough (medida 2026-09-24)**: con el servidor recién arrancado (`--clear`) el primer bundle puede tardar ~15 min si la máquina está cargada, y el test se come su timeout esperando. Y aun con el servidor caliente, ~1 de cada 3 corridas se atora en un paso al azar (checkout "PROCESANDO", comunidad) con una promesa de mock que no se resuelve — pasa igual con el código anterior a facturación, así que no es de una pantalla en particular. Para una corrida confiable: arrancar el servidor, pedir el bundle una vez (`curl` al `.bundle` que referencia `index.html`) y correr `./node_modules/.bin/playwright test` reusándolo. Correr `pnpm test:e2e` en un árbol con dependencias distintas poda `node_modules` (pnpm verifica deps antes del script).
 - **Lo que Expo web NO prueba** (solo en un teléfono real con Expo Go): SecureStore, brillo, `Intl` de Hermes (`formatDate` usa `timeZone: 'UTC'`), el regreso de Stripe por deep link, íconos y splash.
 - Ojo al escribir selectores de Playwright: en web las pantallas de abajo del Stack siguen en el DOM (ocultas), así que un texto puede aparecer dos veces. Usar `exact: true`.
 

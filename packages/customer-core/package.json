@@ -13,6 +13,7 @@
     "./order-status": "./src/orderStatus.ts",
     "./translations": "./src/translations.ts",
     "./cognito-errors": "./src/cognito-errors.ts",
+    "./contact": "./src/contact.ts",
     "./fiscal": "./src/fiscal.ts",
     "./invoicing-errors": "./src/invoicing-errors.ts",
     "./membership-errors": "./src/membership-errors.ts",
