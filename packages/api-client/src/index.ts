@@ -77,17 +77,40 @@ export interface RequestOptions {
   timeoutMs?: number;
 }
 
+/** Un archivo binario del backend (PDF, XML de un CFDI), tal cual llegó. */
+export interface ApiFile {
+  data: Uint8Array;
+  contentType: string;
+  /** El de `Content-Disposition`; `null` si el backend no lo mandó. */
+  filename: string | null;
+}
+
 export interface ApiClient {
   get<T>(path: string, opts?: RequestOptions): Promise<T>;
   /** Igual que `get`, pero un 404 devuelve `null` en vez de tirar. */
   getOrNull<T>(path: string, opts?: RequestOptions): Promise<T | null>;
   post<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>;
+  put<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>;
+  /**
+   * Descarga binaria. Existe aparte porque `get` lee la respuesta como texto,
+   * y un PDF leído como texto llega corrupto. Nunca se cachea.
+   */
+  getFile(path: string, opts?: RequestOptions): Promise<ApiFile>;
 }
 
 interface RawResponse {
   status: number;
   ok: boolean;
   text: string;
+  /** Solo en `getFile` con respuesta 2xx. */
+  bytes?: Uint8Array;
+  headers: Headers;
+}
+
+/** `attachment; filename="x.pdf"` → `x.pdf`. */
+function filenameFrom(disposition: string | null): string | null {
+  const match = disposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -128,8 +151,9 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     path: string,
     opts: RequestOptions,
     body: unknown,
+    binary = false,
   ): Promise<RawResponse> {
-    const headers: Record<string, string> = { Accept: 'application/json' };
+    const headers: Record<string, string> = { Accept: binary ? '*/*' : 'application/json' };
     const auth = await authorization(path, opts.auth);
     if (auth) headers.Authorization = auth;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -150,12 +174,17 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: controller.signal,
-        ...config.cachePolicy?.(opts.maxAgeSeconds),
+        // Un archivo es siempre del usuario y siempre fresco: nada de caché.
+        ...(binary ? { cache: 'no-store' as const } : config.cachePolicy?.(opts.maxAgeSeconds)),
         ...opts.fetch,
       });
       // El cuerpo se lee DENTRO del timeout: un backend que manda los headers
       // y se cuelga a media respuesta también cuenta como colgado.
-      return { status: res.status, ok: res.ok, text: await res.text() };
+      if (binary && res.ok) {
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        return { status: res.status, ok: true, text: '', bytes, headers: res.headers };
+      }
+      return { status: res.status, ok: res.ok, text: await res.text(), headers: res.headers };
     } catch (cause) {
       // fetch solo tira por fallas de red/abort — un 4xx/5xx llega como Response.
       throw new ApiRequestError(
@@ -201,6 +230,18 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       // pago) igual debe mandar `{}`, no `undefined` — si no, el cliente
       // omitiría el Content-Type y el ValidationPipe del backend recibe vacío.
       return parse<T>(await send('POST', path, opts, body ?? {}), 'POST', path);
+    },
+    async put<T>(path: string, body?: unknown, opts: RequestOptions = {}): Promise<T> {
+      return parse<T>(await send('PUT', path, opts, body ?? {}), 'PUT', path);
+    },
+    async getFile(path: string, opts: RequestOptions = {}): Promise<ApiFile> {
+      const res = await send('GET', path, opts, undefined, true);
+      if (!res.bytes) return parse<never>(res, 'GET', path); // no-2xx: tira el ApiRequestError
+      return {
+        data: res.bytes,
+        contentType: res.headers.get('Content-Type') ?? 'application/octet-stream',
+        filename: filenameFrom(res.headers.get('Content-Disposition')),
+      };
     },
   };
 }

@@ -113,6 +113,19 @@ Un socio nuevo ya no nace con membresía: `getMembership()` devuelve `null` hast
 - "Recoger en gym" exige membresía (sale de su sucursal). Por eso `tests/e2e/shop-checkout.spec.ts` contrata una (mock) antes de comprar.
 - **Sin verificar en navegador**: el panel y `/membership` solo pasaron typecheck, lint y unit tests — sin User Pool vivo no hay sesión para abrirlos. El mismo flujo en el móvil sí se recorrió en Playwright (modo mock).
 
+## Facturar (CFDI) — 2026-09-23
+
+Spec, plan y tareas en `specs/001-member-cfdi-invoicing/` (primera funcionalidad hecha con Spec Kit). El backend ya existía ("Facturación CFDI" en `apps/backend/CLAUDE.md`); esto es su frontend web.
+
+- **`/invoicing`** (protegida: `PROTECTED_PATHS` + redirect en la página), `app/[locale]/(account)/invoicing/page.tsx` + `components/invoicing/`. Acceso desde el sidebar. `?charge=<id>` abre directo la confirmación de ese cobro. Arriba los datos fiscales (formulario o resumen con "EDITAR"), abajo los cobros con su estado: Facturable / Facturado / Ya no facturable (entró a la global) / No facturable.
+- **Contrato en customer-core**, listo para mobile-app: `IInvoicingRepository` (`./contract`), `InvoicingMockDatasource` (`./mock`), `InvoicingHttpDatasource` (`./http`), rechazos tipados con `invoicingErrorOf()` (`./invoicing-errors`) y el catálogo SAT con el filtro régimen ↔ uso de CFDI (`./fiscal`: 605, 607, 608, 610, 611, 614, 615 y 616 solo admiten S01). Aquí solo `lib/repositories/invoicing.repository.ts` elige cuál.
+- **Rutas** (`app/api/invoicing/*`, validan sesión solas): `PUT fiscal-profile` (400 por campo con `validateFiscalProfile`), `POST charges/[chargeId]/invoice` (devuelve `{ cfdi, charges }`; los rechazos por cambio de estado traen la lista fresca) y `GET invoices/[cfdiId]/[format]` (binario, `private, no-store`). Probadas en `app/api/invoicing/route.test.ts`.
+- **Mock**: cada socio arranca sin datos fiscales y con un cobro de cada estado. El RFC `XAXX010101000` (público en general) hace que "el SAT" rechace, para ver ese error sin Facturapi. `NO_CHARGES_TEST_EMAIL` = pantalla vacía.
+- **Corregir una factura mal emitida** no se hace aquí: "¿Datos incorrectos?" abre WhatsApp de soporte (`lib/contact.ts`, el mismo número del landing) con el folio; HQ cancela y el cobro vuelve a ser facturable.
+- `lib/api-client.ts` (`postJson`/`putJson` del navegador): `ApiError` ahora trae `status` y el cuerpo (`data`), para distinguir un 401 (sesión expirada → `/account?next=`) y leer `detail`/`charges`.
+- La descripción del cobro llega del backend en español (es el concepto fiscal) y no se traduce — limitación conocida.
+- **Sin verificar en navegador**: typecheck, lint, `next build`, unit (rutas incluidas) e integración de rutas contra el backend local. `tests/e2e/invoicing.spec.ts` está escrito pero necesita User Pool vivo para correr. **Sin probar contra Facturapi** (no hay cuenta).
+
 ## Pedidos a domicilio: dirección de envío (2026-09-14)
 
 Antes, `PaymentStep` pedía calle, ciudad y CP en inputs sueltos que nadie leía: el pedido a domicilio se creaba sin dirección. Ahora son campos controlados (calle, colonia, alcaldía o municipio, estado, CP, teléfono del repartidor, referencias) en `CheckoutClient`, validados al confirmar con `parseShippingAddress` de `@mucho-loco/customer-core/shipping` (mismas reglas que el backend; normaliza el teléfono a E.164) y mandados como `OrderDelivery`. `/api/orders` y `/api/checkout` rechazan con 400 un `delivery` mal formado antes de tocar el repositorio. El detalle del pedido muestra "SE ENVÍA A" con la dirección en vez del QR de retiro, y el estado 'ready' de un envío dice "PREPARANDO ENVÍO" (`orderStatusLabel` recibe `delivery`).

@@ -246,3 +246,94 @@ describe('timeout', () => {
     }
   });
 });
+
+describe('put', () => {
+  it('sends PUT with a JSON body and the token', async () => {
+    const spy = stubFetch(() => jsonResponse({ taxId: 'XAXX010101000' }));
+    await expect(
+      client({ getToken: () => 'tok' }).put('/users/me/fiscal-profile', { taxId: 'XAXX010101000' }),
+    ).resolves.toEqual({ taxId: 'XAXX010101000' });
+
+    expect(spy.mock.calls[0][1]?.method).toBe('PUT');
+    expect(spy.mock.calls[0][1]?.body).toBe('{"taxId":"XAXX010101000"}');
+    expect(headersOf(spy)['Content-Type']).toBe('application/json');
+    expect(headersOf(spy).Authorization).toBe('Bearer tok');
+  });
+
+  it('turns a 4xx into an ApiRequestError with the backend code', async () => {
+    stubFetch(() => jsonResponse({ code: 'VALIDATION' }, 400));
+    await expect(client().put('/x', {})).rejects.toMatchObject({ status: 400, code: 'VALIDATION' });
+  });
+});
+
+describe('getFile', () => {
+  // Bytes que no son UTF-8 válido: leerlos como texto (lo que hacen get/post)
+  // los reemplazaría por U+FFFD y el PDF llegaría corrupto.
+  const PDF_BYTES = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a, 0xff, 0xfe, 0x00, 0x80]);
+
+  function fileResponse(headers: Record<string, string>): Response {
+    return new Response(PDF_BYTES, { status: 200, headers });
+  }
+
+  it('returns the raw bytes, content type and filename', async () => {
+    const spy = stubFetch(() =>
+      fileResponse({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="factura-123.pdf"',
+      }),
+    );
+
+    const file = await client({ getToken: () => 'tok' }).getFile('/users/me/invoices/c1/pdf');
+
+    expect(file.data).toBeInstanceOf(Uint8Array);
+    expect(Array.from(file.data)).toEqual(Array.from(PDF_BYTES));
+    expect(file.contentType).toBe('application/pdf');
+    expect(file.filename).toBe('factura-123.pdf');
+    expect(spy.mock.calls[0][1]?.method).toBe('GET');
+    expect(headersOf(spy).Authorization).toBe('Bearer tok');
+    expect(headersOf(spy).Accept).toBe('*/*');
+  });
+
+  it('filename is null when there is no Content-Disposition', async () => {
+    stubFetch(() => fileResponse({ 'Content-Type': 'application/xml' }));
+    const file = await client().getFile('/f');
+
+    expect(file.filename).toBeNull();
+    expect(file.contentType).toBe('application/xml');
+  });
+
+  it('never caches, whatever the app cache policy says', async () => {
+    const spy = stubFetch(() => fileResponse({ 'Content-Type': 'application/pdf' }));
+    await client({ cachePolicy: () => ({ next: { revalidate: 300 } }) }).getFile('/f');
+
+    expect(spy.mock.calls[0][1]).toMatchObject({ cache: 'no-store' });
+    expect(spy.mock.calls[0][1]).not.toHaveProperty('next');
+  });
+
+  it('turns a JSON 4xx into an ApiRequestError with the backend code', async () => {
+    stubFetch(() => jsonResponse({ code: 'CFDI_NOT_FOUND' }, 404));
+    await expect(client().getFile('/f')).rejects.toMatchObject({
+      name: 'ApiRequestError',
+      status: 404,
+      code: 'CFDI_NOT_FOUND',
+    });
+  });
+
+  it('a network failure is a status-0 error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed'); }));
+    await expect(client().getFile('/f')).rejects.toMatchObject({ status: 0 });
+  });
+
+  it('aborts a download that hangs past timeoutMs', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+          }),
+      ),
+    );
+    await expect(client({ timeoutMs: 20 }).getFile('/slow')).rejects.toMatchObject({ status: 0 });
+  });
+});

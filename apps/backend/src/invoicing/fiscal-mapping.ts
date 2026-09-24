@@ -136,7 +136,10 @@ const INVOICE_STATUS: Record<FiscalReceiptStatus, ChargeInvoiceStatus> = {
 };
 
 export function toMemberCharge(
-  row: Charge & { lines: ChargeLine[]; fiscalReceipt: FiscalReceipt | null },
+  row: Charge & {
+    lines: ChargeLine[];
+    fiscalReceipt: (FiscalReceipt & { cfdi: CfdiRow | null }) | null;
+  },
 ): MemberCharge {
   // El renglón más caro nombra al cobro: "Pre-Entreno Bestia y 2 más".
   const lines = [...row.lines].sort(
@@ -146,6 +149,9 @@ export function toMemberCharge(
     lines.length > 1
       ? `${lines[0].description} y ${lines.length - 1} más`
       : (lines[0]?.description ?? '');
+  const status: ChargeInvoiceStatus = row.fiscalReceipt
+    ? INVOICE_STATUS[row.fiscalReceipt.status]
+    : 'unavailable';
   return {
     id: row.id,
     paidAt: row.paidAt.toISOString(),
@@ -153,10 +159,11 @@ export function toMemberCharge(
     description,
     invoice: {
       // Sin recibo = cobro anterior a la facturación: no hay qué facturar.
-      status: row.fiscalReceipt
-        ? INVOICE_STATUS[row.fiscalReceipt.status]
-        : 'unavailable',
+      status,
       cfdiId: row.fiscalReceipt?.cfdiId ?? null,
+      // El folio solo si la factura es SUYA: en `closed` el CFDI es la global.
+      uuid:
+        status === 'invoiced' ? (row.fiscalReceipt?.cfdi?.uuid ?? null) : null,
     },
   };
 }

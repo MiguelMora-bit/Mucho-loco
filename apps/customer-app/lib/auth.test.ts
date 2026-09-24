@@ -11,6 +11,11 @@ describe('isProtected', () => {
     expect(isProtected('/product/checkout/nope')).toBe(false); // not a real sub-path of any protected root
   });
 
+  // Facturar muestra RFC y cobros: es cuenta, como el panel.
+  it('protects the invoicing page', () => {
+    expect(isProtected('/invoicing')).toBe(true);
+  });
+
   it('does not protect unrelated paths', () => {
     expect(isProtected('/')).toBe(false);
     expect(isProtected('/account')).toBe(false);

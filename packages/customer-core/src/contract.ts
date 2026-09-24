@@ -14,13 +14,16 @@
 import type {
   Announcement,
   Branch,
+  Cfdi,
   CommunityPost,
   FeedPost,
+  FiscalProfile,
   HeatmapLevel,
   Lang,
   MembershipInfo,
   MembershipPlanChoice,
   MembershipTier,
+  MemberCharge,
   NewOrderLine,
   OfflinePaymentMethod,
   Order,
@@ -56,6 +59,38 @@ export interface ICommunityRepository {
   createPost(email: string, body: string): Promise<CommunityPost>;
   toggleLike(email: string, postId: string): Promise<CommunityPost>;
   addComment(email: string, postId: string, body: string): Promise<CommunityPost>;
+}
+
+/** Un PDF o XML de una factura, listo para mandarlo al navegador. */
+export interface InvoiceFile {
+  data: Uint8Array;
+  contentType: string;
+  filename: string;
+}
+
+/**
+ * Facturación del socio (CFDI). Mismo criterio que `IUserRepository`: `email`
+ * está en la firma porque el mock lo necesita para saber de quién son los
+ * datos; el datasource HTTP lo ignora y manda el ID token de la sesión.
+ *
+ * Los rechazos (ya facturado, fuera de plazo, el SAT rechazó los datos…) se
+ * leen con `invoicingErrorOf` de `./invoicing-errors`, igual en mock y HTTP.
+ */
+export interface IInvoicingRepository {
+  /** `null` = todavía no captura sus datos fiscales (no es un error). */
+  getFiscalProfile(email: string): Promise<FiscalProfile | null>;
+
+  /** Crea o reemplaza, y devuelve lo guardado ya normalizado (mayúsculas, correo vacío = `null`). */
+  saveFiscalProfile(email: string, profile: FiscalProfile): Promise<FiscalProfile>;
+
+  /** Sus cobros más recientes (hasta 100), del más nuevo al más viejo, con su estado de facturación. */
+  getCharges(email: string): Promise<MemberCharge[]>;
+
+  /** Emite el CFDI del cobro con los datos fiscales guardados; el PAC manda PDF y XML por correo. */
+  invoiceCharge(email: string, chargeId: string): Promise<Cfdi>;
+
+  /** Solo facturas individuales del socio — la global no es suya. */
+  downloadInvoice(email: string, cfdiId: string, format: 'pdf' | 'xml'): Promise<InvoiceFile>;
 }
 
 export interface IMembershipRepository {

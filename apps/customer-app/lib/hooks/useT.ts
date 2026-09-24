@@ -25,5 +25,6 @@ export function useT(): Translations {
     dashboard:   t.raw('dashboard')   as Translations['dashboard'],
     checkout:    t.raw('checkout')    as Translations['checkout'],
     performance: t.raw('performance') as Translations['performance'],
+    invoicing:   t.raw('invoicing')   as Translations['invoicing'],
   };
 }

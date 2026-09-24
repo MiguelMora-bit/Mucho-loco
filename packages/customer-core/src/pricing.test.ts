@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateMembershipPrice, formatPrice, resolveMembershipTierPrice } from './pricing';
+import { calculateMembershipPrice, formatMoney, formatPrice, resolveMembershipTierPrice } from './pricing';
 
 describe('calculateMembershipPrice', () => {
   it('multiplies base price by tier factor and period multiplier', () => {
@@ -43,5 +43,19 @@ describe('formatPrice', () => {
 
   it('handles amounts under 1000 with no separator', () => {
     expect(formatPrice(290)).toBe('$290');
+  });
+});
+
+describe('formatMoney', () => {
+  // Un comprobante lleva centavos siempre; formatPrice (catálogo) no.
+  it('always shows two decimals in pesos', () => {
+    expect(formatMoney(1090, 'es')).toMatch(/1,090\.00/);
+    expect(formatMoney(1090.5, 'en')).toMatch(/1,090\.50/);
+    expect(formatMoney(0.99, 'es')).toMatch(/0\.99/);
+  });
+
+  it('says it is Mexican pesos in either language', () => {
+    expect(formatMoney(1090, 'es')).toContain('$');
+    expect(formatMoney(1090, 'en')).toMatch(/MX\$|MXN/);
   });
 });

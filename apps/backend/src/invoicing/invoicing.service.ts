@@ -103,7 +103,7 @@ export class InvoicingService {
   async getCharges(userId: string): Promise<MemberCharge[]> {
     const rows = await this.prisma.charge.findMany({
       where: { userId },
-      include: { lines: true, fiscalReceipt: true },
+      include: { lines: true, fiscalReceipt: { include: { cfdi: true } } },
       orderBy: { paidAt: 'desc' },
       take: 100,
     });

@@ -1,4 +1,4 @@
-import type { MembershipTier, PlanKey } from '@mucho-loco/types';
+import type { Lang, MembershipTier, PlanKey } from '@mucho-loco/types';
 
 /**
  * Membership price for a given branch, tier, and billing period, rounded to
@@ -44,6 +44,20 @@ export const PERIOD_MULTIPLIERS: Record<PlanKey, number> = {
 /** Formats a peso amount as "$X,XXX" — the one place this string shape gets built. */
 export function formatPrice(amount: number): string {
   return `$${amount.toLocaleString()}`;
+}
+
+/**
+ * Un monto de comprobante (un cobro, una factura): siempre con centavos y en
+ * pesos, en el idioma de la pantalla. `formatPrice` es el formato del catálogo
+ * — redondea y depende del locale del runtime —, no el de un recibo.
+ */
+export function formatMoney(amount: number, lang: Lang): string {
+  return new Intl.NumberFormat(lang === 'en' ? 'en-US' : 'es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 }
 
 /**

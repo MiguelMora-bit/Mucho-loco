@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { LuHouse, LuQrCode, LuPackage, LuUsers, LuCircleUser, LuSettings, LuTrendingUp, LuLogOut } from 'react-icons/lu';
+import { LuHouse, LuQrCode, LuPackage, LuUsers, LuCircleUser, LuSettings, LuTrendingUp, LuReceipt, LuLogOut } from 'react-icons/lu';
 import { Link, usePathname, useRouter } from '@/i18n/routing';
 import { useLogout } from '@/lib/hooks/useLogout';
 import { useDashboardPaneStore } from '@/lib/stores/dashboardPane.store';
@@ -55,6 +55,10 @@ export function Sidebar() {
         <Link href="/performance" className={'nav-item no-underline' + (pathname === '/performance' ? ' active' : '')}>
           <span className={'nav-icon' + (pathname === '/performance' ? ' icon-rise' : '')}><LuTrendingUp size={20} /></span>
           <span className="side-label">{t.dashboard.nav.performance}</span>
+        </Link>
+        <Link href="/invoicing" className={'nav-item no-underline' + (pathname === '/invoicing' ? ' active' : '')}>
+          <span className={'nav-icon' + (pathname === '/invoicing' ? ' icon-wobble' : '')}><LuReceipt size={20} /></span>
+          <span className="side-label">{t.dashboard.nav.invoicing}</span>
         </Link>
       </nav>
       <div className="side-foot px-3.5 py-3.5 border-t border-ml-border">

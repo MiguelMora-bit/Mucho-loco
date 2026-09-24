@@ -505,6 +505,7 @@ export interface Translations {
       settings: string;
       performance: string;
       community: string;
+      invoicing: string;
       logout: string;
     };
     membershipStatus: {
@@ -705,6 +706,68 @@ export interface Translations {
       more: string;
       trained: string;
       noRecord: string;
+    };
+  };
+  /** Facturar (CFDI) — `/invoicing`. `{email}`, `{description}`, `{date}`, `{uuid}` se llenan al pintar. */
+  invoicing: {
+    title: string;
+    subtitle: string;
+    fiscal: {
+      title: string;
+      emptyTitle: string;
+      emptyBody: string;
+      edit: string;
+      save: string;
+      saving: string;
+      saved: string;
+      cancel: string;
+      taxId: string;
+      taxIdHelp: string;
+      legalName: string;
+      legalNameHelp: string;
+      taxSystem: string;
+      taxSystemPlaceholder: string;
+      zip: string;
+      zipHelp: string;
+      cfdiUse: string;
+      cfdiUsePlaceholder: string;
+      cfdiUseFiltered: string;
+      email: string;
+      emailHelp: string;
+      errors: Record<'taxId' | 'legalName' | 'taxSystem' | 'zip' | 'cfdiUse' | 'email', string>;
+    };
+    charges: {
+      title: string;
+      empty: string;
+      invoice: string;
+      downloadPdf: string;
+      downloadXml: string;
+      wrongData: string;
+      whatsappMessage: string;
+    };
+    status: Record<ChargeInvoiceStatus, { label: string; hint: string }>;
+    confirm: {
+      title: string;
+      chargeLabel: string;
+      fiscalLabel: string;
+      warning: string;
+      confirm: string;
+      confirming: string;
+      cancel: string;
+      success: string;
+    };
+    errors: {
+      FISCAL_PROFILE_REQUIRED: string;
+      CHARGE_NOT_FOUND: string;
+      CHARGE_ALREADY_INVOICED: string;
+      INVOICING_WINDOW_CLOSED: string;
+      CHARGE_NOT_INVOICEABLE: string;
+      INVOICING_UNAVAILABLE: string;
+      FISCAL_DATA_REJECTED: string;
+      INVOICING_PROVIDER_ERROR: string;
+      CFDI_NOT_FOUND: string;
+      connection: string;
+      fixData: string;
     };
   };
 }
@@ -1095,7 +1158,7 @@ export type HeatmapLevel = '' | 'l1' | 'l2' | 'l3';
  * Facturapi; lo que aquí se llama CFDI es la factura timbrada ante el SAT, no
  * el "invoice" de Stripe Billing, que es un cobro. */
 
-/** c_UsoCFDI que se ofrecen: gastos en general, adquisición de mercancías, sin efectos fiscales. */
+/** c_UsoCFDI que se ofrecen: G01 adquisición de mercancías, G03 gastos en general, S01 sin efectos fiscales. */
 export type CfdiUse = 'G01' | 'G03' | 'S01';
 
 /** Datos fiscales del socio, tal cual su Constancia de Situación Fiscal. */
@@ -1133,6 +1196,8 @@ export interface MemberCharge {
   invoice: {
     status: ChargeInvoiceStatus;
     cfdiId: string | null;
+    /** Folio fiscal del SAT. Solo con status 'invoiced' (la global no es del socio). */
+    uuid: string | null;
   };
 }
 

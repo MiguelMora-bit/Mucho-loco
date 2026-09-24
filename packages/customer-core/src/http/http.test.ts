@@ -5,6 +5,7 @@ import {
   BranchHttpDatasource,
   CATALOG_MAX_AGE,
   CommunityHttpDatasource,
+  InvoicingHttpDatasource,
   LANDING_MAX_AGE,
   MembershipHttpDatasource,
   PaymentHttpDatasource,
@@ -13,7 +14,8 @@ import {
   SocialHttpDatasource,
   UserHttpDatasource,
 } from './index';
-import type { OrderDelivery, ShippingAddress } from '@mucho-loco/types';
+import type { FiscalProfile, OrderDelivery, ShippingAddress } from '@mucho-loco/types';
+import { invoicingErrorOf } from '../invoicing-errors';
 
 const HOME_ADDRESS: ShippingAddress = {
   street: 'Av. Insurgentes Sur 1234',
@@ -340,5 +342,103 @@ describe('PaymentHttpDatasource', () => {
     );
 
     expect(String(call(spy).init.body)).not.toMatch(/total|amount|price/);
+  });
+});
+
+describe('InvoicingHttpDatasource', () => {
+  const PROFILE: FiscalProfile = {
+    taxId: 'CUPU800825569',
+    legalName: 'JUAN PÉREZ',
+    taxSystem: '612',
+    zip: '06700',
+    cfdiUse: 'G03',
+    email: null,
+  };
+
+  it('maps each repository method to its backend route, always with the session token', async () => {
+    const spy = stubFetch({});
+    const ds = new InvoicingHttpDatasource(client().api);
+
+    await ds.getFiscalProfile('ignorado@test.mx');
+    await ds.saveFiscalProfile('ignorado@test.mx', PROFILE);
+    await ds.getCharges('ignorado@test.mx');
+    await ds.invoiceCharge('ignorado@test.mx', 'ch/1');
+
+    expect(call(spy, 0)).toMatchObject({ url: 'http://api.test/users/me/fiscal-profile', auth: 'Bearer id-token' });
+    expect(call(spy, 0).init.method).toBe('GET');
+    expect(call(spy, 1).url).toBe('http://api.test/users/me/fiscal-profile');
+    expect(call(spy, 1).init.method).toBe('PUT');
+    expect(JSON.parse(call(spy, 1).init.body as string)).toEqual(PROFILE);
+    expect(call(spy, 2).url).toBe('http://api.test/users/me/charges');
+    // El id va escapado: un id con "/" no puede cambiar la ruta.
+    expect(call(spy, 3).url).toBe('http://api.test/users/me/charges/ch%2F1/invoice');
+    expect(call(spy, 3).init.method).toBe('POST');
+    for (let i = 0; i < 4; i++) {
+      expect(call(spy, i).auth).toBe('Bearer id-token');
+      // La identidad es el token; el correo del contrato nunca viaja.
+      expect(call(spy, i).url).not.toContain('ignorado');
+      expect(String(call(spy, i).init.body ?? '')).not.toContain('ignorado');
+    }
+  });
+
+  it('no fiscal data yet is null, not an error', async () => {
+    stubFetch({ code: 'FISCAL_PROFILE_NOT_FOUND' }, 404);
+    await expect(new InvoicingHttpDatasource(client().api).getFiscalProfile('x')).resolves.toBeNull();
+  });
+
+  it('downloads the invoice bytes from its route', async () => {
+    const spy = vi.fn(
+      async () =>
+        new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="F-1.pdf"' },
+        }),
+    );
+    vi.stubGlobal('fetch', spy);
+
+    const file = await new InvoicingHttpDatasource(client().api).downloadInvoice('x', 'cfdi 1', 'pdf');
+
+    expect(String((spy.mock.calls[0] as unknown[])[0])).toBe('http://api.test/users/me/invoices/cfdi%201/pdf');
+    expect(file).toMatchObject({ contentType: 'application/pdf', filename: 'F-1.pdf' });
+    expect(Array.from(file.data)).toEqual([0x25, 0x50, 0x44, 0x46]);
+  });
+
+  it('names the file when the backend does not', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('<xml/>', { status: 200, headers: { 'Content-Type': 'application/xml' } })),
+    );
+    const file = await new InvoicingHttpDatasource(client().api).downloadInvoice('x', 'cfdi-9', 'xml');
+    expect(file.filename).toBe('factura-cfdi-9.xml');
+  });
+
+  it.each([
+    ['FISCAL_PROFILE_REQUIRED', 400],
+    ['CHARGE_NOT_FOUND', 404],
+    ['CHARGE_ALREADY_INVOICED', 409],
+    ['INVOICING_WINDOW_CLOSED', 409],
+    ['CHARGE_NOT_INVOICEABLE', 409],
+    ['INVOICING_UNAVAILABLE', 503],
+    ['INVOICING_PROVIDER_ERROR', 502],
+  ])('reads the backend %s rejection as the same typed error the mock throws', async (code, status) => {
+    stubFetch({ code, message: 'prosa en español' }, status);
+    const err = await new InvoicingHttpDatasource(client().api).invoiceCharge('x', 'c1').catch((e: unknown) => e);
+    expect(invoicingErrorOf(err)).toEqual({ code });
+  });
+
+  it("keeps the SAT's reason on a fiscal-data rejection", async () => {
+    stubFetch({ code: 'FISCAL_DATA_REJECTED', message: 'El RFC no existe', detail: 'El RFC no existe' }, 422);
+    const err = await new InvoicingHttpDatasource(client().api).invoiceCharge('x', 'c1').catch((e: unknown) => e);
+    expect(invoicingErrorOf(err)).toEqual({ code: 'FISCAL_DATA_REJECTED', detail: 'El RFC no existe' });
+  });
+
+  it('a 500 or a dead network is not a business rejection', async () => {
+    stubFetch({ message: 'boom' }, 500);
+    const serverError = await new InvoicingHttpDatasource(client().api).invoiceCharge('x', 'c1').catch((e: unknown) => e);
+    expect(invoicingErrorOf(serverError)).toBeNull();
+
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed'); }));
+    const network = await new InvoicingHttpDatasource(client().api).getCharges('x').catch((e: unknown) => e);
+    expect(invoicingErrorOf(network)).toBeNull();
   });
 });

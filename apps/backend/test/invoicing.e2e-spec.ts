@@ -402,12 +402,14 @@ describe('Invoicing (e2e)', () => {
       const invoiced = charges.find((c) => c.id === chargeIds[0]);
       expect(invoiced).toMatchObject({
         total: 1090,
-        invoice: { status: 'invoiced' },
+        // El folio es con lo que el socio le escribe a soporte y HQ lo encuentra.
+        invoice: { status: 'invoiced', uuid: 'UUID-inv_e2e_1' },
       });
       expect(invoiced!.description).toContain('Membresía');
       expect(charges.find((c) => c.id === chargeIds[1])!.invoice).toEqual({
         status: 'available',
         cfdiId: null,
+        uuid: null,
       });
 
       const other = await request(app.getHttpServer())
@@ -523,6 +525,15 @@ describe('Invoicing (e2e)', () => {
         .set(...auth(MEMBER))
         .expect(409);
       expect(body<{ code: string }>(res).code).toBe('INVOICING_WINDOW_CLOSED');
+
+      // La global no es del socio: su folio no se le muestra.
+      const list = await request(app.getHttpServer())
+        .get('/users/me/charges')
+        .set(...auth(MEMBER))
+        .expect(200);
+      expect(
+        body<MemberCharge[]>(list).find((c) => c.id === id)!.invoice,
+      ).toMatchObject({ status: 'closed', uuid: null });
     });
   });
 

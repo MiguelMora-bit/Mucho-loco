@@ -25,5 +25,12 @@ El timeout usa `AbortController` + `setTimeout`, no `AbortSignal.timeout()`:
 React Native no tiene este último (su polyfill `abort-controller` es anterior).
 Hay un test que corre sin él.
 
+Métodos: `get`, `getOrNull` (404 → `null`), `post`, `put` y `getFile`.
+`getFile` (2026-09-23, para el PDF/XML de un CFDI) existe aparte porque los
+demás leen la respuesta como texto, y un binario leído como texto llega
+corrupto: devuelve `{ data: Uint8Array, contentType, filename }` (el nombre sale
+de `Content-Disposition`) y nunca pasa por `cachePolicy`. Los errores y el
+timeout son los mismos que en `get`.
+
 Paquete **source-only**, sin build — igual que `@mucho-loco/types`. Lo compilan
 los bundlers que lo consumen (Vite, Next, Metro). No lo importa `apps/backend`.

@@ -12,3 +12,4 @@ export {
   UserHttpDatasource,
 } from './account.http';
 export { CATALOG_MAX_AGE, LANDING_MAX_AGE } from './max-age';
+export { InvoicingHttpDatasource } from './invoicing.http';

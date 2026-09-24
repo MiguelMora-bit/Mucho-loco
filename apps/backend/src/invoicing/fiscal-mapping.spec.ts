@@ -135,7 +135,8 @@ describe('fiscal mapping', () => {
     const receipt = (
       status: FiscalReceipt['status'],
       cfdiId: string | null = null,
-    ): FiscalReceipt => ({
+      uuid: string | null = null,
+    ) => ({
       chargeId: 'c1',
       status,
       attempts: 1,
@@ -146,10 +147,14 @@ describe('fiscal mapping', () => {
       selfInvoiceUrl: null,
       expiresAt: null,
       cfdiId,
+      cfdi: cfdiId && uuid ? { id: cfdiId, uuid } : null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    const charge = (fiscalReceipt: FiscalReceipt | null, lines = [line()]) =>
+    const charge = (
+      fiscalReceipt: ReturnType<typeof receipt> | null,
+      lines = [line()],
+    ) =>
       ({
         id: 'c1',
         totalCents: 129900,
@@ -192,24 +197,29 @@ describe('fiscal mapping', () => {
 
     it('carries the invoice of one already invoiced', () => {
       expect(
-        toMemberCharge(charge(receipt('invoiced_to_customer', 'cfdi-1')))
-          .invoice,
+        toMemberCharge(
+          charge(receipt('invoiced_to_customer', 'cfdi-1', 'UUID-1')),
+        ).invoice,
       ).toEqual({
         status: 'invoiced',
         cfdiId: 'cfdi-1',
+        uuid: 'UUID-1',
       });
     });
 
-    it('one that went into the global invoice is closed', () => {
+    it('one that went into the global invoice is closed — and its folio is not theirs', () => {
       expect(
-        toMemberCharge(charge(receipt('invoiced_globally'))).invoice.status,
-      ).toBe('closed');
+        toMemberCharge(
+          charge(receipt('invoiced_globally', 'cfdi-global', 'UUID-GLOBAL')),
+        ).invoice,
+      ).toEqual({ status: 'closed', cfdiId: 'cfdi-global', uuid: null });
     });
 
     it('one from before invoicing existed has nothing to invoice', () => {
       expect(toMemberCharge(charge(null)).invoice).toEqual({
         status: 'unavailable',
         cfdiId: null,
+        uuid: null,
       });
     });
   });

@@ -259,6 +259,7 @@
       "settings": "SETTINGS",
       "performance": "PERFORMANCE",
       "community": "COMMUNITY",
+      "invoicing": "INVOICES",
       "logout": "LOG OUT"
     },
     "membershipStatus": {
@@ -473,5 +474,90 @@
     "performanceDesc": "Stats and progress from your Mucho Loco Gym workouts.",
     "productTitle": "Mucho Loco Store",
     "productDesc": "Buy it at the Mucho Loco store. Branch pickup or home delivery."
+  },
+  "invoicing": {
+    "title": "INVOICES",
+    "subtitle": "Request the tax invoice (CFDI) for your payments. The PDF and XML go to your email.",
+    "fiscal": {
+      "title": "TAX DETAILS",
+      "emptyTitle": "First, your tax details",
+      "emptyBody": "Have them ready exactly as they appear on your Constancia de Situación Fiscal. You only enter them once.",
+      "edit": "EDIT",
+      "save": "SAVE DETAILS",
+      "saving": "SAVING…",
+      "saved": "Tax details saved.",
+      "cancel": "CANCEL",
+      "taxId": "RFC (tax ID)",
+      "taxIdHelp": "12 characters for a company, 13 for an individual.",
+      "legalName": "Name or company name",
+      "legalNameHelp": "Exactly as on your constancia, without the company type (no \"SA DE CV\").",
+      "taxSystem": "Tax regime",
+      "taxSystemPlaceholder": "Choose your regime",
+      "zip": "Postal code",
+      "zipHelp": "The one of your tax address.",
+      "cfdiUse": "CFDI use",
+      "cfdiUsePlaceholder": "Choose the use",
+      "cfdiUseFiltered": "Only the uses the SAT allows for your regime are shown.",
+      "email": "Email for your invoices (optional)",
+      "emailHelp": "If you leave it empty, they go to {email}.",
+      "errors": {
+        "taxId": "This doesn't look like an RFC.",
+        "legalName": "Enter your name or company name (254 characters max).",
+        "taxSystem": "Choose your tax regime.",
+        "zip": "The postal code is 5 digits.",
+        "cfdiUse": "Choose a use your regime allows.",
+        "email": "Check the email address."
+      }
+    },
+    "charges": {
+      "title": "YOUR PAYMENTS",
+      "empty": "Your purchases and membership payments will show up here so you can invoice them.",
+      "invoice": "INVOICE",
+      "downloadPdf": "PDF",
+      "downloadXml": "XML",
+      "wrongData": "Wrong details?",
+      "whatsappMessage": "Hi, my invoice was issued with wrong details. Payment: {description} on {date}. Tax folio: {uuid}."
+    },
+    "status": {
+      "available": {
+        "label": "Can be invoiced",
+        "hint": "You can request its invoice."
+      },
+      "invoiced": {
+        "label": "Invoiced",
+        "hint": "It already has its invoice."
+      },
+      "closed": {
+        "label": "No longer invoiceable",
+        "hint": "It went into the month's global invoice because nobody requested it in time."
+      },
+      "unavailable": {
+        "label": "Not invoiceable",
+        "hint": "This payment has no tax receipt."
+      }
+    },
+    "confirm": {
+      "title": "CONFIRM YOUR INVOICE",
+      "chargeLabel": "Payment",
+      "fiscalLabel": "It will be issued to",
+      "warning": "Double-check: an issued invoice can't be corrected from the app.",
+      "confirm": "ISSUE INVOICE",
+      "confirming": "ISSUING…",
+      "cancel": "CANCEL",
+      "success": "Done, your invoice is ready. The PDF and XML are on their way to {email}."
+    },
+    "errors": {
+      "FISCAL_PROFILE_REQUIRED": "To invoice, save your tax details first.",
+      "CHARGE_NOT_FOUND": "We couldn't find that payment.",
+      "CHARGE_ALREADY_INVOICED": "This payment already has its invoice (maybe you requested it with the receipt).",
+      "INVOICING_WINDOW_CLOSED": "This payment already went into the period's global invoice; it can't be invoiced separately.",
+      "CHARGE_NOT_INVOICEABLE": "This payment can't be invoiced.",
+      "INVOICING_UNAVAILABLE": "Invoicing isn't available right now. Try again later; your payment is not lost.",
+      "FISCAL_DATA_REJECTED": "The SAT rejected your tax details:",
+      "INVOICING_PROVIDER_ERROR": "The invoicing service didn't respond. Try again later.",
+      "CFDI_NOT_FOUND": "We couldn't find that invoice.",
+      "connection": "Connection error. Try again.",
+      "fixData": "FIX MY DETAILS"
+    }
   }
 }

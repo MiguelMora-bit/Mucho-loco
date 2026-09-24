@@ -38,3 +38,20 @@ export function formatMonthShort(iso: string, lang: Lang): string {
     .replace('.', '')
     .toUpperCase();
 }
+
+/**
+ * Un INSTANTE (cuándo se pagó un cobro), en la hora de quien lo lee. Distinto
+ * de `formatDate`, que es para fechas sin hora y fija UTC para no correrse un
+ * día. Mismo formato que el `formatDateTime` de branch-app, más el año: una
+ * lista de cobros abarca más de uno. `timeZone` solo lo pasan los tests.
+ */
+export function formatDateTime(iso: string, lang: Lang, timeZone?: string): string {
+  return new Intl.DateTimeFormat(lang === 'es' ? 'es-MX' : 'en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone,
+  }).format(new Date(iso));
+}

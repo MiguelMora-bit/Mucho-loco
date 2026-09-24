@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatDayOfMonth, formatDuration, formatMonthShort } from './dates';
+import { formatDate, formatDateTime, formatDayOfMonth, formatDuration, formatMonthShort } from './dates';
 
 describe('formatDate', () => {
   // Una fecha sin hora se parsea como medianoche UTC; formatearla en México
@@ -50,5 +50,25 @@ describe('formatDayOfMonth / formatMonthShort', () => {
   it('translates the month', () => {
     expect(formatMonthShort('2026-01-15T12:00:00.000Z', 'en')).toBe('JAN');
     expect(formatMonthShort('2026-01-15T12:00:00.000Z', 'es')).toBe('ENE');
+  });
+});
+
+describe('formatDateTime', () => {
+  // Un instante (cuándo se pagó), no una fecha sola: se ve en la hora de
+  // quien lo lee. 03:30 UTC del 1 de septiembre es el 31 de agosto en CDMX.
+  it('shows the local time, not UTC', () => {
+    const text = formatDateTime('2026-09-01T03:30:00.000Z', 'es', 'America/Mexico_City');
+    expect(text).toMatch(/31/);
+    expect(text).toMatch(/ago/i);
+    expect(text).toMatch(/9:30|21:30/);
+  });
+
+  it('includes the year — a charge list spans more than one', () => {
+    expect(formatDateTime('2025-12-31T18:00:00.000Z', 'en', 'America/Mexico_City')).toContain('2025');
+  });
+
+  it('follows the locale', () => {
+    const iso = '2026-09-15T18:00:00.000Z';
+    expect(formatDateTime(iso, 'es', 'UTC')).not.toBe(formatDateTime(iso, 'en', 'UTC'));
   });
 });

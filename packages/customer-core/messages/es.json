@@ -259,6 +259,7 @@
       "settings": "CONFIGURACIÓN",
       "performance": "RENDIMIENTO",
       "community": "COMUNIDAD",
+      "invoicing": "FACTURAR",
       "logout": "CERRAR SESIÓN"
     },
     "membershipStatus": {
@@ -473,5 +474,90 @@
     "performanceDesc": "Estadísticas y progreso de tus entrenamientos en Mucho Loco Gym.",
     "productTitle": "Mucho Loco Store",
     "productDesc": "Cómpralo en la tienda Mucho Loco. Retiro en sucursal o envío a domicilio."
+  },
+  "invoicing": {
+    "title": "FACTURAR",
+    "subtitle": "Pide la factura (CFDI) de tus pagos. Te llega en PDF y XML a tu correo.",
+    "fiscal": {
+      "title": "DATOS FISCALES",
+      "emptyTitle": "Primero, tus datos fiscales",
+      "emptyBody": "Tenlos a la mano como vienen en tu Constancia de Situación Fiscal. Solo los capturas una vez.",
+      "edit": "EDITAR",
+      "save": "GUARDAR DATOS",
+      "saving": "GUARDANDO…",
+      "saved": "Datos fiscales guardados.",
+      "cancel": "CANCELAR",
+      "taxId": "RFC",
+      "taxIdHelp": "12 caracteres si es empresa, 13 si es persona física.",
+      "legalName": "Nombre o razón social",
+      "legalNameHelp": "Exactamente como en tu constancia, sin el régimen societario (sin \"SA DE CV\").",
+      "taxSystem": "Régimen fiscal",
+      "taxSystemPlaceholder": "Elige tu régimen",
+      "zip": "Código postal",
+      "zipHelp": "El de tu domicilio fiscal.",
+      "cfdiUse": "Uso del CFDI",
+      "cfdiUsePlaceholder": "Elige el uso",
+      "cfdiUseFiltered": "Solo aparecen los usos que el SAT permite para tu régimen.",
+      "email": "Correo para tus facturas (opcional)",
+      "emailHelp": "Si lo dejas vacío, llegan a {email}.",
+      "errors": {
+        "taxId": "Esto no tiene forma de RFC.",
+        "legalName": "Escribe tu nombre o razón social (máximo 254 caracteres).",
+        "taxSystem": "Elige tu régimen fiscal.",
+        "zip": "El código postal son 5 dígitos.",
+        "cfdiUse": "Elige un uso que tu régimen permita.",
+        "email": "Revisa el correo."
+      }
+    },
+    "charges": {
+      "title": "TUS PAGOS",
+      "empty": "Aquí van a aparecer tus compras y pagos de membresía, para que los factures.",
+      "invoice": "FACTURAR",
+      "downloadPdf": "PDF",
+      "downloadXml": "XML",
+      "wrongData": "¿Datos incorrectos?",
+      "whatsappMessage": "Hola, mi factura salió con datos incorrectos. Pago: {description} del {date}. Folio fiscal: {uuid}."
+    },
+    "status": {
+      "available": {
+        "label": "Facturable",
+        "hint": "Puedes pedir su factura."
+      },
+      "invoiced": {
+        "label": "Facturado",
+        "hint": "Ya tiene su factura."
+      },
+      "closed": {
+        "label": "Ya no facturable",
+        "hint": "Entró a la factura global del mes porque nadie la pidió a tiempo."
+      },
+      "unavailable": {
+        "label": "No facturable",
+        "hint": "Este pago no tiene recibo fiscal."
+      }
+    },
+    "confirm": {
+      "title": "CONFIRMA TU FACTURA",
+      "chargeLabel": "Pago",
+      "fiscalLabel": "Se va a emitir a nombre de",
+      "warning": "Revisa bien: una factura emitida no se puede corregir desde la app.",
+      "confirm": "EMITIR FACTURA",
+      "confirming": "EMITIENDO…",
+      "cancel": "CANCELAR",
+      "success": "Listo, ya está tu factura. El PDF y el XML llegan a {email}."
+    },
+    "errors": {
+      "FISCAL_PROFILE_REQUIRED": "Para facturar, primero guarda tus datos fiscales.",
+      "CHARGE_NOT_FOUND": "No encontramos ese pago.",
+      "CHARGE_ALREADY_INVOICED": "Este pago ya tiene su factura (quizá la pediste con el ticket).",
+      "INVOICING_WINDOW_CLOSED": "Este pago ya entró a la factura global del periodo; ya no se puede facturar aparte.",
+      "CHARGE_NOT_INVOICEABLE": "Este pago no se puede facturar.",
+      "INVOICING_UNAVAILABLE": "La facturación no está disponible en este momento. Intenta más tarde; tu pago no se pierde.",
+      "FISCAL_DATA_REJECTED": "El SAT rechazó tus datos fiscales:",
+      "INVOICING_PROVIDER_ERROR": "El servicio de facturación no respondió. Intenta más tarde.",
+      "CFDI_NOT_FOUND": "No encontramos esa factura.",
+      "connection": "Error de conexión. Intenta de nuevo.",
+      "fixData": "CORREGIR MIS DATOS"
+    }
   }
 }
