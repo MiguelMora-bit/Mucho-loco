@@ -76,6 +76,7 @@ Antes nada creaba una `Visit`: validar en la puerta era un `GET` de solo lectura
 
 - **Una visita por socio por día de CDMX**, garantizado por el índice único `(userId, visitDay)` (`visitDay DATE`, calculado con `America/Mexico_City`, migración `20260925153950_member_check_ins`). `createMany({ skipDuplicates: true })` hace que dos escaneos simultáneos registren uno solo, sin error. La respuesta `valid` trae `checkIn: { visitedAt, firstToday }`: un segundo escaneo el mismo día pasa, pero con la hora de la PRIMERA entrada — mostrador ve "ya había entrado hoy" (señal de QR prestado; bloquearlo es decisión de negocio pendiente).
 - **Visitas y racha se derivan al leer** (`memberships/visit-stats.ts`, como `daysLeft`): visitas = días con entrada del mes en curso; racha = días consecutivos que terminan hoy o ayer (no se rompe antes de que el socio llegue hoy). Se lee a lo más un año de días. Las columnas `memberships.visits/streak` se borraron.
+- **Cifras del inicio del panel** (spec 013), de las mismas filas: `visitsLastMonth` (enero → diciembre), `bestStreak` (la racha más larga del año leído, nunca menor que la actual) y `branchesThisMonth` (sucursales distintas del mes).
 - **Sin salida no hay duración**: `Visit.durationMinutes` es `number | null` y los clientes pintan "—" (`formatDuration` de customer-core).
 - Probado: unit (`visit-stats.spec.ts`, `memberships.service.spec.ts`) y e2e en `branch-ops.e2e-spec.ts` (una por día, negado no registra, 400 sin método, y un socio de la app ve su entrada, `visits: 1`, `streak: 1`).
 

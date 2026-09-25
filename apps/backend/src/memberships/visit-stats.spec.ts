@@ -1,4 +1,11 @@
-import { currentStreak, mexicoDay, visitsThisMonth } from './visit-stats';
+import {
+  branchesThisMonth,
+  currentStreak,
+  longestStreak,
+  mexicoDay,
+  visitsLastMonth,
+  visitsThisMonth,
+} from './visit-stats';
 
 // 2026-09-25 12:00 en CDMX (UTC-6).
 const NOW = new Date('2026-09-25T18:00:00.000Z');
@@ -39,5 +46,39 @@ describe('currentStreak', () => {
 
   it('crosses the turn of the month', () => {
     expect(currentStreak(['2026-10-01', '2026-09-30'], new Date('2026-10-01T18:00:00.000Z'))).toBe(2);
+  });
+});
+
+describe('visitsLastMonth (spec 013)', () => {
+  it('counts the days of the previous month', () => {
+    expect(visitsLastMonth(['2026-09-02', '2026-08-31', '2026-08-01', '2026-07-31'], NOW)).toBe(2);
+  });
+
+  it('goes back to December of the previous year in January', () => {
+    expect(visitsLastMonth(['2025-12-31', '2026-01-02'], new Date('2026-01-10T18:00:00.000Z'))).toBe(1);
+  });
+});
+
+describe('longestStreak (spec 013)', () => {
+  it('finds the longest run of consecutive days, wherever it is', () => {
+    const days = ['2026-09-25', '2026-09-24', '2026-09-10', '2026-09-09', '2026-09-08', '2026-09-07', '2026-09-01'];
+    expect(longestStreak(days)).toBe(4);
+  });
+
+  it('crosses months and ignores order', () => {
+    expect(longestStreak(['2026-09-01', '2026-08-30', '2026-08-31'])).toBe(3);
+    expect(longestStreak([])).toBe(0);
+  });
+});
+
+describe('branchesThisMonth (spec 013)', () => {
+  it('counts distinct branches with an entry this month only', () => {
+    const visits = [
+      { day: '2026-09-25', branchId: 1 },
+      { day: '2026-09-20', branchId: 3 },
+      { day: '2026-09-18', branchId: 1 },
+      { day: '2026-08-30', branchId: 7 },
+    ];
+    expect(branchesThisMonth(visits, NOW)).toBe(2);
   });
 });

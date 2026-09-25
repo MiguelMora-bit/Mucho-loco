@@ -95,12 +95,15 @@ describe('MembershipsService', () => {
         branch: { name: 'Roma Sur' },
       });
       prisma.visit.findMany.mockResolvedValue([
-        { visitDay: new Date(`${today}T00:00:00.000Z`) },
-        { visitDay: yesterday },
+        { visitDay: new Date(`${today}T00:00:00.000Z`), branchId: 1 },
+        { visitDay: yesterday, branchId: 3 },
       ]);
 
       const info = await service.getForUser('user-1');
       expect(info.streak).toBe(2);
+      // Spec 013: la mejor racha nunca es menor que la actual.
+      expect(info.bestStreak).toBe(2);
+      expect(info.branchesThisMonth).toBe(today.endsWith('-01') ? 1 : 2);
       // Ayer puede ser del mes anterior (hoy es día 1).
       expect(info.visits).toBe(today.endsWith('-01') ? 1 : 2);
       expect(prisma.visit.findMany).toHaveBeenCalledWith(

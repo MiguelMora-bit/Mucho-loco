@@ -647,6 +647,52 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
       expect(visits[0]).toMatchObject({ branchId: 1, durationMinutes: null });
     });
 
+    // Spec 013: las cifras del inicio del panel salen de las visitas reales.
+    it('derives last month, best streak and branches this month from real visits', async () => {
+      const member = auth('', 'checkin-e2e-stats@mucholoco.mx');
+      await request(app.getHttpServer()).get('/users/me').set(...member).expect(200);
+      const user = await prisma.user.findUniqueOrThrow({ where: { email: 'checkin-e2e-stats@mucholoco.mx' } });
+      await prisma.membership.create({
+        data: {
+          userId: user.id, branchId: 1, tierKey: 'all', periodKey: 'monthly',
+          expiresAt: new Date(Date.now() + 20 * 86_400_000), accessCode: 'ML-CHECKIN-E2E-STATS',
+        },
+      });
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+      const shift = (day: string, days: number) => {
+        const d = new Date(`${day}T00:00:00.000Z`);
+        d.setUTCDate(d.getUTCDate() + days);
+        return d.toISOString().slice(0, 10);
+      };
+      const [year, month] = today.split('-').map(Number);
+      const lastMonth = new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 7);
+      // Hoy (Roma Sur) y ayer (Condesa): racha 2. El mes pasado, 4 días seguidos: mejor racha 4.
+      const days = [
+        { day: today, branchId: 1 },
+        { day: shift(today, -1), branchId: 3 },
+        ...[10, 11, 12, 13].map((d) => ({ day: `${lastMonth}-${d}`, branchId: 1 })),
+      ];
+      await prisma.visit.createMany({
+        data: days.map(({ day, branchId }) => ({
+          userId: user.id, branchId, visitDay: new Date(`${day}T00:00:00.000Z`),
+          visitedAt: new Date(`${day}T15:00:00.000Z`),
+        })),
+      });
+
+      const membership = body<MembershipInfo>(
+        await request(app.getHttpServer()).get('/users/me/membership').set(...member).expect(200),
+      );
+      // Si hoy es día 1, "ayer" cae en el mes pasado.
+      const firstOfMonth = today.endsWith('-01');
+      expect(membership).toMatchObject({
+        streak: 2,
+        bestStreak: 4,
+        visits: firstOfMonth ? 1 : 2,
+        visitsLastMonth: firstOfMonth ? 5 : 4,
+        branchesThisMonth: firstOfMonth ? 1 : 2,
+      });
+    });
+
     it('lets an app member see the entry, their visits and their streak', async () => {
       const member = auth('', 'checkin-e2e@mucholoco.mx');
       await request(app.getHttpServer()).get('/users/me').set(...member).expect(200);

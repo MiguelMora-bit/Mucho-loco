@@ -88,6 +88,10 @@ function seedRecords(): Record<string, UserRecord> {
       expiresAt: '2026-07-20',
       visits: 18,
       streak: 7,
+      // Lo que antes decía el panel en texto fijo, ahora como dato (spec 013).
+      visitsLastMonth: 15,
+      bestStreak: 14,
+      branchesThisMonth: 3,
       daysLeft: 12,
       accessCode: 'ML-DIEGO-2026-ALLGYMS',
       status: 'active',
@@ -145,6 +149,9 @@ function seedRecords(): Record<string, UserRecord> {
       expiresAt: '2026-08-05',
       visits: 9,
       streak: 3,
+      visitsLastMonth: 11,
+      bestStreak: 6,
+      branchesThisMonth: 1,
       daysLeft: 27,
       accessCode: 'ML-VALERIA-2026-CONDESA',
       // A propósito en 'grace' (no 'active') — demuestra el aviso de pago
@@ -250,6 +257,9 @@ export class UserMockDatasource implements IUserRepository {
       expiresAt,
       visits: current?.visits ?? 0,
       streak: current?.streak ?? 0,
+      visitsLastMonth: current?.visitsLastMonth ?? 0,
+      bestStreak: current?.bestStreak ?? 0,
+      branchesThisMonth: current?.branchesThisMonth ?? 0,
       daysLeft: daysUntil(expiresAt),
       // El QR no rota: quien ya tenía uno lo conserva.
       accessCode: current?.accessCode ?? `ML-${record.profile.name.replace(/\W+/g, '')}-2026`,

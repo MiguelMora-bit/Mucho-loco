@@ -46,3 +46,12 @@ export function renewalStartsOn(membership: MembershipInfo | null, now: number =
 export function membershipPlanLabel(t: Translations, membership: Pick<MembershipInfo, 'tierKey' | 'periodKey'>): string {
   return `${t.membershipPlan.tiers[membership.tierKey]} · ${t.membershipPlan.periods[membership.periodKey]}`;
 }
+
+/**
+ * "+3 vs mes anterior" / "-2 vs mes anterior" / "0 vs mes anterior" (spec 013):
+ * el número sale de las visitas reales, el texto de las traducciones.
+ */
+export function visitsDeltaLabel(t: Translations, membership: Pick<MembershipInfo, 'visits' | 'visitsLastMonth'>): string {
+  const delta = membership.visits - membership.visitsLastMonth;
+  return `${delta > 0 ? '+' : ''}${delta} ${t.dashboard.home.statVisitsDeltaSuffix}`;
+}

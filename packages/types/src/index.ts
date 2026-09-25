@@ -111,8 +111,15 @@ export interface MembershipInfo {
    *  customer-core), en su idioma — el contrato manda las claves (spec 011). */
   periodKey: PlanKey;
   expiresAt: string;
+  /** Días con entrada este mes (spec 012: una visita por día, hora de CDMX). */
   visits: number;
   streak: number;
+  /** Para "+N vs mes anterior" (spec 013). */
+  visitsLastMonth: number;
+  /** La racha más larga del último año; nunca menor que `streak`. */
+  bestStreak: number;
+  /** Sucursales distintas con entrada este mes. */
+  branchesThisMonth: number;
   daysLeft: number;
   accessCode: string;
   status: AccessStatus;
@@ -548,9 +555,10 @@ export interface Translations {
       suspendedBody: string;
       reactivate: string;
       statVisits: string;
-      statVisitsDelta: string;
+      /** "vs mes anterior": el número lo pone quien pinta (spec 013). */
+      statVisitsDeltaSuffix: string;
       statStreak: string;
-      statStreakDelta: string;
+      statBestStreakLabel: string;
       statDaysLeft: string;
       statBranches: string;
       statBranchesDelta: string;

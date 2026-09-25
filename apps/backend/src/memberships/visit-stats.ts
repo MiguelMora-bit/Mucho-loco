@@ -29,10 +29,45 @@ function previousDay(day: string): string {
   return date.toISOString().slice(0, 10);
 }
 
+function nextDay(day: string): string {
+  const date = dayDate(day);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+/** `YYYY-MM` del mes en curso en CDMX. */
+function currentMonth(now: Date): string {
+  return mexicoDay(now).slice(0, 7);
+}
+
+/** `YYYY-MM` del mes anterior (enero → diciembre del año anterior). */
+function previousMonth(month: string): string {
+  const [year, index] = month.split('-').map(Number);
+  const date = new Date(Date.UTC(year, index - 2, 1));
+  return date.toISOString().slice(0, 7);
+}
+
+function visitsInMonth(days: readonly string[], month: string): number {
+  return new Set(days.filter((day) => day.startsWith(month))).size;
+}
+
 /** Días con entrada en el mes en curso (una visita por día, ver `visits_userId_visitDay_key`). */
 export function visitsThisMonth(days: readonly string[], now: Date): number {
-  const month = mexicoDay(now).slice(0, 7);
-  return new Set(days.filter((day) => day.startsWith(month))).size;
+  return visitsInMonth(days, currentMonth(now));
+}
+
+/** Días con entrada el mes anterior — para "+N vs mes anterior" (spec 013). */
+export function visitsLastMonth(days: readonly string[], now: Date): number {
+  return visitsInMonth(days, previousMonth(currentMonth(now)));
+}
+
+/** Sucursales distintas con entrada este mes (spec 013). */
+export function branchesThisMonth(
+  visits: readonly { day: string; branchId: number }[],
+  now: Date,
+): number {
+  const month = currentMonth(now);
+  return new Set(visits.filter((v) => v.day.startsWith(month)).map((v) => v.branchId)).size;
 }
 
 /**
@@ -49,4 +84,22 @@ export function currentStreak(days: readonly string[], now: Date): number {
     day = previousDay(day);
   }
   return streak;
+}
+
+/** La racha más larga entre los días dados, en cualquier momento (spec 013). */
+export function longestStreak(days: readonly string[]): number {
+  const visited = new Set(days);
+  let longest = 0;
+  for (const day of visited) {
+    // Solo se cuenta desde el primer día de cada racha.
+    if (visited.has(previousDay(day))) continue;
+    let length = 1;
+    let next = nextDay(day);
+    while (visited.has(next)) {
+      length++;
+      next = nextDay(next);
+    }
+    longest = Math.max(longest, length);
+  }
+  return longest;
 }

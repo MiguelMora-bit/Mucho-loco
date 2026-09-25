@@ -19,7 +19,13 @@ import {
   graceDeadline,
   RENEWAL_TOLERANCE_DAYS,
 } from './membership-status';
-import { currentStreak, visitsThisMonth } from './visit-stats';
+import {
+  branchesThisMonth,
+  currentStreak,
+  longestStreak,
+  visitsLastMonth,
+  visitsThisMonth,
+} from './visit-stats';
 
 const DAY_MS = 86_400_000;
 const VISIT_DAYS_WINDOW = 366;
@@ -93,7 +99,7 @@ export class MembershipsService {
       // en curso y para cualquier racha razonable.
       this.prisma.visit.findMany({
         where: { userId },
-        select: { visitDay: true },
+        select: { visitDay: true, branchId: true },
         orderBy: { visitDay: 'desc' },
         take: VISIT_DAYS_WINDOW,
       }),
@@ -102,7 +108,10 @@ export class MembershipsService {
       throw new NotFoundException('Membership not found for user');
     return toMembershipInfo(
       membership,
-      visits.map((v) => v.visitDay.toISOString().slice(0, 10)),
+      visits.map((v) => ({
+        day: v.visitDay.toISOString().slice(0, 10),
+        branchId: v.branchId,
+      })),
     );
   }
 
@@ -243,9 +252,11 @@ export class MembershipsService {
 
 function toMembershipInfo(
   membership: MembershipWithBranch,
-  visitDays: readonly string[],
+  visits: readonly { day: string; branchId: number }[],
 ): MembershipInfo {
   const now = new Date();
+  const visitDays = visits.map((v) => v.day);
+  const streak = currentStreak(visitDays, now);
   const status = effectiveStatus(membership);
   const daysLeft = Math.max(
     0,
@@ -259,7 +270,12 @@ function toMembershipInfo(
     expiresAt: membership.expiresAt.toISOString(),
     // Derivadas de las entradas reales (spec 012), como daysLeft.
     visits: visitsThisMonth(visitDays, now),
-    streak: currentStreak(visitDays, now),
+    streak,
+    // Spec 013: las cifras del inicio del panel, de las mismas filas.
+    visitsLastMonth: visitsLastMonth(visitDays, now),
+    // La ventana es de un año: la mejor racha "del último año".
+    bestStreak: Math.max(streak, longestStreak(visitDays)),
+    branchesThisMonth: branchesThisMonth(visits, now),
     daysLeft,
     accessCode: membership.accessCode,
     status,

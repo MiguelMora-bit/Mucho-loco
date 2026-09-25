@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MembershipInfo } from '@mucho-loco/types';
-import { membershipPlanLabel, purchaseBlock, renewalStartsOn } from './membership-rules';
+import { membershipPlanLabel, purchaseBlock, renewalStartsOn, visitsDeltaLabel } from './membership-rules';
 import { translations } from './translations';
 
 const NOW = Date.parse('2026-09-13T12:00:00.000Z');
@@ -15,6 +15,9 @@ function member(overrides: Partial<MembershipInfo> = {}): MembershipInfo {
     expiresAt: isoIn(20),
     visits: 0,
     streak: 0,
+    visitsLastMonth: 0,
+    bestStreak: 0,
+    branchesThisMonth: 0,
     daysLeft: 20,
     accessCode: 'ML-TEST',
     status: 'active',
@@ -77,5 +80,13 @@ describe('membershipPlanLabel', () => {
   it('covers every period of both tiers', () => {
     expect(membershipPlanLabel(translations.es, { tierKey: 'single', periodKey: 'quarterly' })).toBe('1 SUCURSAL · TRIMESTRAL');
     expect(membershipPlanLabel(translations.en, { tierKey: 'all', periodKey: 'visit' })).toBe('15 GYMS · DAY PASS');
+  });
+});
+
+describe('visitsDeltaLabel', () => {
+  it('signs the difference against last month', () => {
+    expect(visitsDeltaLabel(translations.es, { visits: 18, visitsLastMonth: 15 })).toBe('+3 vs mes anterior');
+    expect(visitsDeltaLabel(translations.en, { visits: 5, visitsLastMonth: 7 })).toBe('-2 vs last month');
+    expect(visitsDeltaLabel(translations.es, { visits: 0, visitsLastMonth: 0 })).toBe('0 vs mes anterior');
   });
 });

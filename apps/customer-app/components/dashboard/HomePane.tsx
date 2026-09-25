@@ -1,5 +1,5 @@
 import type { Lang, MembershipInfo, Translations, UserProfile } from '@mucho-loco/types';
-import { membershipPlanLabel } from '@mucho-loco/customer-core/membership-rules';
+import { membershipPlanLabel, visitsDeltaLabel } from '@mucho-loco/customer-core/membership-rules';
 import { Link } from '@/i18n/routing';
 import { formatDate } from '../../lib/dates';
 
@@ -30,10 +30,11 @@ const BANNER_BUTTON_CLASS = 'px-5 py-2.5 bg-ml-red text-ml-cream font-bebas trac
 
 export function HomePane({ t, lang, active, profile, membership, justPaid, planHref, onRetryPayment, retryingPayment, retryError, onManageSubscription, managingSubscription, manageError }: HomePaneProps) {
   const stats = [
-    { lbl: t.dashboard.home.statVisits, num: membership?.visits ?? 0, delta: t.dashboard.home.statVisitsDelta, up: true },
-    { lbl: t.dashboard.home.statStreak, num: membership?.streak ?? 0, delta: t.dashboard.home.statStreakDelta },
+    // Spec 013: cifras del socio, derivadas de sus entradas en sucursal.
+    { lbl: t.dashboard.home.statVisits, num: membership?.visits ?? 0, delta: membership ? visitsDeltaLabel(t, membership) : '', up: Boolean(membership && membership.visits > membership.visitsLastMonth) },
+    { lbl: t.dashboard.home.statStreak, num: membership?.streak ?? 0, delta: membership ? `${t.dashboard.home.statBestStreakLabel} ${membership.bestStreak}` : '' },
     { lbl: t.dashboard.home.statDaysLeft, num: membership?.daysLeft ?? 0, delta: membership ? membershipPlanLabel(t, membership) : '' },
-    { lbl: t.dashboard.home.statBranches, num: 3, delta: t.dashboard.home.statBranchesDelta },
+    { lbl: t.dashboard.home.statBranches, num: membership?.branchesThisMonth ?? 0, delta: t.dashboard.home.statBranchesDelta },
   ];
   // Volvió de Stripe pero el webhook todavía no llega (o el banco no ha
   // confirmado): no es un error, son segundos. Volver de pagar NO activa nada.
