@@ -4,6 +4,7 @@ import { useBranchInventoryStore } from '../../lib/stores/branchInventory.store'
 import { counterSaleRepository, ProductNotFoundError, InsufficientStockError } from '../../lib/repositories/counterSale.repository';
 import { getCurrentBranchId } from '../../lib/currentBranch';
 import type { PaymentMethod } from '@mucho-loco/types';
+import { CounterTicket } from '../../components/CounterTicket';
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-MX')}`;
@@ -17,6 +18,8 @@ export function ProductSaleTab() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmedTotal, setConfirmedTotal] = useState<number | null>(null);
+  // El ticket de la última venta, con su clave de autofactura (spec 003).
+  const [lastSaleId, setLastSaleId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch();
@@ -67,6 +70,7 @@ export function ProductSaleTab() {
         paymentMethod
       );
       setConfirmedTotal(sale.total);
+      setLastSaleId(sale.id);
       setCart({});
       await fetch(); // reflects the stock already deducted
       setTimeout(() => setConfirmedTotal(null), 3000);
@@ -87,6 +91,9 @@ export function ProductSaleTab() {
   return (
     <div className="grid grid-cols-[1fr_320px] gap-6">
       <div>
+        {lastSaleId && (
+          <CounterTicket kind="sale" sourceId={lastSaleId} branchId={getCurrentBranchId()} onClose={() => setLastSaleId(null)} />
+        )}
         {error && (
           <div className="bg-ml-red/10 border border-ml-red text-ml-red rounded p-3 mb-4 text-sm">
             {t('counter.products.loadError')}: {error}

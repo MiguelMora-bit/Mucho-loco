@@ -6,6 +6,7 @@ import { CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } 
 import { captureFingerprint } from '../../lib/fingerprintScanner';
 import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import { formatDate, langOf } from '../../lib/dates';
+import { CounterTicket } from '../../components/CounterTicket';
 
 type EnrollMethod = 'qr' | 'fingerprint';
 
@@ -251,6 +252,10 @@ export function MembershipTab() {
         <button onClick={() => switchMode('new')} className={'px-4 py-2 rounded text-sm font-medium border ' + (mode === 'new' ? 'bg-ml-red border-ml-red text-ml-cream' : 'border-ml-border text-ml-cream-dim')}>{t('counter.membership.newMember')}</button>
         <button onClick={() => switchMode('renew')} className={'px-4 py-2 rounded text-sm font-medium border ' + (mode === 'renew' ? 'bg-ml-red border-ml-red text-ml-cream' : 'border-ml-border text-ml-cream-dim')}>{t('counter.membership.renew')}</button>
       </div>
+
+      {successPayment && (
+        <CounterTicket kind="membership" sourceId={successPayment.id} branchId={getCurrentBranchId()} onClose={() => setSuccessPayment(null)} />
+      )}
 
       {successPayment && (
         <div className="bg-ml-green/10 border border-ml-green text-ml-green rounded p-4 mb-6">

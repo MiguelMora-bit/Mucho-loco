@@ -5,6 +5,8 @@ import { cashRegisterShiftRepository } from '../lib/repositories/cashRegisterShi
 import { calculateShiftTotals } from '../lib/cashRegister';
 import type { CashRegisterShift, PaymentMethod, ShiftTransaction } from '@mucho-loco/types';
 import { formatDateTime, langOf } from '../lib/dates';
+import { getCurrentBranchId } from '../lib/currentBranch';
+import { CounterTicket } from '../components/CounterTicket';
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-MX')}`;
@@ -38,9 +40,15 @@ function TotalsGrid({ totals, transactionCount }: { totals: Record<PaymentMethod
 function TransactionList({ transactions }: { transactions: ShiftTransaction[] }) {
   const { t, i18n } = useTranslation();
   const lang = langOf(i18n.language);
+  // Reimprimir el ticket de un cobro de mostrador del turno (spec 003, US2).
+  const [ticketOf, setTicketOf] = useState<ShiftTransaction | null>(null);
   if (transactions.length === 0) return <p className="text-ml-muted text-sm">{t('cashRegister.noTransactions')}</p>;
 
   return (
+    <>
+    {ticketOf && (ticketOf.kind === 'sale' || ticketOf.kind === 'membership') && (
+      <CounterTicket kind={ticketOf.kind} sourceId={ticketOf.id} branchId={getCurrentBranchId()} onClose={() => setTicketOf(null)} />
+    )}
     <ul className="space-y-2">
       {transactions.map((tx) => (
         <li key={tx.id} className="flex items-center justify-between bg-ml-card border border-ml-border rounded p-3 text-sm">
@@ -51,10 +59,18 @@ function TransactionList({ transactions }: { transactions: ShiftTransaction[] })
             <span>{tx.description}</span>
             <span className="text-ml-cream-dim ml-2 text-xs">{formatDateTime(tx.createdAt, lang)}</span>
           </div>
-          <span className="font-medium">{formatPrice(tx.amount)}</span>
+          <span className="flex items-center gap-3">
+            {tx.kind !== 'pickup' && (
+              <button onClick={() => setTicketOf(tx)} className="text-xs underline text-ml-cream-dim">
+                {t('ticket.view')}
+              </button>
+            )}
+            <span className="font-medium">{formatPrice(tx.amount)}</span>
+          </span>
         </li>
       ))}
     </ul>
+    </>
   );
 }
 

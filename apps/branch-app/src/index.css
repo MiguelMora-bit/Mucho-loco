@@ -5,3 +5,27 @@
 body {
   @apply bg-ml-black text-ml-cream;
 }
+
+/* Ticket de mostrador (spec 003): al imprimir, solo el ticket, en papel de 80 mm. */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #ticket,
+  #ticket * {
+    visibility: visible;
+    color: #000 !important;
+    border-color: #000 !important;
+  }
+  #ticket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 72mm;
+    max-width: none;
+  }
+}

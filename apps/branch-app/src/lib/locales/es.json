@@ -213,5 +213,34 @@
     "clockInLabel": "Entrada",
     "clockOutLabel": "Salida",
     "onShift": "En turno"
+  },
+  "ticket": {
+    "title": "Ticket",
+    "branch": "Sucursal",
+    "paidAt": "Fecha",
+    "total": "Total",
+    "method": {
+      "cash": "Efectivo",
+      "card": "Tarjeta",
+      "card_credit": "Tarjeta de crédito",
+      "card_debit": "Tarjeta de débito",
+      "oxxo": "OXXO",
+      "spei": "SPEI",
+      "transfer": "Transferencia"
+    },
+    "invoiceTitle": "¿Necesitas factura?",
+    "invoiceHowTo": "Escanea el código o entra a la dirección y escribe tu clave. Te llega por correo.",
+    "keyLabel": "Clave",
+    "validUntil": "Factúralo antes del {{date}}",
+    "pending": "Clave de facturación en proceso…",
+    "pendingStopped": "La clave todavía no está lista. Vuelve a abrir el ticket en unos minutos.",
+    "unavailable": "Factura no disponible por ahora; pídela en sucursal.",
+    "invoiced": "Este cobro ya se facturó.",
+    "print": "Imprimir",
+    "refresh": "Actualizar",
+    "close": "Cerrar",
+    "view": "Ver ticket",
+    "loadError": "No pudimos cargar el ticket.",
+    "notFound": "No encontramos ese cobro en esta sucursal."
   }
 }

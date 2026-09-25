@@ -66,6 +66,17 @@ Tres secciones independientes (QR con cámara+manual, huella con manual, nombre 
 
 Datos demo en `lib/data.ts`: Rosa Jiménez (`FP-DEMO-ROSA`, tier `all`, Roma Sur — pasa en cualquier sucursal), Luis Herrera (`FP-DEMO-LUIS`, tier `single`, Interlomas — debe rechazarse con `wrong_branch` si se valida en Roma Sur), y Carlos Vega (comparte nombre de pila con el ya existente Carlos Mendoza, a propósito, para demostrar `ambiguous` al buscar "Carlos").
 
+## Ticket con autofactura (2026-09-24)
+
+Spec en `specs/003-counter-self-invoice-ticket/`. Cada cobro de `/counter` (venta, alta, renovación) muestra un ticket con la clave y el QR del portal de autofactura de Facturapi, para que el cliente sin app se facture solo.
+
+- **`components/CounterTicket.tsx`**: pide `ticketRepository.getTicket(kind, sourceId, branchId)` y, mientras la clave está "en proceso" (el backend da de alta el recibo en segundo plano), vuelve a pedir cada 3 s hasta 90 s (`lib/ticketPolling.ts`); después ofrece "Actualizar". El cobro NUNCA espera a la facturación. QR con `qrcode.react` (misma versión que customer-app).
+- **Imprimir** = `window.print()`; `index.css` (`@media print`) deja solo `#ticket` en papel de 80 mm. Sin drivers de impresora térmica.
+- **Reimprimir**: "Ver ticket" en las transacciones `sale`/`membership` del corte de caja (`/cash-register`).
+- Estados: `pending` (en proceso), `ready` (clave + URL + fecha límite), `invoiced` (ya facturado o en la global), `unavailable` (facturación apagada o recibo fallido — se imprime igual).
+- Mock (`ticket.mock.ts`): `pending` los primeros 4 s de vida del cobro y luego una clave estable por cobro, para ver el flujo sin backend. HTTP: `GET /branches/:id/tickets/:kind/:sourceId`; `TICKET_NOT_FOUND` → `TicketNotFoundError`.
+- **Sin verificar en navegador**: como el resto del app, iniciar sesión necesita un User Pool vivo. Verificado: unit (mock, HTTP, polling), `tsc -b`, lint, build, e2e del backend contra Postgres e integración de la ruta (401, no 404).
+
 ## Capas en `src/lib/`
 
 Mismo patrón mock-first que `customer-app`: `datasources/mock/` (datos + delay simulado) → `repositories/` (`I*Repository` + instancia singleton, con el comentario "Swap this line..." marcando la costura hacia el backend real) → `stores/` (Zustand, un store por recurso vía `createAsyncResource`). Cada repository tiene su test de Vitest.

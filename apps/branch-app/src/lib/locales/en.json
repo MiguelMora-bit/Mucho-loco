@@ -213,5 +213,34 @@
     "clockInLabel": "Clock in",
     "clockOutLabel": "Clock out",
     "onShift": "On shift"
+  },
+  "ticket": {
+    "title": "Receipt",
+    "branch": "Branch",
+    "paidAt": "Date",
+    "total": "Total",
+    "method": {
+      "cash": "Cash",
+      "card": "Card",
+      "card_credit": "Credit card",
+      "card_debit": "Debit card",
+      "oxxo": "OXXO",
+      "spei": "SPEI",
+      "transfer": "Transfer"
+    },
+    "invoiceTitle": "Need a tax invoice?",
+    "invoiceHowTo": "Scan the code or go to the address and enter your key. It arrives by email.",
+    "keyLabel": "Key",
+    "validUntil": "Invoice it before {{date}}",
+    "pending": "Invoice key in process…",
+    "pendingStopped": "The key isn't ready yet. Open the receipt again in a few minutes.",
+    "unavailable": "Invoicing isn't available right now; ask for it at the branch.",
+    "invoiced": "This payment was already invoiced.",
+    "print": "Print",
+    "refresh": "Refresh",
+    "close": "Close",
+    "view": "View receipt",
+    "loadError": "We couldn't load the receipt.",
+    "notFound": "We couldn't find that payment at this branch."
   }
 }

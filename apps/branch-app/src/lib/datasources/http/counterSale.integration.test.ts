@@ -5,6 +5,7 @@ import { CashRegisterShiftHttpDatasource } from './cashRegisterShift.http';
 import { AttendanceHttpDatasource } from './attendance.http';
 import { ReportsHttpDatasource } from './reports.http';
 import { MembershipHttpDatasource } from './membership.http';
+import { TicketHttpDatasource } from './ticket.http';
 import { ApiRequestError } from './client';
 import { apiBaseUrl } from './config';
 import { useAuthStore } from '../../stores/auth.store';
@@ -97,6 +98,7 @@ describe('every other branch endpoint is there and guarded too', () => {
   const attendance = new AttendanceHttpDatasource();
   const reports = new ReportsHttpDatasource();
   const memberships = new MembershipHttpDatasource();
+  const tickets = new TicketHttpDatasource();
 
   // Una tabla y no un test por método: lo que se afirma es idéntico —la ruta
   // existe (no 404) y el guard la protege (401)— y listarlas juntas hace
@@ -120,6 +122,8 @@ describe('every other branch endpoint is there and guarded too', () => {
       memberships.signUpNewMember(1, 'Roma Sur', {
         memberName: 'X', phone: '55', tierKey: 'all', periodKey: 'monthly', paymentMethod: 'cash',
       })],
+    ['ticket.getTicket (sale)', () => tickets.getTicket('sale', 'sale-1', 1)],
+    ['ticket.getTicket (membership)', () => tickets.getTicket('membership', 'mp-1', 1)],
   ];
 
   it.each(calls)('%s hits a real route and is rejected with 401', async (_name, call) => {
