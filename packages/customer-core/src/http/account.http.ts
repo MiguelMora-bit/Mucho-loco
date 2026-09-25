@@ -144,7 +144,7 @@ export class PerformanceHttpDatasource implements IPerformanceRepository {
     return this.api.get<Workout[]>('/performance/workouts', ACCOUNT);
   }
 
-  getHeatmap(): Promise<HeatmapLevel[][]> {
+  getHeatmap(_email: string): Promise<HeatmapLevel[][]> {
     return this.api.get<HeatmapLevel[][]>('/performance/heatmap', ACCOUNT);
   }
 }

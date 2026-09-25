@@ -268,7 +268,7 @@ describe('PerformanceHttpDatasource', () => {
     await ds.getStats();
     await ds.getPersonalRecords();
     await ds.getWorkouts();
-    await ds.getHeatmap();
+    await ds.getHeatmap('ignorado@test.mx');
 
     expect(call(spy, 0).url).toBe('http://api.test/performance/stats');
     expect(call(spy, 1).url).toBe('http://api.test/performance/records');

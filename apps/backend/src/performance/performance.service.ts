@@ -12,8 +12,8 @@ import type {
   PerformanceStat as StatRow,
   PersonalRecord as RecordRow,
   Workout as WorkoutRow,
-  HeatmapCell as HeatmapCellRow,
 } from '@prisma/client';
+import { HEATMAP_WEEKS, dayDate, heatmapOf, heatmapStart } from '../memberships/visit-stats';
 
 const STAT_COLORS: readonly StatColor[] = ['red', 'orange', 'yellow', 'gold', 'green', 'cream'];
 /** Los dos hex que traía el seed antes del spec 010. */
@@ -59,13 +59,6 @@ function toWorkout(row: WorkoutRow): Workout {
   };
 }
 
-// '' del contrato de HeatmapLevel no es un valor de enum válido en Postgres
-// (ver comentario en schema.prisma) — 'none' se traduce de vuelta aquí para
-// no filtrar ese detalle de almacenamiento al frontend.
-function toHeatmapLevel(row: HeatmapCellRow): HeatmapLevel {
-  return row.level === 'none' ? '' : row.level;
-}
-
 @Injectable()
 export class PerformanceService {
   constructor(private prisma: PrismaService) {}
@@ -91,14 +84,19 @@ export class PerformanceService {
     return rows.map(toWorkout);
   }
 
-  async getHeatmap(): Promise<HeatmapLevel[][]> {
-    const rows = await this.prisma.heatmapCell.findMany({
-      orderBy: [{ week: 'asc' }, { day: 'asc' }],
+  /**
+   * La asistencia real del socio (spec 016): cada cuadro es un día que entró
+   * a una sucursal, de las visitas que registra mostrador (spec 012).
+   */
+  async getHeatmap(userId: string, now = new Date()): Promise<HeatmapLevel[][]> {
+    const rows = await this.prisma.visit.findMany({
+      where: { userId, visitDay: { gte: dayDate(heatmapStart(now)) } },
+      select: { visitDay: true, durationMinutes: true },
+      take: HEATMAP_WEEKS * 7,
     });
-    const weeks: HeatmapLevel[][] = Array.from({ length: 52 }, () => []);
-    for (const row of rows) {
-      weeks[row.week][row.day] = toHeatmapLevel(row);
-    }
-    return weeks;
+    return heatmapOf(
+      rows.map((r) => ({ day: r.visitDay.toISOString().slice(0, 10), minutes: r.durationMinutes })),
+      now,
+    );
   }
 }

@@ -161,7 +161,8 @@ export interface IPerformanceRepository {
   getStats(): Promise<PerformanceStat[]>;
   getPersonalRecords(): Promise<PersonalRecord[]>;
   getWorkouts(): Promise<Workout[]>;
-  getHeatmap(): Promise<HeatmapLevel[][]>;
+  /** La asistencia real del socio, 52 semanas × 7 días (spec 016). */
+  getHeatmap(email: string): Promise<HeatmapLevel[][]>;
 }
 
 export interface IProductRepository {

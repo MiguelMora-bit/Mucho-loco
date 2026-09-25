@@ -195,20 +195,39 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
       expect(body<PerformanceStat[]>(res).map((s) => s.color)).toEqual(['orange', 'red', 'gold', 'green']);
     });
 
-    it('GET /performance/heatmap returns a fixed 52-week x 7-day grid, deterministic across requests', async () => {
-      const res1 = await request(app.getHttpServer())
-        .get('/performance/heatmap')
-        .set(...fakeAuthHeader('perf@mucholoco.mx'))
-        .expect(200);
-      const res2 = await request(app.getHttpServer())
-        .get('/performance/heatmap')
-        .set(...fakeAuthHeader('perf@mucholoco.mx'))
-        .expect(200);
+    // Spec 016: el heatmap es la asistencia real del socio, no una cuadrícula sembrada.
+    it('GET /performance/heatmap is the member\'s own attendance: 52 weeks x 7 days, today marked', async () => {
+      const member = 'heat-e2e@mucholoco.mx';
+      const other = 'heat-other-e2e@mucholoco.mx';
+      try {
+        await request(app.getHttpServer()).get('/users/me').set(...fakeAuthHeader(member)).expect(200);
+        const user = await prisma.user.findUniqueOrThrow({ where: { email: member } });
+        const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+        await prisma.visit.create({
+          data: {
+            userId: user.id, branchId: 1, visitedAt: new Date(),
+            visitDay: new Date(`${today}T00:00:00.000Z`),
+          },
+        });
 
-      const heatmap1 = body<HeatmapLevel[][]>(res1);
-      expect(heatmap1).toHaveLength(52);
-      expect(heatmap1[0]).toHaveLength(7);
-      expect(heatmap1).toEqual(body<HeatmapLevel[][]>(res2));
+        const mine = body<HeatmapLevel[][]>(
+          await request(app.getHttpServer()).get('/performance/heatmap').set(...fakeAuthHeader(member)).expect(200),
+        );
+        expect(mine).toHaveLength(52);
+        expect(mine.every((week) => week.length === 7)).toBe(true);
+        // Última columna = esta semana; filas de lunes (0) a domingo (6).
+        const weekday = (new Date(`${today}T00:00:00.000Z`).getUTCDay() + 6) % 7;
+        expect(mine[51][weekday]).toBe('l2');
+        expect(mine.flat().filter((level) => level !== '')).toHaveLength(1);
+
+        const theirs = body<HeatmapLevel[][]>(
+          await request(app.getHttpServer()).get('/performance/heatmap').set(...fakeAuthHeader(other)).expect(200),
+        );
+        expect(theirs.flat().every((level) => level === '')).toBe(true);
+      } finally {
+        await prisma.visit.deleteMany({ where: { user: { email: { in: [member, other] } } } });
+        await prisma.user.deleteMany({ where: { email: { in: [member, other] } } });
+      }
     });
   });
 

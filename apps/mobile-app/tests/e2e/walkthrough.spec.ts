@@ -181,6 +181,8 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
     await expect(page.getByText('Push Day · Pecho & Hombros')).toBeVisible();
     await page.getByRole('button', { name: 'HEATMAP', exact: true }).click();
     await expect(page.getByText(/Últimas 52 semanas/)).toBeVisible();
+    // Spec 016: los cuadros marcados son las 6 visitas del historial de Diego, no un patrón al azar.
+    await expect(page.getByLabel('Entrenamiento', { exact: true })).toHaveCount(6);
     await page.goBack();
   });
 

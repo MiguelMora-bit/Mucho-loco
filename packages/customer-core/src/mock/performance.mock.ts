@@ -1,4 +1,6 @@
 import type { Workout, PerformanceStat, PersonalRecord, HeatmapLevel } from '@mucho-loco/types';
+import { heatmapFromVisits } from '../heatmap';
+import { UserMockDatasource } from './user.mock';
 import { delay } from './delay';
 import type { IPerformanceRepository } from '../contract';
 
@@ -24,16 +26,6 @@ const MOCK_WORKOUTS: Workout[] = [
   { date: '2026-06-07', name: { es: 'Leg Day · Isquiotibiales', en: 'Leg Day · Hamstrings' }, sets: 20, vol: '16,200 kg', pr: { es: 'Hip thrust: 170kg', en: 'Hip thrust: 170kg' }, duration: '1h 33m' },
 ];
 
-function generateHeatmap(): HeatmapLevel[][] {
-  return Array.from({ length: 52 }, () =>
-    Array.from({ length: 7 }, (): HeatmapLevel => {
-      if (Math.random() <= 0.4) return '';
-      if (Math.random() > 0.6) return 'l3';
-      return Math.random() > 0.5 ? 'l2' : 'l1';
-    })
-  );
-}
-
 export class PerformanceMockDatasource implements IPerformanceRepository {
   async getStats(): Promise<PerformanceStat[]> {
     await delay(140);
@@ -50,8 +42,8 @@ export class PerformanceMockDatasource implements IPerformanceRepository {
     return MOCK_WORKOUTS;
   }
 
-  async getHeatmap(): Promise<HeatmapLevel[][]> {
-    await delay(100);
-    return generateHeatmap();
+  /** Del historial de visitas del mock, con la misma regla que el backend (spec 016). */
+  async getHeatmap(email: string): Promise<HeatmapLevel[][]> {
+    return heatmapFromVisits(await new UserMockDatasource().getVisitHistory(email));
   }
 }

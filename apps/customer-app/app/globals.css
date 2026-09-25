@@ -2123,7 +2123,8 @@ button, a, input, select { -webkit-tap-highlight-color: rgba(225,20,28,0.2); }
   .rend-stat::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--orange); }
   .workout-row { display: grid; grid-template-columns: 80px 1fr auto; gap: 16px; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--border); }
   .workout-row:last-child { border: none; }
-  .heatmap-grid { display: grid; grid-template-columns: repeat(52, 1fr); gap: 3px; }
+  /* Una columna por semana (spec 016): los datos vienen semana por semana, lunes a domingo. */
+  .heatmap-grid { display: grid; grid-template-columns: repeat(52, 1fr); grid-template-rows: repeat(7, auto); grid-auto-flow: column; gap: 3px; }
   .heatmap-cell { aspect-ratio: 1; background: var(--card-2); border: 1px solid var(--border); border-radius: 2px; }
   .heatmap-cell.l1 { background: rgba(225,20,28,0.25); border-color: rgba(225,20,28,0.4); }
   .heatmap-cell.l2 { background: rgba(225,20,28,0.55); border-color: var(--red); }

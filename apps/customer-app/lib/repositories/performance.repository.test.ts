@@ -19,7 +19,7 @@ describe('performanceRepository', () => {
   });
 
   it('getHeatmap returns a 52-week x 7-day grid of valid levels', async () => {
-    const heatmap = await performanceRepository.getHeatmap();
+    const heatmap = await performanceRepository.getHeatmap('diego@mucholoco.mx');
     expect(heatmap).toHaveLength(52);
     for (const week of heatmap) {
       expect(week).toHaveLength(7);

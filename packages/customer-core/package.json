@@ -15,6 +15,7 @@
     "./cognito-errors": "./src/cognito-errors.ts",
     "./contact": "./src/contact.ts",
     "./fiscal": "./src/fiscal.ts",
+    "./heatmap": "./src/heatmap.ts",
     "./invoicing-errors": "./src/invoicing-errors.ts",
     "./membership-errors": "./src/membership-errors.ts",
     "./membership-rules": "./src/membership-rules.ts",

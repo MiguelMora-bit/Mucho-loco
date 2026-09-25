@@ -1,5 +1,6 @@
 import {
   branchesThisMonth,
+  heatmapOf,
   currentStreak,
   longestStreak,
   mexicoDay,
@@ -80,5 +81,49 @@ describe('branchesThisMonth (spec 013)', () => {
       { day: '2026-08-30', branchId: 7 },
     ];
     expect(branchesThisMonth(visits, NOW)).toBe(2);
+  });
+});
+
+describe('heatmapOf (spec 016)', () => {
+  // NOW = viernes 25 de septiembre de 2026: la última columna arranca el lunes 21.
+  const cell = (grid: ReturnType<typeof heatmapOf>, week: number, day: number) => grid[week][day];
+
+  it('is 52 weeks of 7 days, Monday first, ending in the current week', () => {
+    const grid = heatmapOf([], NOW);
+    expect(grid).toHaveLength(52);
+    expect(grid.every((week) => week.length === 7)).toBe(true);
+    expect(grid.flat().every((level) => level === '')).toBe(true);
+  });
+
+  it('marks today, and leaves the rest of the week empty', () => {
+    const grid = heatmapOf([{ day: '2026-09-25', minutes: null }], NOW);
+    expect(cell(grid, 51, 4)).toBe('l2');
+    expect(cell(grid, 51, 5)).toBe('');
+  });
+
+  it('grades by duration when the exit is known', () => {
+    const grid = heatmapOf(
+      [
+        { day: '2026-09-21', minutes: 30 },
+        { day: '2026-09-14', minutes: 120 },
+        { day: '2026-09-15', minutes: 60 },
+      ],
+      NOW,
+    );
+    expect(cell(grid, 51, 0)).toBe('l1');
+    expect(cell(grid, 50, 0)).toBe('l3');
+    expect(cell(grid, 50, 1)).toBe('l2');
+  });
+
+  it('starts on the Monday 51 weeks before this one and drops anything older', () => {
+    const grid = heatmapOf(
+      [
+        { day: '2025-09-29', minutes: null },
+        { day: '2025-09-28', minutes: null },
+      ],
+      NOW,
+    );
+    expect(cell(grid, 0, 0)).toBe('l2');
+    expect(grid.flat().filter((level) => level !== '')).toHaveLength(1);
   });
 });

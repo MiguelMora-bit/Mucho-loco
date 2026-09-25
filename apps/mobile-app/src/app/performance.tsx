@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { HeatmapLevel } from '@mucho-loco/types';
 import { formatDate } from '@mucho-loco/customer-core/dates';
 import { Body, Card, Chip, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
 import { useT } from '@/lib/i18n';
 import { performanceRepository } from '@/lib/repositories';
+import { useSessionStore } from '@/lib/stores/session.store';
 import { useResource } from '@/lib/use-resource';
 import { colors, space } from '@/theme';
 
@@ -22,16 +23,19 @@ export default function PerformanceScreen() {
   const { t, lang } = useT();
   const p = t.performance;
   const [view, setView] = useState<View_>('overview');
+  const email = useSessionStore((s) => s.session?.email) ?? '';
+  // La última columna es la semana en curso (spec 016): el scroll abre ahí.
+  const heatmapScroll = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
     const [stats, records, workouts, heatmap] = await Promise.all([
       performanceRepository.getStats(),
       performanceRepository.getPersonalRecords(),
       performanceRepository.getWorkouts(),
-      performanceRepository.getHeatmap(),
+      performanceRepository.getHeatmap(email),
     ]);
     return { stats, records, workouts, heatmap };
-  }, []);
+  }, [email]);
   const { state, reload } = useResource(load);
 
   return (
@@ -112,7 +116,13 @@ export default function PerformanceScreen() {
           </Heading>
           <Body style={styles.small}>{p.heatmap.caption}</Body>
           {/* 52 semanas no caben en un teléfono: una columna por semana, con scroll horizontal. */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.heatmap}>
+          <ScrollView
+            ref={heatmapScroll}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.heatmap}
+            onContentSizeChange={() => heatmapScroll.current?.scrollToEnd({ animated: false })}
+          >
             {state.data.heatmap.map((week, wi) => (
               <View key={wi} style={styles.week}>
                 {week.map((day, di) => (

@@ -149,13 +149,6 @@ enum SocialNetwork {
 
 /// '' del mock (sin actividad esa semana) se mapea a `none` — Prisma no
 /// permite un variant de enum vacío.
-enum HeatmapLevel {
-  none
-  l1
-  l2
-  l3
-}
-
 model Branch {
   id       Int        @id
   name     String
@@ -498,13 +491,12 @@ model CommunityComment {
   @@map("community_comments")
 }
 
-/// Rendimiento (workouts/PRs/stats/heatmap) — hoy 100% contenido fijo
-/// semillado, IGUAL para cualquier usuario que llame el endpoint (ni el mock
-/// ni este backend personalizan por socio todavía: no existe ningún flujo
-/// real que capture un entrenamiento). Queda detrás de auth (no @Public())
-/// porque conceptualmente es contenido de la cuenta, pero no filtra por
-/// userId — el día que exista captura real de entrenamientos, ESE es el
-/// momento de agregarle userId a estos 4 modelos, no antes.
+/// Rendimiento (workouts/PRs/stats) — hoy contenido fijo semillado, IGUAL
+/// para cualquier usuario (no existe ningún flujo real que capture un
+/// entrenamiento). Queda detrás de auth porque es contenido de la cuenta, pero
+/// no filtra por userId — el día que exista captura real de entrenamientos,
+/// ESE es el momento de agregarle userId a estos 3 modelos, no antes. El
+/// heatmap ya no vive aquí: sale de las visitas reales del socio (spec 016).
 model PerformanceStat {
   id    String @id @default(uuid())
   /// LocalizedString
@@ -544,16 +536,6 @@ model Workout {
   @@map("workouts")
 }
 
-/// Grid fijo de 52 semanas x 7 días — reemplaza el generateHeatmap() random
-/// del mock por datos deterministas (mismo request, misma respuesta).
-model HeatmapCell {
-  week  Int
-  day   Int
-  level HeatmapLevel @default(none)
-
-  @@id([week, day])
-  @@map("heatmap_cells")
-}
 
 // ---------------------------------------------------------------------------
 // Operación de sucursal y HQ (2026-09-12) — contrato derivado de los

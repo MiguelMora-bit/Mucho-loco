@@ -199,14 +199,6 @@ const workouts = [
   { date: new Date('2026-06-07'), name: { es: 'Leg Day · Isquiotibiales', en: 'Leg Day · Hamstrings' }, sets: 20, vol: '16,200 kg', pr: { es: 'Hip thrust: 170kg', en: 'Hip thrust: 170kg' }, duration: '1h 33m' },
 ];
 
-function heatmapLevel(week: number, day: number): 'none' | 'l1' | 'l2' | 'l3' {
-  const n = (week * 7 + day) % 5;
-  if (n === 0) return 'none';
-  if (n <= 2) return 'l1';
-  if (n === 3) return 'l2';
-  return 'l3';
-}
-
 
 // --- Operación de sucursal y HQ (2026-09-12) ---------------------------------
 // Los mocks de branch-app y owner-panel tenían CADA UNO su propio
@@ -321,17 +313,6 @@ async function main() {
     data: workouts.map((w) => ({ ...w, pr: w.pr ?? Prisma.JsonNull })),
   });
 
-  for (let week = 0; week < 52; week++) {
-    for (let day = 0; day < 7; day++) {
-      const level = heatmapLevel(week, day);
-      await prisma.heatmapCell.upsert({
-        where: { week_day: { week, day } },
-        create: { week, day, level },
-        update: { level },
-      });
-    }
-  }
-
   for (const level of branchInventory) {
     await prisma.branchInventory.upsert({
       where: { branchId_productId: { branchId: level.branchId, productId: level.productId } },
@@ -352,7 +333,7 @@ async function main() {
   console.log(
     `Seeded ${branches.length} branches, ${products.length} products, ${membershipTiers.length} membership tiers, ` +
       `${announcements.length} announcements, ${socialLinks.length} social links, ${socialFeedPosts.length} social feed posts, ` +
-      `${performanceStats.length} performance stats, ${personalRecords.length} personal records, ${workouts.length} workouts, 364 heatmap cells, ` +
+      `${performanceStats.length} performance stats, ${personalRecords.length} personal records, ${workouts.length} workouts, ` +
       `${branchInventory.length} inventory levels, ${employees.length} employees, ${expenses.length} expenses, ${payrollPeriods.length} payroll periods.`,
   );
 }

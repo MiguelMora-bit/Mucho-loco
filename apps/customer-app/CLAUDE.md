@@ -131,6 +131,8 @@ Spec, plan y tareas en `specs/001-member-cfdi-invoicing/` (primera funcionalidad
 
 Spec 007. `SignupForm` pide teléfono (obligatorio, con la nota de que ahí llegan los avisos de WhatsApp) en lugar del cumpleaños, que nunca se enviaba. `AccountClient` valida con `toE164` de customer-core antes de enviar; `/api/auth/register` revalida (400 `INVALID_PHONE`) y agrega `phone_number` a Cognito — el backend lo guarda al crear al socio. Tests en `app/api/auth/register/route.test.ts`. Sin probar el registro de punta a punta (necesita User Pool vivo).
 
+**Heatmap de asistencia (spec 016)**: `/performance` pasa el email de la sesión a `getHeatmap` (redirige a `/account` sin sesión) y la cuadrícula ahora fluye por columnas (`grid-auto-flow: column`, 7 filas en `globals.css`): antes llenaba por filas, así que una columna NO era una semana aunque el texto lo dijera — con datos aleatorios no se notaba.
+
 **Completar o cambiar el teléfono (spec 015)**: quien entra con Google/Facebook no da teléfono y sin él no hay avisos de WhatsApp. El inicio del panel muestra "Agrega tu teléfono" con el campo (`components/dashboard/PhoneForm.tsx`) cuando falta, y el perfil ofrece "Cambiar". `PUT /api/profile/phone` valida con `toE164` (400 `INVALID_PHONE`) y llama `userRepository.updatePhone`; `DashboardClient` reemplaza el perfil con el que devuelve. De paso, el perfil ya no pinta un renglón de cumpleaños vacío. Tests: `app/api/profile/phone/route.test.ts` e integración (401, no 404). **La UI web no se probó en navegador** (entrar necesita User Pool); la misma lógica compartida sí, en el walkthrough del móvil.
 
 ## Administrar suscripción — portal de Stripe (2026-09-24)

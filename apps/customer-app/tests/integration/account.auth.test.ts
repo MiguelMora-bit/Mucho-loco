@@ -79,7 +79,7 @@ describe('account endpoints are really guarded', () => {
     expect(await statusOf(() => ds.getStats())).toBe(401);
     expect(await statusOf(() => ds.getPersonalRecords())).toBe(401);
     expect(await statusOf(() => ds.getWorkouts())).toBe(401);
-    expect(await statusOf(() => ds.getHeatmap())).toBe(401);
+    expect(await statusOf(() => ds.getHeatmap('diego@mucholoco.mx'))).toBe(401);
   });
 
   // Un 404 significaría que el datasource pega en una ruta que no existe — el

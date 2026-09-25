@@ -101,6 +101,10 @@ EXPO_PUBLIC_COGNITO_DOMAIN=<terraform output cognito_domain>    # solo login soc
 
   Además `cognito.test.ts` fija la forma exacta de cada request. **Sin probar**: confirmar con un código real (el registro de prueba usó `@example.com` para no mandarle correo a nadie), Google/Facebook (sin apps OAuth ni build de desarrollo) y el app nativo en un teléfono.
 
+## Heatmap de asistencia (2026-09-25)
+
+Spec 016. `performanceRepository.getHeatmap(email)` devuelve la asistencia real (en mock, del historial de visitas con `heatmapFromVisits` de customer-core — antes `Math.random()` en cada llamada). Una columna por semana; el scroll horizontal abre en la semana actual (`scrollToEnd` al medir el contenido). El walkthrough cuenta las 6 visitas de Diego.
+
 ## Teléfono del socio (2026-09-25)
 
 Spec 015. Sin teléfono, el panel de Cuenta muestra "Agrega tu teléfono" con el campo (`components/account/PhoneEditor.tsx`, `toE164` antes de enviar, `userRepository.updatePhone`); con teléfono, "Teléfono: … · Cambiar". `MockAuthService` guarda el teléfono del registro en el mock de usuarios al confirmar la cuenta — lo mismo que hace el backend con el claim `phone_number` —, así una cuenta recién creada no ve el aviso. Walkthrough: cambiar el de Diego (con el rechazo de "55 12"), el de la cuenta nueva llega del registro, y un tercer test donde un socio sin teléfono (login social) lo completa.

@@ -1,3 +1,5 @@
+import type { HeatmapLevel } from '@mucho-loco/types';
+
 /**
  * Visitas y racha del socio, derivadas de sus entradas reales (spec 012) — se
  * calculan al leer, igual que `daysLeft`, nunca se guardan.
@@ -23,17 +25,14 @@ export function dayDate(day: string): Date {
   return new Date(`${day}T00:00:00.000Z`);
 }
 
-function previousDay(day: string): string {
+function shiftDay(day: string, days: number): string {
   const date = dayDate(day);
-  date.setUTCDate(date.getUTCDate() - 1);
+  date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
-function nextDay(day: string): string {
-  const date = dayDate(day);
-  date.setUTCDate(date.getUTCDate() + 1);
-  return date.toISOString().slice(0, 10);
-}
+const previousDay = (day: string) => shiftDay(day, -1);
+const nextDay = (day: string) => shiftDay(day, 1);
 
 /** `YYYY-MM` del mes en curso en CDMX. */
 function currentMonth(now: Date): string {
@@ -102,4 +101,44 @@ export function longestStreak(days: readonly string[]): number {
     longest = Math.max(longest, length);
   }
   return longest;
+}
+
+export const HEATMAP_WEEKS = 52;
+
+/** Una visita para el heatmap: su día de CDMX y cuánto duró, si se sabe. */
+export interface HeatmapVisit {
+  day: string;
+  minutes: number | null;
+}
+
+/** Sin salida registrada (lo normal: sucursal solo registra la entrada) → `l2`. */
+function levelOf(minutes: number | null): HeatmapLevel {
+  if (minutes === null) return 'l2';
+  if (minutes < 45) return 'l1';
+  return minutes <= 90 ? 'l2' : 'l3';
+}
+
+/** El lunes con que arranca la cuadrícula: 51 semanas antes del lunes de esta. */
+export function heatmapStart(now: Date): string {
+  const today = mexicoDay(now);
+  const sinceMonday = (dayDate(today).getUTCDay() + 6) % 7;
+  return shiftDay(today, -sinceMonday - (HEATMAP_WEEKS - 1) * 7);
+}
+
+/**
+ * La asistencia del socio en 52 semanas × 7 días (lunes → domingo), la última
+ * columna es la semana en curso y los días que no llegan van vacíos (spec 016).
+ * Gemela de `heatmapFromVisits` de customer-core — el backend no depende de
+ * ese paquete.
+ */
+export function heatmapOf(visits: readonly HeatmapVisit[], now: Date): HeatmapLevel[][] {
+  const today = mexicoDay(now);
+  const start = heatmapStart(now);
+  const byDay = new Map(visits.map((v) => [v.day, levelOf(v.minutes)]));
+  return Array.from({ length: HEATMAP_WEEKS }, (_, week) =>
+    Array.from({ length: 7 }, (_, weekday): HeatmapLevel => {
+      const day = shiftDay(start, week * 7 + weekday);
+      return day > today ? '' : (byDay.get(day) ?? '');
+    }),
+  );
 }
