@@ -148,7 +148,9 @@ Módulo `shipments`, solo rol `owner` (la bodega central la opera HQ; no existe 
 
 Estado nuevo `shipped` en `OrderStatus` (migración `20260914130000_order_shipment_tracking`, que además agrega `shippedAt` y `trackingNumber`). Errores con código: `ORDER_NOT_PAID`, `ORDER_ALREADY_SHIPPED`, `ORDER_NOT_SHIPPED`, `ORDER_ALREADY_DELIVERED`, `NOT_A_HOME_ORDER`. El socio ve `shipped` y la guía en `GET /users/me/orders`. e2e en `test/branch-ops.e2e-spec.ts` ("shipments (tienda → bodega)").
 
-**Pendiente**: aviso de WhatsApp "tu pedido va en camino" (necesita una plantilla aprobada por Meta), y un rol de bodega si algún día la opera alguien que no sea el dueño.
+**Aviso "tu pedido va en camino"** ✅ (2026-09-25, spec 008): `markShipped` llama `NotificationsService.notifyOrderShipped` después de guardar — plantilla `pedido_en_camino` con `[nombre, pedido, guía]` ("sin guía por ahora" si bodega no la capturó), una vez por pedido (`NotificationKind.order_shipped`, `dedupeKey` = pedido). **Dar de alta y aprobar `pedido_en_camino` en Meta Business** junto con las otras cuatro. Sin probar contra Meta.
+
+**Pendiente**: un rol de bodega si algún día la opera alguien que no sea el dueño.
 
 ## Membresías con Stripe Billing (2026-09-13)
 
@@ -301,6 +303,7 @@ Avisos por WhatsApp Business Platform (Cloud API de Meta) — se eligió sobre e
 | Aviso | Disparador |
 |---|---|
 | `payment_confirmed` | El webhook de Stripe, al confirmar el cobro. |
+| `order_shipped` | Bodega marca el pedido a domicilio "en camino" (`/shipments/:id/ship`). |
 | `order_ready` | El mismo, pero solo si la entrega es "recoger en gym". |
 | `membership_expiring` | Cron diario, a 7 / 3 / 1 días del vencimiento. |
 | `membership_grace` | Cron diario, mientras el socio esté en periodo de gracia. |

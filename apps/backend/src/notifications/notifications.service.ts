@@ -17,7 +17,11 @@ const TEMPLATES: Record<NotificationKind, string> = {
   membership_grace: 'membresia_pago_fallido',
   order_ready: 'pedido_listo',
   payment_confirmed: 'pago_confirmado',
+  order_shipped: 'pedido_en_camino',
 };
+
+/** Tercer parámetro de `pedido_en_camino` cuando bodega no capturó guía: Meta exige todos. */
+const NO_TRACKING = 'sin guía por ahora';
 
 const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
 
@@ -113,6 +117,27 @@ export class NotificationsService {
         params: [order.user.name, order.id.slice(0, 8).toUpperCase()],
       });
     }
+  }
+
+  /**
+   * "Tu pedido va en camino" (spec 008) — lo dispara bodega al marcar el
+   * envío. Una vez por pedido (`dedupeKey` = el pedido) y nunca tira.
+   */
+  async notifyOrderShipped(orderId: string): Promise<void> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { user: true },
+    });
+    if (!order) return;
+
+    await this.notifyOnce({
+      userId: order.userId,
+      kind: 'order_shipped',
+      dedupeKey: order.id,
+      phone: order.user.phone,
+      lang: 'es',
+      params: [order.user.name, order.id.slice(0, 8).toUpperCase(), order.trackingNumber ?? NO_TRACKING],
+    });
   }
 
   /**

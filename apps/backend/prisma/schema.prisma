@@ -78,6 +78,8 @@ enum NotificationKind {
   membership_grace
   order_ready
   payment_confirmed
+  /// Bodega marcó el pedido a domicilio "en camino" (spec 008).
+  order_shipped
 }
 
 enum NotificationStatus {

@@ -251,4 +251,45 @@ describe('NotificationsService', () => {
       expect(whatsapp.sendTemplate).not.toHaveBeenCalled();
     });
   });
+
+  // Spec 008: bodega marcó el pedido a domicilio "en camino".
+  describe('notifyOrderShipped', () => {
+    const order = {
+      id: 'order-1234-abcd',
+      userId: 'u1',
+      trackingNumber: 'DHL-998877',
+      user: { name: 'Diego Ramírez', phone: '+52 55 1234 5678' },
+    };
+
+    it('tells the member the order is on its way, with the tracking number, once per order', async () => {
+      prisma.order.findUnique.mockResolvedValue(order);
+
+      await service.notifyOrderShipped('order-1234-abcd');
+
+      expect(whatsapp.sendTemplate).toHaveBeenCalledWith(
+        expect.any(String),
+        'pedido_en_camino',
+        'es',
+        ['Diego Ramírez', 'ORDER-12', 'DHL-998877'],
+      );
+      expect(prisma.notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ kind: 'order_shipped', dedupeKey: 'order-1234-abcd' }) }),
+      );
+    });
+
+    // Las plantillas de Meta tienen un número fijo de parámetros.
+    it('says there is no tracking number yet when warehouse did not enter one', async () => {
+      prisma.order.findUnique.mockResolvedValue({ ...order, trackingNumber: null });
+
+      await service.notifyOrderShipped('order-1234-abcd');
+
+      expect(whatsapp.sendTemplate.mock.calls[0][3]).toEqual(['Diego Ramírez', 'ORDER-12', 'sin guía por ahora']);
+    });
+
+    it('does nothing for an order that does not exist', async () => {
+      prisma.order.findUnique.mockResolvedValue(null);
+      await service.notifyOrderShipped('nope');
+      expect(whatsapp.sendTemplate).not.toHaveBeenCalled();
+    });
+  });
 });

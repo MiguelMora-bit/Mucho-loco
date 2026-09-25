@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { ShipmentOrder, ShipmentStatus } from '@mucho-loco/types';
 import type { Order as OrderRow, OrderItem as OrderItemRow, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { shippingAddressFromJson } from '../users/shipping-address';
 import {
   notAHomeOrder,
@@ -42,7 +43,10 @@ const WITH_DETAILS = { items: true, user: true } as const;
 
 @Injectable()
 export class ShipmentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   /**
    * Solo pedidos a domicilio ya cobrados. `pending_payment` es una sesión de
@@ -70,6 +74,9 @@ export class ShipmentsService {
       data: { status: 'shipped', shippedAt: new Date(), trackingNumber: trackingNumber?.trim() || null },
       include: WITH_DETAILS,
     });
+    // Spec 008: "tu pedido va en camino". Después de guardar, y un aviso que
+    // falla no deshace un envío que sí salió de bodega.
+    await this.notifications.notifyOrderShipped(orderId).catch(() => undefined);
     return toShipment(updated);
   }
 

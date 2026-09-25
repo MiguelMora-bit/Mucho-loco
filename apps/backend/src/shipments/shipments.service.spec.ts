@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ShipmentsService } from './shipments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const ADDRESS = {
   street: 'Av. Insurgentes Sur 1234',
@@ -33,8 +34,10 @@ function row(overrides: Record<string, unknown> = {}) {
 describe('ShipmentsService', () => {
   let service: ShipmentsService;
   let prisma: { order: { findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock } };
+  let notifications: { notifyOrderShipped: jest.Mock };
 
   beforeEach(async () => {
+    notifications = { notifyOrderShipped: jest.fn().mockResolvedValue(undefined) };
     prisma = {
       order: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -43,7 +46,11 @@ describe('ShipmentsService', () => {
       },
     };
     const module = await Test.createTestingModule({
-      providers: [ShipmentsService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        ShipmentsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: notifications },
+      ],
     }).compile();
     service = module.get(ShipmentsService);
   });
@@ -94,6 +101,29 @@ describe('ShipmentsService', () => {
         }),
       );
       expect(shipment.status).toBe('shipped');
+    });
+
+    // Spec 008: el socio se entera por WhatsApp — después de guardar el envío.
+    it('tells the member the order is on its way', async () => {
+      await service.markShipped('order-1', '1Z999AA1');
+
+      expect(notifications.notifyOrderShipped).toHaveBeenCalledWith('order-1');
+      expect(prisma.order.update.mock.invocationCallOrder[0]).toBeLessThan(
+        notifications.notifyOrderShipped.mock.invocationCallOrder[0],
+      );
+    });
+
+    // notifyOnce nunca tira, pero si algo más fallara el envío ya quedó guardado.
+    it('keeps the shipment even if the notice blows up', async () => {
+      notifications.notifyOrderShipped.mockRejectedValue(new Error('meta down'));
+
+      await expect(service.markShipped('order-1')).resolves.toMatchObject({ status: 'shipped' });
+    });
+
+    it('does not notify when the shipment is refused', async () => {
+      prisma.order.findUnique.mockResolvedValue(row({ status: 'shipped' }));
+      await service.markShipped('order-1').catch(() => undefined);
+      expect(notifications.notifyOrderShipped).not.toHaveBeenCalled();
     });
 
     it('ships without a tracking number too', async () => {
