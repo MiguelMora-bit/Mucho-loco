@@ -1,3 +1,4 @@
+import { UserMockDatasource } from '@mucho-loco/customer-core/mock';
 import { toE164 } from '../phone';
 import { AuthError, type AuthService, type Session, type SignUpInput, type SocialProvider } from './types';
 
@@ -36,6 +37,8 @@ function meetsPasswordPolicy(password: string): boolean {
 export class MockAuthService implements AuthService {
   readonly kind = 'mock' as const;
   readonly socialProviders: SocialProvider[] = [];
+  /** El teléfono del registro, hasta que se confirma la cuenta. */
+  private readonly pendingPhones = new Map<string, string>();
 
   async signIn(email: string, password: string): Promise<Session> {
     const normalized = email.trim().toLowerCase();
@@ -49,11 +52,25 @@ export class MockAuthService implements AuthService {
     const email = input.email.trim().toLowerCase();
     if (EXISTING.has(email)) throw new AuthError('USER_EXISTS');
     if (!meetsPasswordPolicy(input.password)) throw new AuthError('INVALID_PASSWORD');
-    if (!toE164(input.phone)) throw new AuthError('INVALID_PHONE');
+    const phone = toE164(input.phone);
+    if (!phone) throw new AuthError('INVALID_PHONE');
+    this.pendingPhones.set(email, phone);
   }
 
-  async confirmSignUp(_email: string, code: string): Promise<void> {
+  /**
+   * Con Cognito, el teléfono viaja en el claim `phone_number` y el backend lo
+   * guarda al crear al socio. Aquí lo hace el mock de usuarios (su estado es
+   * del módulo, el mismo que leen los repositorios): sin esto, una cuenta
+   * recién registrada vería "agrega tu teléfono" (spec 015).
+   */
+  async confirmSignUp(email: string, code: string): Promise<void> {
     if (code.trim() !== MOCK_CONFIRMATION_CODE) throw new AuthError('CODE_MISMATCH');
+    const normalized = email.trim().toLowerCase();
+    const phone = this.pendingPhones.get(normalized);
+    if (phone) {
+      this.pendingPhones.delete(normalized);
+      await new UserMockDatasource().updatePhone(normalized, phone);
+    }
   }
 
   async resendCode(): Promise<void> {}

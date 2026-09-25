@@ -101,6 +101,10 @@ EXPO_PUBLIC_COGNITO_DOMAIN=<terraform output cognito_domain>    # solo login soc
 
   Además `cognito.test.ts` fija la forma exacta de cada request. **Sin probar**: confirmar con un código real (el registro de prueba usó `@example.com` para no mandarle correo a nadie), Google/Facebook (sin apps OAuth ni build de desarrollo) y el app nativo en un teléfono.
 
+## Teléfono del socio (2026-09-25)
+
+Spec 015. Sin teléfono, el panel de Cuenta muestra "Agrega tu teléfono" con el campo (`components/account/PhoneEditor.tsx`, `toE164` antes de enviar, `userRepository.updatePhone`); con teléfono, "Teléfono: … · Cambiar". `MockAuthService` guarda el teléfono del registro en el mock de usuarios al confirmar la cuenta — lo mismo que hace el backend con el claim `phone_number` —, así una cuenta recién creada no ve el aviso. Walkthrough: cambiar el de Diego (con el rechazo de "55 12"), el de la cuenta nueva llega del registro, y un tercer test donde un socio sin teléfono (login social) lo completa.
+
 ## Membresía (2026-09-13)
 
 Un socio nuevo nace **sin membresía** (`getMembership()` → `null`) hasta su primer cobro — antes el mock y el backend le regalaban una. El panel lo dice y lleva a la pantalla `membership`: sucursal, tier y periodo → `paymentRepository.createMembershipCheckout` → Stripe con `WebBrowser.openAuthSessionAsync` y regreso por deep link (`mucholoco://membership?paid=1`), el mismo patrón del checkout. En gracia, "REINTENTAR PAGO" abre la factura pendiente de Stripe (`openMembershipInvoice`) con `WebBrowser.openBrowserAsync`. Las reglas (qué rechazaría el backend, respetar lo ya pagado) salen de `@mucho-loco/customer-core/membership-rules`, las mismas que la web; `renewalStartsOn()` se llama al cargar datos, no al pintar (el lint prohíbe `Date.now()` en el render). Detalle del cobro en "Membresías con Stripe Billing" de `apps/backend/CLAUDE.md`. El walkthrough de Playwright cubre la compra: cuenta nueva sin membresía → elige plan → paga (mock) → vuelve con QR y "se renueva sola".

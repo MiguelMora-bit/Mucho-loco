@@ -170,6 +170,17 @@ export class UsersService {
     return this.prisma.user.update({ where: { id: user.id }, data: { phone } });
   }
 
+  /**
+   * Lo que el socio escribe gana sobre el claim del token: `backfillPhone`
+   * solo llena un teléfono vacío, nunca pisa uno guardado. No se toca Cognito
+   * — los avisos leen esta columna, y cambiarlo allá pediría verificar por SMS.
+   */
+  async updatePhone(identity: CognitoIdentity, phone: string): Promise<UserProfile> {
+    const user = await this.findOrCreateByCognito(identity);
+    await this.prisma.user.update({ where: { id: user.id }, data: { phone } });
+    return this.getProfile(identity);
+  }
+
   async getProfile(identity: CognitoIdentity): Promise<UserProfile> {
     const user = await this.findOrCreateByCognito(identity);
     const membership = await this.prisma.membership.findUnique({

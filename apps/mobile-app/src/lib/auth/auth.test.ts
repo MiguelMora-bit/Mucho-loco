@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { UserMockDatasource } from '@mucho-loco/customer-core/mock';
 import { translations } from '@mucho-loco/customer-core/translations';
 import { mobileMessages } from '../mobile-messages';
 import { authErrorCode, authErrorMessage } from './errors';
@@ -36,6 +37,16 @@ describe('MockAuthService', () => {
   it('confirms only with the demo code', async () => {
     await expect(auth.confirmSignUp('nueva@mucholoco.mx', MOCK_CONFIRMATION_CODE)).resolves.toBeUndefined();
     await expect(auth.confirmSignUp('nueva@mucholoco.mx', '000000')).rejects.toMatchObject({ code: 'CODE_MISMATCH' });
+  });
+
+  // Spec 015: como el claim phone_number con Cognito, el teléfono del registro
+  // llega al perfil — una cuenta recién creada no ve "agrega tu teléfono".
+  it('gives the member the sign-up phone once the account is confirmed', async () => {
+    const email = `tel.${Date.now()}@mucholoco.mx`;
+    await auth.signUp({ name: 'Con Tel', email, password: 'Bestia123!', phone: '55 8765 4321' });
+    await auth.confirmSignUp(email, MOCK_CONFIRMATION_CODE);
+
+    expect((await new UserMockDatasource().getProfile(email)).phone).toBe('+525587654321');
   });
 
   it('offers no social login', () => {

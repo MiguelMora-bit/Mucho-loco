@@ -44,11 +44,14 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
       .useValue({
         verify: (token: string): Promise<IdTokenClaims> => {
           if (token === 'invalid') throw new Error('bad token');
+          // "correo#+52…" simula un token con phone_number (spec 015).
+          const [email, phone] = token.split('#');
           return Promise.resolve({
-            sub: `sub-${token}`,
-            email: token,
-            name: token.split('@')[0].toUpperCase(),
+            sub: `sub-${email}`,
+            email,
+            name: email.split('@')[0].toUpperCase(),
             groups: [],
+            ...(phone ? { phone } : {}),
           });
         },
       })
@@ -358,6 +361,55 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
   // compiten por crearlo: ninguna debe fallar por la carrera, y debe quedar
   // UN socio — sin membresía, que nace con su primer cobro (ver
   // findOrCreateByCognito).
+  // Spec 015: quien entra con Google/Facebook no trae teléfono y sin él no
+  // hay avisos de WhatsApp. El socio lo completa (o lo cambia) en su perfil.
+  describe('member phone', () => {
+    const email = 'phone-e2e@mucholoco.mx';
+
+    afterAll(async () => {
+      await prisma.user.deleteMany({ where: { email } });
+    });
+
+    it('lets a member without a phone add one, and returns their profile', async () => {
+      const before = body<UserProfile>(
+        await request(app.getHttpServer()).get('/users/me').set(...fakeAuthHeader(email)).expect(200),
+      );
+      expect(before.phone).toBe('');
+
+      const saved = body<UserProfile>(
+        await request(app.getHttpServer())
+          .put('/users/me/phone')
+          .set(...fakeAuthHeader(email))
+          .send({ phone: '+525512345678' })
+          .expect(200),
+      );
+      expect(saved).toMatchObject({ email, phone: '+525512345678' });
+    });
+
+    it('rejects a phone that is not E.164, and any other field', async () => {
+      await request(app.getHttpServer())
+        .put('/users/me/phone')
+        .set(...fakeAuthHeader(email))
+        .send({ phone: '5512' })
+        .expect(400);
+      await request(app.getHttpServer())
+        .put('/users/me/phone')
+        .set(...fakeAuthHeader(email))
+        .send({ phone: '+525512345678', name: 'OTRO NOMBRE' })
+        .expect(400);
+    });
+
+    it('never lets the token overwrite the phone the member saved', async () => {
+      const profile = body<UserProfile>(
+        await request(app.getHttpServer())
+          .get('/users/me')
+          .set(...fakeAuthHeader(`${email}#+525599998888`))
+          .expect(200),
+      );
+      expect(profile.phone).toBe('+525512345678');
+    });
+  });
+
   describe('a brand-new member opening the mobile dashboard', () => {
     const email = `e2e-race-${Date.now()}@mucholoco.mx`;
 

@@ -179,6 +179,11 @@ export interface ISocialRepository {
 export interface IUserRepository {
   getProfile(email: string): Promise<UserProfile>;
   /**
+   * Completa o cambia el teléfono (E.164, ya normalizado con `toE164`) y
+   * devuelve el perfil (spec 015). Sin teléfono no hay avisos de WhatsApp.
+   */
+  updatePhone(email: string, phone: string): Promise<UserProfile>;
+  /**
    * `null` = nunca ha contratado. Un socio nuevo nace sin membresía: existe
    * desde su primer cobro confirmado (en línea o en mostrador).
    */

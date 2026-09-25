@@ -9,6 +9,7 @@ import { membershipPlanLabel } from '@mucho-loco/customer-core/membership-rules'
 import { orderStatusLabel } from '@mucho-loco/customer-core/order-status';
 import { formatPrice } from '@mucho-loco/customer-core/pricing';
 import { Body, Button, Card, Chip, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
+import { PhoneEditor } from '@/components/account/PhoneEditor';
 import { useLangStore, useT } from '@/lib/i18n';
 import { paymentRepository, userRepository } from '@/lib/repositories';
 import { useSessionStore } from '@/lib/stores/session.store';
@@ -59,6 +60,7 @@ export function Dashboard({ email }: { email: string }) {
     }, [reload]),
   );
 
+  const [editingPhone, setEditingPhone] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryFailed, setRetryFailed] = useState(false);
 
@@ -132,6 +134,31 @@ export function Dashboard({ email }: { email: string }) {
         <Body>
           {home.branchLabel} {membership.branch} · {home.planLabel} {membershipPlanLabel(t, membership)}
         </Body>
+      )}
+
+      {/* Spec 015: sin teléfono no hay avisos de WhatsApp. Con teléfono, se puede cambiar. */}
+      {!profile.phone ? (
+        <Card style={styles.banner}>
+          <Heading>📱 {t.dashboard.phone.missingTitle}</Heading>
+          <Body>{t.dashboard.phone.missingBody}</Body>
+          <PhoneEditor email={email} onSaved={reload} />
+        </Card>
+      ) : editingPhone ? (
+        <PhoneEditor
+          email={email}
+          onSaved={() => {
+            setEditingPhone(false);
+            reload();
+          }}
+          onCancel={() => setEditingPhone(false)}
+        />
+      ) : (
+        <View style={styles.row}>
+          <Body>
+            {t.dashboard.profile.phoneLabel}: {profile.phone}
+          </Body>
+          <Button title={t.dashboard.phone.change} variant="outline" onPress={() => setEditingPhone(true)} />
+        </View>
       )}
 
       {/* Un socio nuevo nace sin membresía: la activa su primera compra. */}

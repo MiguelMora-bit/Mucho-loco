@@ -265,6 +265,18 @@
     }
   },
   "dashboard": {
+    "phone": {
+      "missingTitle": "AGREGA TU TELÉFONO",
+      "missingBody": "Te avisamos por WhatsApp cuando tu pedido está listo o tu membresía está por vencer.",
+      "label": "Teléfono (10 dígitos)",
+      "placeholder": "55 1234 5678",
+      "save": "GUARDAR",
+      "saving": "GUARDANDO…",
+      "change": "Cambiar",
+      "cancel": "Cancelar",
+      "invalid": "Escribe un teléfono de 10 dígitos.",
+      "saveError": "No pudimos guardar tu teléfono. Intenta de nuevo."
+    },
     "brandLabel": "MUCHO LOCO · MI CUENTA",
     "nav": {
       "home": "INICIO",

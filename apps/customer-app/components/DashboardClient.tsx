@@ -5,7 +5,7 @@ import { useLocale } from 'next-intl';
 import { useDashboardPaneStore } from '@/lib/stores/dashboardPane.store';
 import { useT } from '@/lib/hooks/useT';
 import { useAsyncSubmit } from '@/lib/hooks/useAsyncSubmit';
-import { postJson } from '@/lib/api-client';
+import { postJson, putJson } from '@/lib/api-client';
 import { QrModal, OrderDetailModal, Header, HomePane, AccessPane, OrdersPane, CommunityPane, ProfilePane, SettingsPane } from './dashboard';
 import type { UserProfile, MembershipInfo, Visit, Order, CommunityPost, Lang } from '@mucho-loco/types';
 
@@ -20,7 +20,12 @@ interface DashboardClientProps {
   feed: CommunityPost[];
 }
 
-export default function DashboardClient({ profile, membership, justPaid, history, orders, feed }: DashboardClientProps) {
+export default function DashboardClient({ profile: initialProfile, membership, justPaid, history, orders, feed }: DashboardClientProps) {
+  // El teléfono se edita aquí mismo (spec 015): el perfil guardado reemplaza al de la página.
+  const [profile, setProfile] = useState(initialProfile);
+  async function handleSavePhone(phone: string) {
+    setProfile(await putJson<UserProfile>('/api/profile/phone', { phone }));
+  }
   const t = useT();
   const lang = useLocale() as Lang;
   const { pane, leaving } = useDashboardPaneStore();
@@ -115,6 +120,7 @@ export default function DashboardClient({ profile, membership, justPaid, history
         onManageSubscription={handleManageSubscription}
         managingSubscription={managingSubscription}
         manageError={manageError}
+        onSavePhone={handleSavePhone}
       />
       <AccessPane t={t} lang={lang} active={isActive('access')} profile={profile} membership={membership} planHref={planHref} history={history} onShowQr={() => setQrOpen(true)} />
       <OrdersPane t={t} lang={lang} active={isActive('orders')} orders={orders} onSelectOrder={setSelectedOrder} />
@@ -129,7 +135,7 @@ export default function DashboardClient({ profile, membership, justPaid, history
         onToggleLike={handleToggleLike}
         onAddComment={handleAddComment}
       />
-      <ProfilePane t={t} lang={lang} active={isActive('profile')} profile={profile} membership={membership} planHref={planHref} />
+      <ProfilePane t={t} lang={lang} active={isActive('profile')} profile={profile} membership={membership} planHref={planHref} onSavePhone={handleSavePhone} />
       <SettingsPane t={t} active={isActive('settings')} />
     </>
   );

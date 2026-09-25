@@ -227,6 +227,13 @@ export class UserMockDatasource implements IUserRepository {
     return getRecord(email).profile;
   }
 
+  async updatePhone(email: string, phone: string): Promise<UserProfile> {
+    await delay(200);
+    const record = getRecord(email);
+    record.profile = { ...record.profile, phone };
+    return record.profile;
+  }
+
   async getMembership(email: string): Promise<MembershipInfo | null> {
     await delay(150);
     return getRecord(email).membership;

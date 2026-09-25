@@ -42,6 +42,8 @@ describe('account endpoints are really guarded', () => {
     expect(await statusOf(() => ds.getMembership('diego@mucholoco.mx'))).toBe(401);
     expect(await statusOf(() => ds.getVisitHistory('diego@mucholoco.mx'))).toBe(401);
     expect(await statusOf(() => ds.getOrders('diego@mucholoco.mx'))).toBe(401);
+    // Spec 015.
+    expect(await statusOf(() => ds.updatePhone('diego@mucholoco.mx', '+525512345678'))).toBe(401);
     const payments = new PaymentHttpDatasource(bogusApi);
     expect(
       await statusOf(() =>

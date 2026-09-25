@@ -182,6 +182,18 @@ describe('UserHttpDatasource', () => {
     expect(String(init.body ?? '')).not.toContain('otro@mucholoco.mx');
   });
 
+  // Spec 015: solo el teléfono viaja; quién es lo dice el token.
+  it('puts only the phone to /users/me/phone', async () => {
+    const spy = stubFetch({});
+    await new UserHttpDatasource(client().api).updatePhone('otro@mucholoco.mx', '+525512345678');
+
+    const { url, init, auth } = call(spy);
+    expect(url).toBe('http://api.test/users/me/phone');
+    expect(init.method).toBe('PUT');
+    expect(auth).toBe('Bearer id-token');
+    expect(JSON.parse(init.body as string)).toEqual({ phone: '+525512345678' });
+  });
+
   it('posts an order as productId+qty with no client-supplied total', async () => {
     const spy = stubFetch({});
     await new UserHttpDatasource(client().api).createOrder(

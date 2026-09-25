@@ -265,6 +265,18 @@
     }
   },
   "dashboard": {
+    "phone": {
+      "missingTitle": "ADD YOUR PHONE",
+      "missingBody": "We'll let you know on WhatsApp when your order is ready or your membership is about to expire.",
+      "label": "Phone (10 digits)",
+      "placeholder": "55 1234 5678",
+      "save": "SAVE",
+      "saving": "SAVING…",
+      "change": "Change",
+      "cancel": "Cancel",
+      "invalid": "Enter a 10-digit phone number.",
+      "saveError": "We couldn't save your phone. Please try again."
+    },
     "brandLabel": "MUCHO LOCO · MY ACCOUNT",
     "nav": {
       "home": "HOME",

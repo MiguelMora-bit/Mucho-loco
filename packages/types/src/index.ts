@@ -519,6 +519,19 @@ export interface Translations {
     };
   };
   dashboard: {
+    /** Completar o cambiar el teléfono (spec 015). */
+    phone: {
+      missingTitle: string;
+      missingBody: string;
+      label: string;
+      placeholder: string;
+      save: string;
+      saving: string;
+      change: string;
+      cancel: string;
+      invalid: string;
+      saveError: string;
+    };
     brandLabel: string;
     nav: {
       home: string;

@@ -114,6 +114,17 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
     await expect(page.getByText('LISTO PARA RETIRO').first()).toBeVisible();
   });
 
+  await test.step('cambiar el teléfono valida la forma y lo guarda en E.164 (spec 015)', async () => {
+    const visible = (name: string) => page.getByRole('button', { name, exact: true }).filter({ visible: true });
+    await visible('Cambiar').click();
+    await page.getByLabel('Teléfono (10 dígitos)').fill('55 12');
+    await visible('GUARDAR').click();
+    await expect(page.getByText('Escribe un teléfono de 10 dígitos.')).toBeVisible();
+    await page.getByLabel('Teléfono (10 dígitos)').fill('55 8765 4321');
+    await visible('GUARDAR').click();
+    await expect(page.getByText('Teléfono: +525587654321')).toBeVisible();
+  });
+
   await test.step('el QR de acceso es el código fijo del socio', async () => {
     await page.getByRole('button', { name: /MOSTRAR QR DE ACCESO/ }).click();
     await expect(page.getByText('ML-DIEGO-2026-ALLGYMS').first()).toBeVisible();
@@ -313,6 +324,9 @@ test('un socio nuevo se registra con teléfono, confirma el código y entra', as
     // Perfil genérico del mock para un email sin datos curados (fallbackRecord):
     // el nombre es el prefijo del email, así que sale en el saludo Y en el pase.
     await expect(page.getByText('NUEVA', { exact: true }).first()).toBeVisible();
+    // El teléfono del registro llegó al perfil (spec 015): no pide agregarlo.
+    await expect(page.getByText('Teléfono: +525512345678')).toBeVisible();
+    await expect(page.getByText(/AGREGA TU TELÉFONO/)).toHaveCount(0);
   });
 
   // Antes una cuenta nueva nacía con una mensual de regalo. Ahora no tiene
@@ -340,6 +354,41 @@ test('un socio nuevo se registra con teléfono, confirma el código y entra', as
 
     await page.getByRole('button', { name: 'REACTIVAR RENOVACIÓN', exact: true }).click();
     await expect(page.getByText(/Se renueva sola el/)).toBeVisible();
+  });
+
+  expect(browserErrors).toEqual([]);
+});
+
+// Spec 015: quien entra con Google/Facebook no dio teléfono. En mock, cualquier
+// correo sin datos curados llega igual: sin teléfono.
+test('un socio sin teléfono lo completa desde su panel', async ({ page }) => {
+  const browserErrors: string[] = [];
+  page.on('pageerror', (e) => browserErrors.push(`pageerror: ${e.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') browserErrors.push(`console.error: ${msg.text()}`);
+  });
+
+  await test.step('entra y ve el aviso de que falta su teléfono', async () => {
+    await page.goto('/account');
+    await expect(page.getByLabel('Email o usuario')).toBeVisible({ timeout: 120_000 });
+    await page.getByLabel('Email o usuario').fill('social@mucholoco.mx');
+    await page.getByLabel('Contraseña').fill('Bestia123!');
+    await page.getByRole('button', { name: 'PRENDER LA MECHA' }).click();
+    await expect(page.getByText(/AGREGA TU TELÉFONO/)).toBeVisible();
+  });
+
+  await test.step('un teléfono incompleto se rechaza sin guardar', async () => {
+    await page.getByLabel('Teléfono (10 dígitos)').fill('55 12');
+    await page.getByRole('button', { name: 'GUARDAR', exact: true }).click();
+    await expect(page.getByText('Escribe un teléfono de 10 dígitos.')).toBeVisible();
+    await expect(page.getByText(/AGREGA TU TELÉFONO/)).toBeVisible();
+  });
+
+  await test.step('con 10 dígitos se guarda y el aviso desaparece', async () => {
+    await page.getByLabel('Teléfono (10 dígitos)').fill('55 1234 5678');
+    await page.getByRole('button', { name: 'GUARDAR', exact: true }).click();
+    await expect(page.getByText('Teléfono: +525512345678')).toBeVisible();
+    await expect(page.getByText(/AGREGA TU TELÉFONO/)).toHaveCount(0);
   });
 
   expect(browserErrors).toEqual([]);

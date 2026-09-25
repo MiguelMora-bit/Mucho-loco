@@ -58,6 +58,10 @@ export class UserHttpDatasource implements IUserRepository {
     return this.api.get<UserProfile>('/users/me', ACCOUNT);
   }
 
+  updatePhone(_email: string, phone: string): Promise<UserProfile> {
+    return this.api.put<UserProfile>('/users/me/phone', { phone }, ACCOUNT);
+  }
+
   /** 404 = todavía no contrata (un socio nuevo nace sin membresía). */
   getMembership(_email: string): Promise<MembershipInfo | null> {
     return this.api.getOrNull<MembershipInfo>('/users/me/membership', ACCOUNT);

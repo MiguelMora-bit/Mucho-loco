@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put } from '@nestjs/common';
 import type {
   MembershipInfo,
   Order,
@@ -10,6 +10,7 @@ import { MembershipsService } from '../memberships/memberships.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { IdTokenClaims } from '../auth/cognito';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdatePhoneDto } from './dto/update-phone.dto';
 
 /** Todo detrás de CognitoAuthGuard (default global, ver main.ts) — "me"
  *  siempre es quien mandó el ID token, nunca un email que el cliente pueda
@@ -24,6 +25,18 @@ export class UsersController {
   @Get()
   getProfile(@CurrentUser() user: IdTokenClaims): Promise<UserProfile> {
     return this.users.getProfile(user);
+  }
+
+  /**
+   * Completar o cambiar el teléfono (spec 015) — sin él no hay avisos de
+   * WhatsApp, y quien entra con Google/Facebook nunca lo dio.
+   */
+  @Put('phone')
+  updatePhone(
+    @CurrentUser() user: IdTokenClaims,
+    @Body() dto: UpdatePhoneDto,
+  ): Promise<UserProfile> {
+    return this.users.updatePhone(user, dto.phone);
   }
 
   @Get('membership')
