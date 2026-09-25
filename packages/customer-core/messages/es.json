@@ -79,6 +79,19 @@
     "stillActive": "Tu membresía sigue vigente; una visita no le agrega nada.",
     "cancelled": "Cancelaste el pago. No se te cobró nada."
   },
+  "membershipPlan": {
+    "tiers": {
+      "single": "1 SUCURSAL",
+      "all": "15 SUCURSALES"
+    },
+    "periods": {
+      "visit": "VISITA",
+      "weekly": "SEMANAL",
+      "monthly": "MENSUAL",
+      "quarterly": "TRIMESTRAL",
+      "annual": "ANUAL"
+    }
+  },
   "memberships": {
     "eyebrow": "Sin letra chica",
     "titleA": "MEMBRESÍAS",
@@ -292,7 +305,6 @@
       "statStreak": "DÍAS DE STREAK",
       "statStreakDelta": "Mejor racha: 14 días",
       "statDaysLeft": "DÍAS RESTANTES",
-      "statDaysLeftDelta": "Plan All Gyms · Mensual",
       "statBranches": "SUCURSALES VISITADAS",
       "statBranchesDelta": "Este mes",
       "thisWeek": "ESTA SEMANA",

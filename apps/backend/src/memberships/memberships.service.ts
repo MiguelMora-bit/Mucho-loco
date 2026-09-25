@@ -20,22 +20,6 @@ import {
   RENEWAL_TOLERANCE_DAYS,
 } from './membership-status';
 
-// Mismo texto que ya usa el mock (ALL GYMS/1 GYM, sin traducir) — no es un
-// contrato localizado hoy, y no es este backend quien debería arreglarlo
-// (ver "Pendiente" en el CLAUDE.md de customer-app sobre Visit.day/.month,
-// mismo tipo de defecto latente aceptado por ahora).
-const TIER_LABEL: Record<TierKey, string> = {
-  single: '1 GYM',
-  all: 'ALL GYMS',
-};
-const PERIOD_LABEL: Record<PlanKey, string> = {
-  visit: 'VISITA',
-  weekly: 'SEMANAL',
-  monthly: 'MENSUAL',
-  quarterly: 'TRIMESTRAL',
-  annual: 'ANUAL',
-};
-
 const DAY_MS = 86_400_000;
 
 type MembershipWithBranch = Membership & { branch: Branch };
@@ -249,9 +233,10 @@ function toMembershipInfo(membership: MembershipWithBranch): MembershipInfo {
     Math.ceil((membership.expiresAt.getTime() - Date.now()) / DAY_MS),
   );
   return {
-    plan: `${TIER_LABEL[membership.tierKey]} · ${PERIOD_LABEL[membership.periodKey]}`,
     branch: membership.branch.name,
     tierKey: membership.tierKey,
+    // Claves, no texto: el nombre del plan lo traduce quien lo pinta (spec 011).
+    periodKey: membership.periodKey,
     expiresAt: membership.expiresAt.toISOString(),
     visits: membership.visits,
     streak: membership.streak,

@@ -109,6 +109,8 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
   await test.step('el panel muestra al socio y el pedido nuevo', async () => {
     await expect(page.getByText('BIENVENIDO,')).toBeVisible();
     await expect(page.getByText('DIEGO', { exact: true })).toBeVisible();
+    // El nombre del plan lo traduce el cliente desde tierKey/periodKey (spec 011).
+    await expect(page.getByText('15 SUCURSALES · MENSUAL', { exact: true })).toBeVisible();
     await expect(page.getByText('LISTO PARA RETIRO').first()).toBeVisible();
   });
 
@@ -249,6 +251,7 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
     await tab(page, /Cuenta/).click();
     await page.getByRole('button', { name: 'ENGLISH' }).click();
     await expect(page.getByText('WELCOME,')).toBeVisible();
+    await expect(page.getByText('15 GYMS · MONTHLY', { exact: true })).toBeVisible();
   });
 
   await test.step('recargar conserva sesión e idioma; el carrito quedó vacío tras pagar', async () => {

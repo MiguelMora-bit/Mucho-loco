@@ -1,5 +1,6 @@
 import { LuUser, LuMail, LuPhone, LuCake } from 'react-icons/lu';
 import type { Lang, MembershipInfo, Translations, UserProfile } from '@mucho-loco/types';
+import { membershipPlanLabel } from '@mucho-loco/customer-core/membership-rules';
 import { Link } from '@/i18n/routing';
 import { InfoList } from './InfoList';
 import { formatDate } from '../../lib/dates';
@@ -36,7 +37,7 @@ export function ProfilePane({ t, lang, active, profile, membership, planHref }: 
           {membership ? (
             <InfoList
               items={[
-                [t.dashboard.profile.planLabel, membership.plan],
+                [t.dashboard.profile.planLabel, membershipPlanLabel(t, membership)],
                 [t.dashboard.profile.branchLabel, membership.branch],
                 [t.dashboard.profile.expiresLabel, formatDate(membership.expiresAt, lang)],
                 [t.dashboard.profile.statusLabel, t.dashboard.membershipStatus[membership.status]],

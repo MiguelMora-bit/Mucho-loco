@@ -13,7 +13,6 @@ import type {
   ShippingAddress,
   Lang,
   PlanKey,
-  TierKey,
 } from '@mucho-loco/types';
 import type { IUserRepository } from '../contract';
 import { BRANCHES, PRODUCTS } from '../data';
@@ -31,15 +30,7 @@ interface UserRecord {
   orders: Order[];
 }
 
-// Mismas etiquetas y días que MembershipsService/membership-plans del backend.
-const TIER_LABEL: Record<TierKey, string> = { single: '1 GYM', all: 'ALL GYMS' };
-const PERIOD_LABEL: Record<PlanKey, string> = {
-  visit: 'VISITA',
-  weekly: 'SEMANAL',
-  monthly: 'MENSUAL',
-  quarterly: 'TRIMESTRAL',
-  annual: 'ANUAL',
-};
+// Mismos días que membership-plans del backend.
 const PERIOD_DAYS: Record<PlanKey, number> = { visit: 1, weekly: 7, monthly: 30, quarterly: 90, annual: 365 };
 const DAY_MS = 86_400_000;
 
@@ -91,9 +82,9 @@ function seedRecords(): Record<string, UserRecord> {
       branch: 'Roma Sur',
     },
     membership: {
-      plan: 'ALL GYMS · MENSUAL',
       branch: 'Roma Sur',
       tierKey: 'all',
+      periodKey: 'monthly',
       expiresAt: '2026-07-20',
       visits: 18,
       streak: 7,
@@ -148,9 +139,9 @@ function seedRecords(): Record<string, UserRecord> {
       branch: 'Condesa',
     },
     membership: {
-      plan: '1 GYM · MENSUAL',
       branch: 'Condesa',
       tierKey: 'single',
+      periodKey: 'monthly',
       expiresAt: '2026-08-05',
       visits: 9,
       streak: 3,
@@ -253,9 +244,9 @@ export class UserMockDatasource implements IUserRepository {
     const expiresAt = isoDate(addDays(start, PERIOD_DAYS[plan.periodKey]));
 
     record.membership = {
-      plan: `${TIER_LABEL[plan.tierKey]} · ${PERIOD_LABEL[plan.periodKey]}`,
       branch: branch.name,
       tierKey: plan.tierKey,
+      periodKey: plan.periodKey,
       expiresAt,
       visits: current?.visits ?? 0,
       streak: current?.streak ?? 0,

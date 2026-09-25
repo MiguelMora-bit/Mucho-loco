@@ -1,4 +1,5 @@
 import type { Lang, MembershipInfo, Translations, UserProfile } from '@mucho-loco/types';
+import { membershipPlanLabel } from '@mucho-loco/customer-core/membership-rules';
 import { Link } from '@/i18n/routing';
 import { formatDate } from '../../lib/dates';
 
@@ -31,7 +32,7 @@ export function HomePane({ t, lang, active, profile, membership, justPaid, planH
   const stats = [
     { lbl: t.dashboard.home.statVisits, num: membership?.visits ?? 0, delta: t.dashboard.home.statVisitsDelta, up: true },
     { lbl: t.dashboard.home.statStreak, num: membership?.streak ?? 0, delta: t.dashboard.home.statStreakDelta },
-    { lbl: t.dashboard.home.statDaysLeft, num: membership?.daysLeft ?? 0, delta: t.dashboard.home.statDaysLeftDelta },
+    { lbl: t.dashboard.home.statDaysLeft, num: membership?.daysLeft ?? 0, delta: membership ? membershipPlanLabel(t, membership) : '' },
     { lbl: t.dashboard.home.statBranches, num: 3, delta: t.dashboard.home.statBranchesDelta },
   ];
   // Volvió de Stripe pero el webhook todavía no llega (o el banco no ha
@@ -44,7 +45,7 @@ export function HomePane({ t, lang, active, profile, membership, justPaid, planH
         {t.dashboard.home.welcomePrefix}<br /><span style={{ background: 'linear-gradient(180deg, #ffe066, #ff8c1a 40%, #e1141c 75%, #8b0a10)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{profile.name.split(' ')[0]}</span>
       </div>
       {membership && (
-        <p className="text-ml-cream-dim text-[15px] mb-7">{t.dashboard.home.branchLabel} {membership.branch} · {t.dashboard.home.planLabel} {membership.plan}</p>
+        <p className="text-ml-cream-dim text-[15px] mb-7">{t.dashboard.home.branchLabel} {membership.branch} · {t.dashboard.home.planLabel} {membershipPlanLabel(t, membership)}</p>
       )}
       {!membership && <div className="mb-7" />}
 

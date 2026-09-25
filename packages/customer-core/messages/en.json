@@ -79,6 +79,19 @@
     "stillActive": "Your membership is still valid; a day pass adds nothing.",
     "cancelled": "You cancelled the payment. You weren't charged."
   },
+  "membershipPlan": {
+    "tiers": {
+      "single": "1 GYM",
+      "all": "15 GYMS"
+    },
+    "periods": {
+      "visit": "DAY PASS",
+      "weekly": "WEEKLY",
+      "monthly": "MONTHLY",
+      "quarterly": "QUARTERLY",
+      "annual": "ANNUAL"
+    }
+  },
   "memberships": {
     "eyebrow": "No fine print",
     "titleA": "MEMBERSHIPS",
@@ -292,7 +305,6 @@
       "statStreak": "STREAK DAYS",
       "statStreakDelta": "Best streak: 14 days",
       "statDaysLeft": "DAYS LEFT",
-      "statDaysLeftDelta": "All Gyms Plan · Monthly",
       "statBranches": "BRANCHES VISITED",
       "statBranchesDelta": "This month",
       "thisWeek": "THIS WEEK",

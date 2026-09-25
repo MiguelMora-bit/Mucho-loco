@@ -105,9 +105,11 @@ export interface UserProfile {
 }
 
 export interface MembershipInfo {
-  plan: string;
   branch: string;
   tierKey: TierKey;
+  /** El nombre del plan lo arma quien lo pinta (`membershipPlanLabel` de
+   *  customer-core), en su idioma — el contrato manda las claves (spec 011). */
+  periodKey: PlanKey;
   expiresAt: string;
   visits: number;
   streak: number;
@@ -338,6 +340,11 @@ export interface Translations {
     stillActive: string;
     cancelled: string;
   };
+  /** Nombre del plan de un socio: "15 SUCURSALES · MENSUAL" (spec 011). */
+  membershipPlan: {
+    tiers: Record<TierKey, string>;
+    periods: Record<PlanKey, string>;
+  };
   memberships: {
     eyebrow: string;
     titleA: string;
@@ -544,7 +551,6 @@ export interface Translations {
       statStreak: string;
       statStreakDelta: string;
       statDaysLeft: string;
-      statDaysLeftDelta: string;
       statBranches: string;
       statBranchesDelta: string;
       thisWeek: string;

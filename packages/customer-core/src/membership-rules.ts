@@ -1,4 +1,4 @@
-import type { MembershipInfo, PlanKey } from '@mucho-loco/types';
+import type { MembershipInfo, PlanKey, Translations } from '@mucho-loco/types';
 import type { MembershipErrorCode } from './membership-errors';
 
 /**
@@ -36,4 +36,13 @@ export function purchaseBlock(membership: MembershipInfo | null, periodKey: Plan
 export function renewalStartsOn(membership: MembershipInfo | null, now: number = Date.now()): string | null {
   if (!membership || membership.hasSubscription || membership.status !== 'active') return null;
   return Date.parse(membership.expiresAt) - now > MIN_CARRY_OVER_MS ? membership.expiresAt : null;
+}
+
+/**
+ * "15 SUCURSALES · MENSUAL": el nombre del plan en el idioma de quien lo pinta.
+ * El contrato solo manda las claves (spec 011) — antes el backend mandaba el
+ * texto armado, mitad inglés y mitad español, y no cambiaba de idioma.
+ */
+export function membershipPlanLabel(t: Translations, membership: Pick<MembershipInfo, 'tierKey' | 'periodKey'>): string {
+  return `${t.membershipPlan.tiers[membership.tierKey]} · ${t.membershipPlan.periods[membership.periodKey]}`;
 }

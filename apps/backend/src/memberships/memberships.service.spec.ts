@@ -59,7 +59,9 @@ describe('MembershipsService', () => {
       const info = await service.getForUser('user-1');
       expect(info.daysLeft).toBeGreaterThanOrEqual(11);
       expect(info.daysLeft).toBeLessThanOrEqual(12);
-      expect(info.plan).toBe('ALL GYMS · MENSUAL');
+      // Claves, no texto armado: el cliente traduce el nombre del plan.
+      expect(info).toMatchObject({ tierKey: 'all', periodKey: 'monthly' });
+      expect(info).not.toHaveProperty('plan');
       expect(info.branch).toBe('Roma Sur');
     });
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MembershipInfo } from '@mucho-loco/types';
-import { purchaseBlock, renewalStartsOn } from './membership-rules';
+import { membershipPlanLabel, purchaseBlock, renewalStartsOn } from './membership-rules';
+import { translations } from './translations';
 
 const NOW = Date.parse('2026-09-13T12:00:00.000Z');
 const DAY = 86_400_000;
@@ -8,9 +9,9 @@ const isoIn = (days: number) => new Date(NOW + days * DAY).toISOString();
 
 function member(overrides: Partial<MembershipInfo> = {}): MembershipInfo {
   return {
-    plan: '1 GYM · MENSUAL',
     branch: 'Roma Sur',
     tierKey: 'single',
+    periodKey: 'monthly',
     expiresAt: isoIn(20),
     visits: 0,
     streak: 0,
@@ -64,5 +65,17 @@ describe('renewalStartsOn', () => {
     expect(renewalStartsOn(member({ autoRenews: true, hasSubscription: true }), NOW)).toBeNull();
     expect(renewalStartsOn(member({ status: 'expired' }), NOW)).toBeNull();
     expect(renewalStartsOn(null, NOW)).toBeNull();
+  });
+});
+
+describe('membershipPlanLabel', () => {
+  it('names the plan in the language it is painted in', () => {
+    expect(membershipPlanLabel(translations.es, member({ tierKey: 'all' }))).toBe('15 SUCURSALES · MENSUAL');
+    expect(membershipPlanLabel(translations.en, member({ tierKey: 'all' }))).toBe('15 GYMS · MONTHLY');
+  });
+
+  it('covers every period of both tiers', () => {
+    expect(membershipPlanLabel(translations.es, { tierKey: 'single', periodKey: 'quarterly' })).toBe('1 SUCURSAL · TRIMESTRAL');
+    expect(membershipPlanLabel(translations.en, { tierKey: 'all', periodKey: 'visit' })).toBe('15 GYMS · DAY PASS');
   });
 });

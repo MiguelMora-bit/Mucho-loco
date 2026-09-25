@@ -1,4 +1,5 @@
 import type { Lang, MembershipInfo, Translations, UserProfile, Visit } from '@mucho-loco/types';
+import { membershipPlanLabel } from '@mucho-loco/customer-core/membership-rules';
 import { Link } from '@/i18n/routing';
 import { formatDate, formatDayOfMonth, formatDuration, formatMonthShort } from '../../lib/dates';
 
@@ -39,7 +40,7 @@ export function AccessPane({ t, lang, active, profile, membership, planHref, his
             <div className="flex items-center justify-between mb-5">
               <div>
                 <div className="font-display text-[32px] leading-none">{profile.name}</div>
-                <div className="font-mono text-11 text-ml-cream-dim uppercase tracking-wide-xl mt-1">{membership.plan}</div>
+                <div className="font-mono text-11 text-ml-cream-dim uppercase tracking-wide-xl mt-1">{membershipPlanLabel(t, membership)}</div>
               </div>
               <div className="w-[70px] h-[70px] rounded-full border-2 border-ml-red bg-ml-card grid place-items-center font-display text-[30px]">{profile.name[0]}</div>
             </div>

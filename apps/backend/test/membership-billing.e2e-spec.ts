@@ -261,9 +261,12 @@ describe('Membership billing (e2e)', () => {
     expect(membership).toMatchObject({
       status: 'active',
       tierKey: 'single',
+      periodKey: 'monthly',
       autoRenews: true,
       branch: 'ROMA SUR',
     });
+    // El nombre del plan lo traduce el cliente (spec 011).
+    expect(membership).not.toHaveProperty('plan');
     expect(membership.expiresAt).toBe(new Date(periodEnd * 1000).toISOString());
 
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
@@ -450,6 +453,7 @@ describe('Membership billing (e2e)', () => {
     expect(first).toMatchObject({
       status: 'active',
       tierKey: 'all',
+      periodKey: 'visit',
       autoRenews: false,
     });
     const hoursLeft = (Date.parse(first.expiresAt) - Date.now()) / 3_600_000;

@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { OrderStatus } from '@mucho-loco/types';
 import { formatDate, formatDayOfMonth, formatDuration, formatMonthShort } from '@mucho-loco/customer-core/dates';
+import { membershipPlanLabel } from '@mucho-loco/customer-core/membership-rules';
 import { orderStatusLabel } from '@mucho-loco/customer-core/order-status';
 import { formatPrice } from '@mucho-loco/customer-core/pricing';
 import { Body, Button, Card, Chip, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
@@ -129,7 +130,7 @@ export function Dashboard({ email }: { email: string }) {
       </View>
       {membership && (
         <Body>
-          {home.branchLabel} {membership.branch} · {home.planLabel} {membership.plan}
+          {home.branchLabel} {membership.branch} · {home.planLabel} {membershipPlanLabel(t, membership)}
         </Body>
       )}
 
@@ -194,7 +195,7 @@ export function Dashboard({ email }: { email: string }) {
       {membership && (
         <Card style={styles.pass}>
           <Heading>{profile.name}</Heading>
-          <Mono>{membership.plan}</Mono>
+          <Mono>{membershipPlanLabel(t, membership)}</Mono>
           <View style={styles.passGrid}>
             <View style={styles.passCell}>
               <Mono>{t.dashboard.access.expiresLabel}</Mono>
