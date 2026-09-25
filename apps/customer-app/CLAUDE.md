@@ -92,7 +92,7 @@ O parado en este directorio: `pnpm dev`, `pnpm build`, `pnpm start`.
 
 ## Pendiente / conocido
 
-- `README.md` de este app menciona "CSS puro (sin Tailwind)" — desactualizado, el proyecto ya usa Tailwind v3. Pendiente de actualizar.
+- ~~`README.md` desactualizado~~ ✅ (2026-09-25): reescrito (Next 15 + TypeScript, Tailwind 3, next-intl, Cognito, rutas actuales, mock/HTTP); el detalle sigue aquí.
 - **Decidido (2026-08-30): no hay formulario de contacto.** WhatsApp gana para este mercado — más natural que un form y ya es el tono de marca. El link `wa.me` en `Contact` (componente `MuchoLoco.tsx`) ya es funcional. Las claves `contact.name/email/branch/message/send` en `messages/*.json` quedan sin usar; no se borran todavía por si más adelante se justifica un form real con lead-capture. Notificaciones automáticas (avisos de vencimiento, pedido listo) van por WhatsApp Business Platform cuando exista backend — ver `CLAUDE.md` root.
 - ~~**Cifras de relleno en el inicio del panel**~~ ✅ Resuelto (2026-09-25, spec 013): las cuatro tarjetas de `HomePane` son del socio — visitas del mes con "+N vs mes anterior" (`visitsDeltaLabel` de customer-core, verde solo si sube), racha con "Mejor racha: N", días restantes con su plan, y sucursales distintas del mes. Salen de `MembershipInfo.{visitsLastMonth,bestStreak,branchesThisMonth}`, que el backend deriva de las entradas reales (spec 012). Los mensajes ya no llevan números.
 - Rutas en inglés (`/account`, `/dashboard`, `/performance`, `/product/[id]`, `/checkout`, `/membership`) por preferencia explícita del usuario (2026-08-30) — el copy/contenido del sitio se queda en español.

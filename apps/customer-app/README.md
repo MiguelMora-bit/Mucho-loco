@@ -1,96 +1,43 @@
-# MUCHO LOCO GYM — Next.js 14
+# Mucho Loco Gym — tienda y app del socio (web)
 
-App de tienda y membresías para una cadena de gym. Frontend en Next.js 14 (App Router, JavaScript). Backend con AWS — próximamente.
+La web del socio de Mucho Loco Gym: landing con tienda, sucursales y membresías, y el panel del socio (membresía y QR de acceso, pedidos, comunidad, rendimiento y facturación). Es uno de los apps del monorepo; el detalle de arquitectura y decisiones está en [`CLAUDE.md`](./CLAUDE.md) y, para todo el proyecto, en el [`CLAUDE.md` raíz](../../CLAUDE.md).
 
 ## Stack
 
 | Tecnología | Uso |
 |---|---|
-| Next.js 14 (App Router) | Framework frontend |
-| React 18 | UI |
-| CSS puro | Estilos (sin Tailwind) |
-| next/font/google | Tipografías (Anton, Bebas Neue, Inter…) |
-| Next.js Middleware | Protección de rutas con cookies |
-| Route Handlers (API Routes) | Login/logout mock |
-
-## Estructura del proyecto
-
-```
-mucho-loco-nextjs/
-├── app/
-│   ├── layout.js              # HTML raíz, fuentes, globals.css
-│   ├── page.js                # Landing principal
-│   ├── globals.css            # Todos los estilos (styles + sections + mobile)
-│   ├── cuenta/page.js         # Login / Registro
-│   ├── checkout/page.js       # Checkout — RUTA PROTEGIDA
-│   ├── producto/[id]/page.js  # Detalle de producto (ruta dinámica)
-│   ├── panel/page.js          # Dashboard del socio — RUTA PROTEGIDA
-│   ├── rendimiento/page.js    # Estadísticas de entrenamiento — RUTA PROTEGIDA
-│   └── api/auth/
-│       ├── login/route.js     # POST → establece cookie ml_session
-│       └── logout/route.js    # POST → elimina cookie
-├── components/
-│   └── MuchoLoco.jsx          # Componente principal de la landing ('use client')
-├── lib/
-│   ├── data.js                # Todos los datos (I18N, BRANCHES, PRODUCTS…)
-│   ├── fire.js                # Canvas de partículas de fuego
-│   └── auth.js                # Constantes de autenticación
-├── middleware.js              # Protección de rutas protegidas
-└── public/
-    └── assets/                # Imágenes (bull-head, productos…)
-```
+| Next.js 15 (App Router) + TypeScript | Framework (Server Components + Route Handlers) |
+| React 19 | UI |
+| Tailwind CSS 3 | Estilos (paleta `ml.*`, tokens en `app/globals.css`) |
+| next-intl | Español / inglés; los textos viven en `@mucho-loco/customer-core/messages` |
+| Amazon Cognito | Login con correo o Google/Facebook (cookie httpOnly) |
+| `@mucho-loco/customer-core` | Contrato, mocks, datasources HTTP y reglas compartidas con la app móvil |
 
 ## Rutas
 
-| Ruta | Acceso | Descripción |
+Todas bajo `/[locale]` (`/es`, `/en`).
+
+| Ruta | Acceso | |
 |---|---|---|
-| `/` | Público | Landing completa (Hero, Tienda, Sucursales, Membresías, Contacto) |
-| `/cuenta` | Público | Login y registro |
-| `/producto/[id]` | Público | Detalle de producto con variantes |
-| `/checkout` | **Protegida** | Proceso de compra paso a paso |
-| `/panel` | **Protegida** | Dashboard del socio (QR, historial, pedidos) |
-| `/rendimiento` | **Protegida** | Estadísticas y PRs de entrenamiento |
+| `/` | Público | Landing: tienda, sucursales, membresías, avisos, contacto |
+| `/product/[id]` | Público | Detalle de producto |
+| `/account` | Público | Login y registro |
+| `/checkout` | Sesión | Compra (Stripe, o efectivo al recoger en sucursal) |
+| `/dashboard` | Sesión | Panel del socio |
+| `/membership` | Sesión | Contratar o renovar la membresía |
+| `/performance` | Sesión | Resumen, entrenamientos y heatmap de asistencia |
+| `/invoicing` | Sesión | Datos fiscales y facturas (CFDI) |
 
-## Autenticación
+## Datos: mock o backend
 
-El sistema de auth es mock (sin backend real aún). Funciona con una cookie `ml_session` httpOnly.
-
-- **Login** → `POST /api/auth/login` → setea cookie → redirect a `/panel` (o al path original)
-- **Logout** → `POST /api/auth/logout` → borra cookie → redirect a `/`
-- **Middleware** → `middleware.js` intercepta `/panel/*`, `/rendimiento/*`, `/checkout/*` y redirige a `/cuenta?next=<ruta>` si no hay cookie
-
-Cuando conectes el backend AWS (Cognito / Lambda), solo necesitas cambiar el `route.js` de login para validar contra la API real. El resto del flujo no cambia.
+Por defecto todo corre contra mocks (`@mucho-loco/customer-core/mock`). Con `NEXT_PUBLIC_DATA_SOURCE=http` y `NEXT_PUBLIC_API_URL` usa el backend NestJS de `apps/backend` — ver "Swap de datasource" en [`CLAUDE.md`](./CLAUDE.md). Las variables van en `.env.local` (plantilla en `.env.example`).
 
 ## Comandos
 
 ```bash
-# Desarrollo
-npm run dev
-
-# Build de producción
-npm run build
-
-# Servidor de producción
-npm start
+pnpm --filter @mucho-loco/customer-app dev               # desarrollo (Turbopack)
+pnpm --filter @mucho-loco/customer-app build
+pnpm --filter @mucho-loco/customer-app test              # unit (Vitest)
+pnpm --filter @mucho-loco/customer-app test:integration  # contra el backend local en :3001
+pnpm --filter @mucho-loco/customer-app test:e2e          # Playwright (necesita un User Pool vivo)
 ```
-
-## Características implementadas
-
-- **Landing completa**: Hero con canvas de fuego, Tienda con filtros por categoría, Mapa de sucursales SVG interactivo, Calculadora de membresías, Feed de redes sociales, Footer
-- **Carrito**: Drawer lateral con contador, add/remove/qty
-- **Tablón de avisos**: FAB con badge de no leídos, board lateral, splash al primer carga
-- **Idioma ES/EN**: Switch en la navbar, todo el contenido i18n
-- **Detalle de producto**: Galería, variantes, productos relacionados, wishlist
-- **Checkout**: Flujo de 3 pasos (carrito → pago → confirmación), métodos OXXO/tarjeta/transferencia/crypto
-- **Dashboard**: QR de acceso, historial de entradas, pedidos, perfil
-- **Rendimiento**: Estadísticas mensuales, PRs, heatmap de asistencia
-- **Auth middleware**: Rutas protegidas con cookie httpOnly, redirect inteligente
-
-## Próximos pasos (backend AWS)
-
-- [ ] Cognito User Pool para auth real (email + Google/Facebook OAuth)
-- [ ] DynamoDB para socios, pedidos, historial de accesos
-- [ ] API Gateway + Lambda para los Route Handlers
-- [ ] S3 + CloudFront para assets
-- [ ] SES para emails de confirmación
-- [ ] Stripe / Conekta para pagos reales
