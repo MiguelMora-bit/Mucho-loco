@@ -10,9 +10,11 @@ export function formatDate(iso: string, lang: Lang, opts: Intl.DateTimeFormatOpt
 
 /**
  * Duración de una visita, a partir de minutos. El backend manda el número, no
- * `'1h 24m'` — ese texto no se podía traducir ni reformatear.
+ * `'1h 24m'` — ese texto no se podía traducir ni reformatear. `null` = la
+ * salida nunca se registró (spec 012: mostrador registra solo la entrada).
  */
-export function formatDuration(minutes: number, lang: Lang): string {
+export function formatDuration(minutes: number | null, lang: Lang): string {
+  if (minutes === null) return '—';
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   if (hours === 0) return `${mins}m`;

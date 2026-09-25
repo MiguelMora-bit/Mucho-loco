@@ -20,6 +20,7 @@ describe('MembershipsService', () => {
       updateMany: jest.Mock;
     };
     membershipTier: { findMany: jest.Mock };
+    visit: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
 
@@ -31,6 +32,7 @@ describe('MembershipsService', () => {
         updateMany: jest.fn(),
       },
       membershipTier: { findMany: jest.fn() },
+      visit: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn(),
     };
     const module = await Test.createTestingModule({
@@ -48,8 +50,6 @@ describe('MembershipsService', () => {
         tierKey: 'all',
         periodKey: 'monthly',
         expiresAt: daysFromNow(12),
-        visits: 5,
-        streak: 2,
         accessCode: 'ML-TEST',
         status: 'active',
         graceEndsAt: null,
@@ -70,8 +70,6 @@ describe('MembershipsService', () => {
         tierKey: 'single',
         periodKey: 'monthly',
         expiresAt: daysFromNow(-5),
-        visits: 0,
-        streak: 0,
         accessCode: 'ML-TEST',
         status: 'expired',
         graceEndsAt: null,
@@ -80,6 +78,34 @@ describe('MembershipsService', () => {
 
       const info = await service.getForUser('user-1');
       expect(info.daysLeft).toBe(0);
+    });
+
+    // Spec 012: salen de las entradas que registró mostrador, no de una columna.
+    it('derives visits this month and the streak from the recorded check-ins', async () => {
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+      const yesterday = new Date(`${today}T00:00:00.000Z`);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      prisma.membership.findUnique.mockResolvedValue({
+        tierKey: 'all',
+        periodKey: 'monthly',
+        expiresAt: daysFromNow(12),
+        accessCode: 'ML-TEST',
+        status: 'active',
+        graceEndsAt: null,
+        branch: { name: 'Roma Sur' },
+      });
+      prisma.visit.findMany.mockResolvedValue([
+        { visitDay: new Date(`${today}T00:00:00.000Z`) },
+        { visitDay: yesterday },
+      ]);
+
+      const info = await service.getForUser('user-1');
+      expect(info.streak).toBe(2);
+      // Ayer puede ser del mes anterior (hoy es día 1).
+      expect(info.visits).toBe(today.endsWith('-01') ? 1 : 2);
+      expect(prisma.visit.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'user-1' } }),
+      );
     });
 
     it('throws NotFoundException when the user has no membership row', async () => {
@@ -94,8 +120,6 @@ describe('MembershipsService', () => {
     const row = {
       tierKey: 'all',
       periodKey: 'monthly',
-      visits: 0,
-      streak: 0,
       accessCode: 'ML-TEST',
       graceEndsAt: null,
       branch: { name: 'Roma Sur' },

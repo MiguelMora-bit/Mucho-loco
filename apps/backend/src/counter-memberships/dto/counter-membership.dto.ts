@@ -53,3 +53,21 @@ export class SignUpMemberDto {
   @IsString()
   fingerprintId?: string;
 }
+
+/**
+ * Validar en mostrador (spec 012). Exactamente uno de los tres — el controller
+ * lo exige: dos a la vez es ambiguo, ninguno no busca a nadie.
+ */
+export class CheckInDto {
+  @IsOptional()
+  @IsString()
+  qrCode?: string;
+
+  @IsOptional()
+  @IsString()
+  fingerprintId?: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+}

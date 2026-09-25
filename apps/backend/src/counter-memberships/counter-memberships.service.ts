@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   AccessCheckResult,
+  CheckIn,
+  CheckInResult,
   MemberAccessRecord,
   MembershipPayment,
   PaymentMethod,
@@ -19,6 +21,7 @@ import type {
 import { RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dto';
 import { PERIOD_DAYS, addDays, calculateMembershipPrice } from '../memberships/membership-plans';
 import { effectiveStatus } from '../memberships/membership-status';
+import { dayDate, mexicoDay } from '../memberships/visit-stats';
 import { memberNotFound, memberRenewsOnline } from '../common/error-codes';
 import { ChargesService, counterChargeMethod, toCents } from '../charges/charges.service';
 
@@ -140,6 +143,43 @@ export class CounterMembershipsService {
     if (candidates.length === 0) return { outcome: 'not_found' };
     if (candidates.length > 1) return { outcome: 'ambiguous', candidates };
     return evaluateAccess(candidates[0], branchId);
+  }
+
+  /**
+   * Validar en mostrador ES la entrada (spec 012): la misma regla de acceso y,
+   * si deja pasar, la visita queda registrada en esta sucursal. Un acceso
+   * negado no registra nada.
+   */
+  async checkIn(
+    branchId: number,
+    query: { qrCode?: string; fingerprintId?: string; name?: string },
+  ): Promise<CheckInResult> {
+    const result = await this.checkAccess(branchId, query);
+    if (result.outcome !== 'valid') return result;
+    return { ...result, checkIn: await this.recordEntry(result.record.qrCode, branchId) };
+  }
+
+  /**
+   * Una visita por socio por día de CDMX, garantizado por el índice único
+   * `(userId, visitDay)`: `ON CONFLICT DO NOTHING` hace que dos escaneos
+   * simultáneos registren uno solo, sin error. Un segundo escaneo del día
+   * devuelve la hora de la PRIMERA entrada — mostrador ve "ya había entrado
+   * hoy", la señal de un QR prestado.
+   */
+  private async recordEntry(qrCode: string, branchId: number, now = new Date()): Promise<CheckIn> {
+    const { userId } = await this.prisma.membership.findUniqueOrThrow({
+      where: { accessCode: qrCode },
+      select: { userId: true },
+    });
+    const visitDay = dayDate(mexicoDay(now));
+    const { count } = await this.prisma.visit.createMany({
+      data: [{ userId, branchId, visitedAt: now, visitDay }],
+      skipDuplicates: true,
+    });
+    const visit = await this.prisma.visit.findUniqueOrThrow({
+      where: { userId_visitDay: { userId, visitDay } },
+    });
+    return { visitedAt: visit.visitedAt.toISOString(), firstToday: count === 1 };
   }
 
   /**

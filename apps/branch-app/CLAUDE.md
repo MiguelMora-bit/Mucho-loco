@@ -66,6 +66,10 @@ Tres secciones independientes (QR con cámara+manual, huella con manual, nombre 
 
 Datos demo en `lib/data.ts`: Rosa Jiménez (`FP-DEMO-ROSA`, tier `all`, Roma Sur — pasa en cualquier sucursal), Luis Herrera (`FP-DEMO-LUIS`, tier `single`, Interlomas — debe rechazarse con `wrong_branch` si se valida en Roma Sur), y Carlos Vega (comparte nombre de pila con el ya existente Carlos Mendoza, a propósito, para demostrar `ambiguous` al buscar "Carlos").
 
+## Registrar la entrada (2026-09-25, spec 012)
+
+Validar en `/qr` registra la entrada del socio (`AccessMethod.checkAccess` devuelve `CheckInResult`): un acceso permitido trae `checkIn` y el panel dice "Entrada registrada · HH:MM", o en naranja "Ya había entrado hoy a las HH:MM" si es el segundo escaneo del día (una visita por socio por día de CDMX; puede ser un QR prestado). HTTP: `POST /branches/:id/check-ins`. Mock: `lib/access/mockCheckIns.ts`, bitácora en memoria gemela de la del backend. La lista de integración (`counterSale.integration.test.ts`) ahora también cubre la ruta de acceso.
+
 ## Crédito o débito (2026-09-25)
 
 Spec 009. Al cobrar con tarjeta en mostrador (venta, alta, renovación), `components/CardTypePicker.tsx` pide "¿Crédito o débito?" y no deja confirmar sin elegir. Viaja como `cardType` y el backend registra el cobro como `card_credit`/`card_debit` — la forma de pago del CFDI (04/28). El corte de caja sigue sumando tarjeta en un solo renglón (cuadra con el cierre de la terminal).
@@ -99,7 +103,7 @@ VITE_DATA_SOURCE=http          # cualquier otro valor / ausente = mock
 VITE_API_URL=http://localhost:3001
 ```
 
-**Los 6 repositorios están migrados** (2026-09-12): `counterSale`, `pickupOrder`, `cashRegisterShift`, `attendance`, `reports` y `membership` — **y también los 3 métodos de acceso** (`lib/access/methods/`), que NO eran repositorios: leían `MEMBER_ACCESS_RECORDS` directo del mock. Se les pasó por alto en la primera pasada y el QR de un socio real devolvía "NO ENCONTRADO"; `httpAccessMethod.ts` los conecta a `GET /branches/:id/member-access`, donde el servidor evalúa la regla.
+**Los 6 repositorios están migrados** (2026-09-12): `counterSale`, `pickupOrder`, `cashRegisterShift`, `attendance`, `reports` y `membership` — **y también los 3 métodos de acceso** (`lib/access/methods/`), que NO eran repositorios: leían `MEMBER_ACCESS_RECORDS` directo del mock. Se les pasó por alto en la primera pasada y el QR de un socio real devolvía "NO ENCONTRADO"; `httpAccessMethod.ts` los conecta a `POST /branches/:id/check-ins` (antes `GET member-access`), donde el servidor evalúa la regla y registra la entrada.
 
 ### El cliente
 

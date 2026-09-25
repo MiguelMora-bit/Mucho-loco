@@ -155,7 +155,8 @@ export interface MembershipPlanChoice {
 export interface Visit {
   visitedAt: string;
   branch: string;
-  durationMinutes: number;
+  /** `null` = no se registró la salida (hoy sucursal solo registra la entrada, spec 012). */
+  durationMinutes: number | null;
 }
 
 export interface CommunityComment {
@@ -909,6 +910,21 @@ export type AccessCheckResult =
   | { outcome: 'wrong_branch'; record: MemberAccessRecord }
   | { outcome: 'expired'; record: MemberAccessRecord }
   | { outcome: 'valid'; record: MemberAccessRecord };
+
+/**
+ * La entrada que dejó un acceso permitido (spec 012). Una por socio por día de
+ * CDMX: un segundo escaneo el mismo día deja pasar, pero devuelve la hora de la
+ * primera con `firstToday: false` — mostrador ve "ya había entrado hoy".
+ */
+export interface CheckIn {
+  visitedAt: string;
+  firstToday: boolean;
+}
+
+/** Lo que responde validar en mostrador: la regla de acceso, y si dejó pasar, la entrada registrada. */
+export type CheckInResult =
+  | Exclude<AccessCheckResult, { outcome: 'valid' }>
+  | { outcome: 'valid'; record: MemberAccessRecord; checkIn: CheckIn };
 
 /** A membership sold or renewed in person at the counter — covers both
  *  signing up a new member (isNewMember: true, mints a new MemberAccessRecord)

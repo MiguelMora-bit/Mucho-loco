@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { qrAccessMethod, fingerprintAccessMethod, nameAccessMethod } from '../lib/access/methods';
-import type { AccessCheckResult, AccessMethod } from '../lib/access/AccessMethod';
+import type { AccessMethod, CheckInResult } from '../lib/access/AccessMethod';
 import { getCurrentBranchId } from '../lib/currentBranch';
 import { QrCameraScanner } from '../components/QrCameraScanner';
 import type { MemberAccessRecord } from '@mucho-loco/types';
-import { formatDate, langOf } from '../lib/dates';
+import { formatDate, formatTime, langOf } from '../lib/dates';
 
 // Demo codes — los dos primeros son los QR reales de customer-app (ver
 // lib/data.ts): Diego (all gyms) siempre pasa, Valeria (single, Condesa) debe
@@ -26,7 +26,7 @@ export function QrValidationPage() {
   const { t, i18n } = useTranslation();
   const [code, setCode] = useState('');
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<AccessCheckResult | null>(null);
+  const [result, setResult] = useState<CheckInResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [fingerprintId, setFingerprintId] = useState('');
@@ -41,7 +41,7 @@ export function QrValidationPage() {
   // Cada sección de la pantalla (QR/huella/nombre) llama este único helper
   // con SU método — QrValidationPage no conoce las reglas de negocio de
   // ninguno, solo que todos implementan `AccessMethod` y devuelven el mismo
-  // `AccessCheckResult` (ver lib/access/AccessMethod.ts).
+  // `CheckInResult` (ver lib/access/AccessMethod.ts).
   async function check(method: AccessMethod, query: string, onSettled?: () => void) {
     if (!query.trim() || checking) return;
     setChecking(true);
@@ -273,6 +273,12 @@ export function QrValidationPage() {
               <p className="text-ml-cream-dim text-sm mt-1">
                 {result.record.status === 'expired' ? t('qr.expiredOn') : t('qr.expiresOn')}{' '}
                 {formatDate(result.record.expiresAt, langOf(i18n.language))}
+              </p>
+              {/* Spec 012: validar registró la entrada. Un segundo escaneo el
+                  mismo día pasa igual, pero avisa — puede ser un QR prestado. */}
+              <p className={'text-sm mt-2 font-medium ' + (result.checkIn.firstToday ? 'text-ml-green' : 'text-ml-orange')}>
+                {result.checkIn.firstToday ? t('qr.checkInRecorded') : t('qr.checkInRepeat')}{' '}
+                {formatTime(result.checkIn.visitedAt, langOf(i18n.language))}
               </p>
             </>
           )}

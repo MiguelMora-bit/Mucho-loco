@@ -28,6 +28,11 @@ describe('formatDuration', () => {
   it('handles an exact hour', () => {
     expect(formatDuration(60, 'es')).toBe('1h 00m');
   });
+
+  // Spec 012: la entrada se registra en sucursal, la salida no — no hay duración.
+  it('shows a dash when the exit was never recorded', () => {
+    expect(formatDuration(null, 'es')).toBe('—');
+  });
 });
 
 describe('formatDayOfMonth / formatMonthShort', () => {

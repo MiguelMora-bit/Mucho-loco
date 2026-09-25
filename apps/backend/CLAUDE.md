@@ -31,7 +31,7 @@ Segunda gran tanda: los dominios que `branch-app` y `owner-panel` tenían como m
 |---|---|---|---|
 | `inventory` | `branches/:id/inventory`, `inventory`, `inventory/global`, `inventory/transfers` | staff / owner | `counterSale.getInventory`, `stats.getGlobalInventory`, `inventoryTransfer.*` |
 | `counter-sales` | `POST branches/:id/counter-sales` | staff | `counterSale.createSale` |
-| `counter-memberships` | `branches/:id/member-access`, `members`, `memberships/renew`, `memberships/signup` | staff | `membership.*` de branch-app |
+| `counter-memberships` | `branches/:id/check-ins` (POST, antes `GET member-access`), `members`, `memberships/renew`, `memberships/signup` | staff | `membership.*` de branch-app |
 | `cash-register` | `branches/:id/cash-register/open-shift`, `history`, `cash-register/shifts/:id/{transactions,close}` | staff / manager | `cashRegisterShift.*` |
 | `pickup-orders` | `branches/:id/pickup-orders`, `pickup-orders/:id/deliver` | staff | `pickupOrder.*` |
 | `reports` | `branches/:id/reports/sales`, `stats/branches` | manager / owner | `reports.getSalesReport`, `stats.getBranchStats` |
@@ -69,6 +69,15 @@ Hay lógica que depende de qué día es "hoy" en la sucursal (asistencia del equ
 ### Cálculo de nómina
 
 `payroll/payroll.math.ts` es gemelo de `owner-panel/src/lib/payroll.ts` (tablas de ISR/IMSS **ilustrativas, no las reales del SAT/IMSS**). La diferencia importa: aquí el recibo se emite y se **guarda**, con nombre, sucursal, puesto y sueldo congelados — un recibo es un documento histórico, no algo que se recalcule cada vez que alguien abre la pantalla. Cuando `owner-panel` conecte a este backend, su copia se borra. `daysWorked` cuenta **días distintos con turno cerrado**, no turnos: entrar y salir dos veces el mismo día es un día trabajado.
+
+## Registro de entradas (2026-09-25, spec 012)
+
+Antes nada creaba una `Visit`: validar en la puerta era un `GET` de solo lectura y `memberships.visits`/`streak` eran columnas que nunca pasaban de 0 — con el backend real el socio veía 0 visitas, racha 0 e historial vacío. Ahora **validar ES la entrada**: `POST /branches/:id/check-ins` (`{ qrCode | fingerprintId | name }`, exactamente uno; 200, no 201) aplica la misma regla (`evaluateAccess`) y, si deja pasar, registra la visita en esa sucursal. Un acceso negado no registra nada. `GET member-access` se retiró.
+
+- **Una visita por socio por día de CDMX**, garantizado por el índice único `(userId, visitDay)` (`visitDay DATE`, calculado con `America/Mexico_City`, migración `20260925153950_member_check_ins`). `createMany({ skipDuplicates: true })` hace que dos escaneos simultáneos registren uno solo, sin error. La respuesta `valid` trae `checkIn: { visitedAt, firstToday }`: un segundo escaneo el mismo día pasa, pero con la hora de la PRIMERA entrada — mostrador ve "ya había entrado hoy" (señal de QR prestado; bloquearlo es decisión de negocio pendiente).
+- **Visitas y racha se derivan al leer** (`memberships/visit-stats.ts`, como `daysLeft`): visitas = días con entrada del mes en curso; racha = días consecutivos que terminan hoy o ayer (no se rompe antes de que el socio llegue hoy). Se lee a lo más un año de días. Las columnas `memberships.visits/streak` se borraron.
+- **Sin salida no hay duración**: `Visit.durationMinutes` es `number | null` y los clientes pintan "—" (`formatDuration` de customer-core).
+- Probado: unit (`visit-stats.spec.ts`, `memberships.service.spec.ts`) y e2e en `branch-ops.e2e-spec.ts` (una por día, negado no registra, 400 sin método, y un socio de la app ve su entrada, `visits: 1`, `streak: 1`).
 
 ## Pagos con Stripe (2026-09-12)
 

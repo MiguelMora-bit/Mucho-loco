@@ -1,10 +1,10 @@
-// AccessMethodId y AccessCheckResult se movieron a @mucho-loco/types
-// (2026-09-12): el backend aplica la misma regla al resolver /member-access,
-// así que el contrato dejó de ser exclusivo de este app. Se importan para
-// usarlos aquí abajo y se re-exportan para no tocar a sus importadores.
-import type { AccessCheckResult, AccessMethodId } from '@mucho-loco/types';
+// AccessMethodId, AccessCheckResult y CheckInResult viven en @mucho-loco/types:
+// el backend aplica la misma regla (y registra la entrada) en
+// POST /branches/:id/check-ins, así que el contrato no es exclusivo de este
+// app. Se re-exportan para no tocar a sus importadores.
+import type { AccessCheckResult, AccessMethodId, CheckInResult } from '@mucho-loco/types';
 
-export type { AccessCheckResult, AccessMethodId };
+export type { AccessCheckResult, AccessMethodId, CheckInResult };
 
 /** true solo cuando el outcome realmente deja pasar al socio (ver CLAUDE.md
  *  raíz, "Membresía y alcance de acceso" — 'grace' cuenta como acceso
@@ -31,5 +31,7 @@ export function isAccessGranted(result: AccessCheckResult): boolean {
  */
 export interface AccessMethod {
   readonly id: AccessMethodId;
-  checkAccess(query: string, branchId: number): Promise<AccessCheckResult>;
+  /** Validar ES registrar la entrada (spec 012): un acceso permitido trae
+   *  `checkIn` — la hora de la entrada del día y si fue la primera. */
+  checkAccess(query: string, branchId: number): Promise<CheckInResult>;
 }

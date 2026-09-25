@@ -295,8 +295,6 @@ model Membership {
   expiresAt   DateTime
   status      AccessStatus @default(active)
   graceEndsAt DateTime?
-  visits      Int          @default(0)
-  streak      Int          @default(0)
   accessCode  String       @unique
   /// Alta por huella en mostrador (ver "Métodos de acceso" en CLAUDE.md raíz).
   /// El registro SIEMPRE conserva accessCode — la huella es un credencial
@@ -330,8 +328,12 @@ model Visit {
   branchId        Int
   branch          Branch   @relation(fields: [branchId], references: [id])
   visitedAt       DateTime
-  durationMinutes Int
+  /// Día de la entrada en hora de CDMX: una visita por socio por día (spec 012).
+  visitDay        DateTime @db.Date
+  /// null = no se registró la salida (sucursal solo registra la entrada).
+  durationMinutes Int?
 
+  @@unique([userId, visitDay])
   @@map("visits")
 }
 

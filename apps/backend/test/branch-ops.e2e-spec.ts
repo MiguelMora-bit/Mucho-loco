@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import request, { type Response } from 'supertest';
 import type {
-  AccessCheckResult,
+  CheckInResult,
   BranchInventoryLevel,
   CashRegisterShift,
   CounterSale,
@@ -10,6 +10,7 @@ import type {
   BranchSalesReport,
   BranchStatsSummary,
   InventoryTransfer,
+  MembershipInfo,
   MembershipPayment,
   MemberAccessRecord,
   AttendanceEntry,
@@ -22,6 +23,7 @@ import type {
   PickupOrder,
   ShiftTransaction,
   ShipmentOrder,
+  Visit,
 } from '@mucho-loco/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -108,7 +110,11 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
     await prisma.cashRegisterShift.deleteMany();
     // Los socios dados de alta en mostrador durante estos tests no tienen
     // cognitoSub, así que borrarlos no toca a ningún usuario de la app.
+    // Spec 012: las entradas registradas en mostrador (el seed no crea visitas).
+    await prisma.visit.deleteMany();
     await prisma.membership.deleteMany({ where: { user: { cognitoSub: null } } });
+    await prisma.membership.deleteMany({ where: { user: { email: { startsWith: 'checkin-e2e' } } } });
+    await prisma.user.deleteMany({ where: { email: { startsWith: 'checkin-e2e' } } });
     await prisma.user.deleteMany({ where: { cognitoSub: null } });
     await prisma.orderItem.deleteMany({ where: { order: { user: { email: { startsWith: 'pickup-e2e' } } } } });
     await prisma.order.deleteMany({ where: { user: { email: { startsWith: 'pickup-e2e' } } } });
@@ -497,10 +503,11 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
 
     it('finds the new member by their minted QR code', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/branches/1/member-access?qrCode=${signedUp.qrCode}`)
+        .post('/branches/1/check-ins')
+        .send({ qrCode: signedUp.qrCode })
         .set(...auth('staff'))
         .expect(200);
-      const result = body<AccessCheckResult>(res);
+      const result = body<CheckInResult>(res);
 
       expect(result.outcome).toBe('valid');
       expect(result.outcome === 'valid' && result.record.memberName).toBe('Socio De Mostrador');
@@ -518,16 +525,23 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
       const { qrCode } = body<MembershipPayment>(signup);
 
       const atHome = await request(app.getHttpServer())
-        .get(`/branches/3/member-access?qrCode=${qrCode}`)
+        .post('/branches/3/check-ins')
+        .send({ qrCode })
         .set(...auth('staff'))
         .expect(200);
-      expect(body<AccessCheckResult>(atHome).outcome).toBe('valid');
+      expect(body<CheckInResult>(atHome).outcome).toBe('valid');
 
       const elsewhere = await request(app.getHttpServer())
-        .get(`/branches/1/member-access?qrCode=${qrCode}`)
+        .post('/branches/1/check-ins')
+        .send({ qrCode })
         .set(...auth('staff'))
         .expect(200);
-      expect(body<AccessCheckResult>(elsewhere).outcome).toBe('wrong_branch');
+      expect(body<CheckInResult>(elsewhere).outcome).toBe('wrong_branch');
+
+      // Spec 012: solo la entrada permitida queda registrada, en su sucursal.
+      const { userId } = await prisma.membership.findUniqueOrThrow({ where: { accessCode: qrCode } });
+      const visits = await prisma.visit.findMany({ where: { userId } });
+      expect(visits.map((v) => v.branchId)).toEqual([3]);
     });
 
     it('finds a member by fingerprint when they signed up without the app', async () => {
@@ -543,10 +557,11 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
       expect(body<MembershipPayment>(signup).isNewMember).toBe(true);
 
       const res = await request(app.getHttpServer())
-        .get('/branches/1/member-access?fingerprintId=fp-e2e-1')
+        .post('/branches/1/check-ins')
+        .send({ fingerprintId: 'fp-e2e-1' })
         .set(...auth('staff'))
         .expect(200);
-      const result = body<AccessCheckResult>(res);
+      const result = body<CheckInResult>(res);
 
       expect(result.outcome).toBe('valid');
       expect(result.outcome === 'valid' && result.record.memberName).toBe('Socio Con Huella');
@@ -554,10 +569,11 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
 
     it('reports ambiguity when a name search matches more than one member', async () => {
       const res = await request(app.getHttpServer())
-        .get('/branches/1/member-access?name=Socio')
+        .post('/branches/1/check-ins')
+        .send({ name: 'Socio' })
         .set(...auth('staff'))
         .expect(200);
-      const result = body<AccessCheckResult>(res);
+      const result = body<CheckInResult>(res);
 
       expect(result.outcome).toBe('ambiguous');
       expect(result.outcome === 'ambiguous' && result.candidates.length).toBeGreaterThan(1);
@@ -565,27 +581,98 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
 
     it('resolves a name search that matches exactly one member', async () => {
       const res = await request(app.getHttpServer())
-        .get('/branches/1/member-access?name=Con Huella')
+        .post('/branches/1/check-ins')
+        .send({ name: 'Con Huella' })
         .set(...auth('staff'))
         .expect(200);
 
-      expect(body<AccessCheckResult>(res).outcome).toBe('valid');
+      expect(body<CheckInResult>(res).outcome).toBe('valid');
     });
 
     it('returns not_found for a code nobody has', async () => {
       const res = await request(app.getHttpServer())
-        .get('/branches/1/member-access?qrCode=ML-QR-NOEXISTE')
+        .post('/branches/1/check-ins')
+        .send({ qrCode: 'ML-QR-NOEXISTE' })
         .set(...auth('staff'))
         .expect(200);
 
-      expect(body<AccessCheckResult>(res).outcome).toBe('not_found');
+      expect(body<CheckInResult>(res).outcome).toBe('not_found');
     });
 
     it('rejects a lookup that gives two methods at once', async () => {
       await request(app.getHttpServer())
-        .get('/branches/1/member-access?qrCode=x&name=y')
+        .post('/branches/1/check-ins')
+        .send({ qrCode: 'x', name: 'y' })
         .set(...auth('staff'))
         .expect(400);
+    });
+
+    it('rejects a check-in that gives no method', async () => {
+      await request(app.getHttpServer())
+        .post('/branches/1/check-ins')
+        .send({})
+        .set(...auth('staff'))
+        .expect(400);
+    });
+
+    // Spec 012: validar en mostrador ES la entrada. Una por socio por día.
+    it('records one entry per member per day and tells the counter about a repeat', async () => {
+      const signup = await request(app.getHttpServer())
+        .post('/branches/1/memberships/signup')
+        .set(...auth('staff'))
+        .send({
+          memberName: 'Socio Que Entra', phone: '55 1111 2222',
+          tierKey: 'all', periodKey: 'monthly', paymentMethod: 'cash',
+        })
+        .expect(201);
+      const { qrCode } = body<MembershipPayment>(signup);
+      const checkIn = async () =>
+        body<CheckInResult>(
+          await request(app.getHttpServer())
+            .post('/branches/1/check-ins')
+            .send({ qrCode })
+            .set(...auth('staff'))
+            .expect(200),
+        );
+
+      const first = await checkIn();
+      const second = await checkIn();
+
+      if (first.outcome !== 'valid' || second.outcome !== 'valid') throw new Error('expected valid');
+      expect(first.checkIn.firstToday).toBe(true);
+      expect(second.checkIn).toEqual({ visitedAt: first.checkIn.visitedAt, firstToday: false });
+      const { userId } = await prisma.membership.findUniqueOrThrow({ where: { accessCode: qrCode } });
+      const visits = await prisma.visit.findMany({ where: { userId } });
+      expect(visits).toHaveLength(1);
+      expect(visits[0]).toMatchObject({ branchId: 1, durationMinutes: null });
+    });
+
+    it('lets an app member see the entry, their visits and their streak', async () => {
+      const member = auth('', 'checkin-e2e@mucholoco.mx');
+      await request(app.getHttpServer()).get('/users/me').set(...member).expect(200);
+      const user = await prisma.user.findUniqueOrThrow({ where: { email: 'checkin-e2e@mucholoco.mx' } });
+      await prisma.membership.create({
+        data: {
+          userId: user.id, branchId: 1, tierKey: 'all', periodKey: 'monthly',
+          expiresAt: new Date(Date.now() + 20 * 86_400_000), accessCode: 'ML-CHECKIN-E2E',
+        },
+      });
+
+      await request(app.getHttpServer())
+        .post('/branches/2/check-ins')
+        .send({ qrCode: 'ML-CHECKIN-E2E' })
+        .set(...auth('staff'))
+        .expect(200);
+
+      const membership = body<MembershipInfo>(
+        await request(app.getHttpServer()).get('/users/me/membership').set(...member).expect(200),
+      );
+      expect(membership).toMatchObject({ visits: 1, streak: 1 });
+      const visits = body<Visit[]>(
+        await request(app.getHttpServer()).get('/users/me/visits').set(...member).expect(200),
+      );
+      expect(visits).toHaveLength(1);
+      expect(visits[0].durationMinutes).toBeNull();
     });
 
     it('renewing moves the member to the new tier and branch', async () => {
@@ -596,10 +683,11 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         .expect(201);
 
       const res = await request(app.getHttpServer())
-        .get(`/branches/3/member-access?qrCode=${signedUp.qrCode}`)
+        .post('/branches/3/check-ins')
+        .send({ qrCode: signedUp.qrCode })
         .set(...auth('staff'))
         .expect(200);
-      const result = body<AccessCheckResult>(res);
+      const result = body<CheckInResult>(res);
 
       expect(result.outcome).toBe('valid');
       expect(result.outcome === 'valid' && result.record.homeBranchId).toBe(3);

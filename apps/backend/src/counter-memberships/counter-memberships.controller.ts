@@ -1,7 +1,7 @@
-import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
-import type { AccessCheckResult, MemberAccessRecord, MembershipPayment } from '@mucho-loco/types';
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import type { CheckInResult, MemberAccessRecord, MembershipPayment } from '@mucho-loco/types';
 import { CounterMembershipsService } from './counter-memberships.service';
-import { RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dto';
+import { CheckInDto, RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dto';
 import { Roles } from '../auth/roles.decorator';
 
 /**
@@ -17,23 +17,24 @@ export class CounterMembershipsController {
   constructor(private memberships: CounterMembershipsService) {}
 
   /**
-   * Un solo endpoint para los 3 métodos de entrada (`?qrCode=`,
-   * `?fingerprintId=`, `?name=`) porque los 3 terminan en la MISMA regla de
-   * acceso — separarlos duplicaría esa regla en tres rutas.
+   * Validar el acceso en la puerta Y registrar la entrada (spec 012). Un solo
+   * endpoint para los 3 métodos de entrada (`qrCode`, `fingerprintId`, `name`)
+   * porque los 3 terminan en la MISMA regla — separarlos la duplicaría en tres
+   * rutas. POST y no GET: deja una visita. 200 y no 201: la respuesta es la
+   * evaluación, y un acceso negado o un segundo escaneo no crean nada.
    */
   @Roles('staff')
-  @Get('member-access')
-  checkAccess(
+  @Post('check-ins')
+  @HttpCode(200)
+  checkIn(
     @Param('branchId', ParseIntPipe) branchId: number,
-    @Query('qrCode') qrCode?: string,
-    @Query('fingerprintId') fingerprintId?: string,
-    @Query('name') name?: string,
-  ): Promise<AccessCheckResult> {
-    const given = [qrCode, fingerprintId, name].filter((v) => v !== undefined);
+    @Body() dto: CheckInDto,
+  ): Promise<CheckInResult> {
+    const given = [dto.qrCode, dto.fingerprintId, dto.name].filter((v) => v !== undefined);
     if (given.length !== 1) {
       throw new BadRequestException('Se requiere exactamente uno de: qrCode, fingerprintId, name');
     }
-    return this.memberships.checkAccess(branchId, { qrCode, fingerprintId, name });
+    return this.memberships.checkIn(branchId, dto);
   }
 
   @Roles('staff')

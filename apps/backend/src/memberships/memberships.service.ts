@@ -19,8 +19,10 @@ import {
   graceDeadline,
   RENEWAL_TOLERANCE_DAYS,
 } from './membership-status';
+import { currentStreak, visitsThisMonth } from './visit-stats';
 
 const DAY_MS = 86_400_000;
+const VISIT_DAYS_WINDOW = 366;
 
 type MembershipWithBranch = Membership & { branch: Branch };
 
@@ -82,13 +84,26 @@ export class MembershipsService {
    * registrarse): la membresía existe desde su primer cobro confirmado.
    */
   async getForUser(userId: string): Promise<MembershipInfo> {
-    const membership = await this.prisma.membership.findUnique({
-      where: { userId },
-      include: { branch: true },
-    });
+    const [membership, visits] = await Promise.all([
+      this.prisma.membership.findUnique({
+        where: { userId },
+        include: { branch: true },
+      }),
+      // Una fila por día (índice único): un año de días alcanza para el mes
+      // en curso y para cualquier racha razonable.
+      this.prisma.visit.findMany({
+        where: { userId },
+        select: { visitDay: true },
+        orderBy: { visitDay: 'desc' },
+        take: VISIT_DAYS_WINDOW,
+      }),
+    ]);
     if (!membership)
       throw new NotFoundException('Membership not found for user');
-    return toMembershipInfo(membership);
+    return toMembershipInfo(
+      membership,
+      visits.map((v) => v.visitDay.toISOString().slice(0, 10)),
+    );
   }
 
   findByUser(userId: string): Promise<Membership | null> {
@@ -226,7 +241,11 @@ export class MembershipsService {
   }
 }
 
-function toMembershipInfo(membership: MembershipWithBranch): MembershipInfo {
+function toMembershipInfo(
+  membership: MembershipWithBranch,
+  visitDays: readonly string[],
+): MembershipInfo {
+  const now = new Date();
   const status = effectiveStatus(membership);
   const daysLeft = Math.max(
     0,
@@ -238,8 +257,9 @@ function toMembershipInfo(membership: MembershipWithBranch): MembershipInfo {
     // Claves, no texto: el nombre del plan lo traduce quien lo pinta (spec 011).
     periodKey: membership.periodKey,
     expiresAt: membership.expiresAt.toISOString(),
-    visits: membership.visits,
-    streak: membership.streak,
+    // Derivadas de las entradas reales (spec 012), como daysLeft.
+    visits: visitsThisMonth(visitDays, now),
+    streak: currentStreak(visitDays, now),
     daysLeft,
     accessCode: membership.accessCode,
     status,

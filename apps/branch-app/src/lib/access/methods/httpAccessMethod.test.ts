@@ -19,6 +19,8 @@ function stubFetch(body: unknown = { outcome: 'not_found' }) {
 }
 
 const urlOf = (spy: ReturnType<typeof stubFetch>, i = 0) => String(spy.mock.calls[i][0]);
+const initOf = (spy: ReturnType<typeof stubFetch>, i = 0) => spy.mock.calls[i][1];
+const bodyOf = (spy: ReturnType<typeof stubFetch>, i = 0): unknown => JSON.parse(String(initOf(spy, i)?.body));
 
 beforeEach(() => {
   vi.stubEnv('VITE_API_URL', 'http://api.test');
@@ -46,10 +48,12 @@ describe('HTTP access methods', () => {
     await fingerprintHttpAccessMethod.checkAccess('fp-1', 1);
     await nameHttpAccessMethod.checkAccess('Diego', 1);
 
-    expect(urlOf(spy, 0)).toContain('/branches/1/member-access?');
-    expect(urlOf(spy, 0)).toContain('qrCode=ML-QR-ABC');
-    expect(urlOf(spy, 1)).toContain('fingerprintId=fp-1');
-    expect(urlOf(spy, 2)).toContain('name=Diego');
+    // POST: validar registra la entrada (spec 012).
+    expect(urlOf(spy, 0)).toContain('/branches/1/check-ins');
+    expect(initOf(spy, 0)?.method).toBe('POST');
+    expect(bodyOf(spy, 0)).toEqual({ qrCode: 'ML-QR-ABC' });
+    expect(bodyOf(spy, 1)).toEqual({ fingerprintId: 'fp-1' });
+    expect(bodyOf(spy, 2)).toEqual({ name: 'Diego' });
   });
 
   it('keeps the id each method reports, so the UI can tell them apart', () => {
@@ -62,7 +66,7 @@ describe('HTTP access methods', () => {
     const spy = stubFetch();
     await qrHttpAccessMethod.checkAccess('ML-QR-ABC', 5);
 
-    expect(urlOf(spy)).toContain('/branches/5/member-access');
+    expect(urlOf(spy)).toContain('/branches/5/check-ins');
   });
 
   // Un lector físico puede añadir un salto de línea al final del código.
@@ -70,8 +74,7 @@ describe('HTTP access methods', () => {
     const spy = stubFetch();
     await qrHttpAccessMethod.checkAccess('  ML-QR-ABC\n', 1);
 
-    expect(urlOf(spy)).toContain('qrCode=ML-QR-ABC');
-    expect(urlOf(spy)).not.toContain('%0A');
+    expect(bodyOf(spy)).toEqual({ qrCode: 'ML-QR-ABC' });
   });
 
   // El backend rechaza un query vacío con 400; preguntarle por nada no aporta.

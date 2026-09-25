@@ -5,6 +5,7 @@ import { CashRegisterShiftHttpDatasource } from './cashRegisterShift.http';
 import { AttendanceHttpDatasource } from './attendance.http';
 import { ReportsHttpDatasource } from './reports.http';
 import { MembershipHttpDatasource } from './membership.http';
+import { qrHttpAccessMethod } from '../../access/methods/httpAccessMethod';
 import { TicketHttpDatasource } from './ticket.http';
 import { ApiRequestError } from './client';
 import { apiBaseUrl } from './config';
@@ -124,6 +125,8 @@ describe('every other branch endpoint is there and guarded too', () => {
       })],
     ['ticket.getTicket (sale)', () => tickets.getTicket('sale', 'sale-1', 1)],
     ['ticket.getTicket (membership)', () => tickets.getTicket('membership', 'mp-1', 1)],
+    // Spec 012: validar en la puerta registra la entrada.
+    ['access.checkIn (qr)', () => qrHttpAccessMethod.checkAccess('ML-DIEGO-2026-ALLGYMS', 1)],
   ];
 
   it.each(calls)('%s hits a real route and is rejected with 401', async (_name, call) => {

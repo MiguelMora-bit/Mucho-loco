@@ -41,6 +41,14 @@ export function formatDateTime(iso: string, lang: Lang): string {
   }).format(new Date(iso));
 }
 
+/** Solo la hora de un instante, en la zona local (la entrada de un socio, spec 012). */
+export function formatTime(iso: string, lang: Lang): string {
+  return new Intl.DateTimeFormat(lang === 'es' ? 'es-MX' : 'en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
+
 /** El idioma activo de i18next, tipado como `Lang`. */
 export function langOf(language: string | undefined): Lang {
   return language?.startsWith('en') ? 'en' : 'es';
