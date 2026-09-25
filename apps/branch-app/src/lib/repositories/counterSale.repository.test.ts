@@ -39,4 +39,12 @@ describe('counterSaleRepository', () => {
     const sale = await counterSaleRepository.createSale(1, [{ productId: target.productId, qty: 1 }], 'cash');
     expect(COUNTER_SALES).toContainEqual(sale);
   });
+
+  // Spec 009: el mock guarda el tipo de tarjeta como el backend.
+  it('createSale keeps the card type of a card payment', async () => {
+    const inventory = await counterSaleRepository.getInventory(1);
+    const target = inventory.find((i) => i.qty > 1)!;
+    const sale = await counterSaleRepository.createSale(1, [{ productId: target.productId, qty: 1 }], 'card', 'credit');
+    expect(sale.cardType).toBe('credit');
+  });
 });

@@ -1,4 +1,4 @@
-import type { BranchInventoryLevel, CounterSale, CounterSaleItem, PaymentMethod } from '@mucho-loco/types';
+import type { BranchInventoryLevel, CardType, CounterSale, CounterSaleItem, PaymentMethod } from '@mucho-loco/types';
 import { BRANCH_INVENTORY, COUNTER_SALES } from '../../data';
 import { delay } from './delay';
 import { ProductNotFoundError, InsufficientStockError } from '../../repositories/counterSale.errors';
@@ -13,7 +13,8 @@ export class CounterSaleMockDatasource implements ICounterSaleRepository {
   async createSale(
     branchId: number,
     picks: Array<{ productId: string; qty: number }>,
-    paymentMethod: PaymentMethod
+    paymentMethod: PaymentMethod,
+    cardType?: CardType
   ): Promise<CounterSale> {
     await delay(220);
     const items: CounterSaleItem[] = picks.map((pick) => {
@@ -29,6 +30,7 @@ export class CounterSaleMockDatasource implements ICounterSaleRepository {
       items,
       total: items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0),
       paymentMethod,
+      ...(paymentMethod === 'card' && cardType ? { cardType } : {}),
       createdAt: new Date().toISOString(),
     };
     COUNTER_SALES.push(sale);

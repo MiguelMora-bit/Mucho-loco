@@ -49,6 +49,7 @@
     }
   },
   "counter": {
+    "cardType": { "label": "Credit or debit?", "credit": "Credit", "debit": "Debit" },
     "title": "Counter",
     "productsTab": "Product sale",
     "membershipTab": "Memberships",

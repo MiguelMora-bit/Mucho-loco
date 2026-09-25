@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return -- jest.fn() sin generics: el `tx` de Prisma es deliberadamente `any`. */
-import { ChargesService } from './charges.service';
+import { ChargesService, counterChargeMethod } from './charges.service';
 
 // Claves de mentira a propósito: el test comprueba que se COPIAN al renglón.
 const CATEGORIES = [
@@ -339,5 +339,19 @@ describe('ChargesService', () => {
         }),
       ).rejects.toThrow('fantasma');
     });
+  });
+});
+
+// Spec 009: el SAT distingue crédito (04) de débito (28) en la forma de pago.
+describe('counterChargeMethod', () => {
+  it('records the card type when the counter captured it', () => {
+    expect(counterChargeMethod('card', 'credit')).toBe('card_credit');
+    expect(counterChargeMethod('card', 'debit')).toBe('card_debit');
+  });
+
+  it('keeps plain card without a type (provisional 04), and ignores a type on cash or transfer', () => {
+    expect(counterChargeMethod('card', null)).toBe('card');
+    expect(counterChargeMethod('cash', 'debit')).toBe('cash');
+    expect(counterChargeMethod('transfer', undefined)).toBe('transfer');
   });
 });

@@ -20,7 +20,7 @@ import { RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dt
 import { PERIOD_DAYS, addDays, calculateMembershipPrice } from '../memberships/membership-plans';
 import { effectiveStatus } from '../memberships/membership-status';
 import { memberNotFound, memberRenewsOnline } from '../common/error-codes';
-import { ChargesService, toCents } from '../charges/charges.service';
+import { ChargesService, counterChargeMethod, toCents } from '../charges/charges.service';
 
 type MembershipWithOwner = Membership & { user: User; branch: Branch };
 
@@ -189,6 +189,7 @@ export class CounterMembershipsService {
           periodKey: dto.periodKey,
           amount,
           paymentMethod: dto.paymentMethod,
+          cardType: dto.paymentMethod === 'card' ? (dto.cardType ?? null) : null,
           isNewMember: false,
         },
       });
@@ -237,6 +238,7 @@ export class CounterMembershipsService {
           periodKey: dto.periodKey,
           amount,
           paymentMethod: dto.paymentMethod,
+          cardType: dto.paymentMethod === 'card' ? (dto.cardType ?? null) : null,
           isNewMember: true,
         },
       });
@@ -253,7 +255,7 @@ export class CounterMembershipsService {
   ): Promise<boolean> {
     return this.charges.recordMembership(tx, {
       source: 'counter_membership',
-      method: payment.paymentMethod,
+      method: counterChargeMethod(payment.paymentMethod, payment.cardType),
       paidAt: payment.createdAt,
       userId,
       branchId: payment.branchId,
@@ -286,6 +288,7 @@ function toPayment(row: {
   periodKey: PlanKey;
   amount: number;
   paymentMethod: string;
+  cardType?: 'credit' | 'debit' | null;
   isNewMember: boolean;
   createdAt: Date;
 }): MembershipPayment {
@@ -299,6 +302,7 @@ function toPayment(row: {
     periodKey: row.periodKey,
     amount: row.amount,
     paymentMethod: row.paymentMethod as PaymentMethod,
+    ...(row.cardType ? { cardType: row.cardType } : {}),
     isNewMember: row.isNewMember,
     createdAt: row.createdAt.toISOString(),
   };

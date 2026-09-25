@@ -1,4 +1,4 @@
-import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import type { CardType, MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import type { IMembershipRepository, SignUpInput } from '../../repositories/membership.repository';
 import { ApiRequestError, api } from './client';
 import { MemberRenewsOnlineError } from '../../repositories/membership.errors';
@@ -31,6 +31,7 @@ export class MembershipHttpDatasource implements IMembershipRepository {
     tierKey: TierKey,
     periodKey: PlanKey,
     paymentMethod: PaymentMethod,
+    cardType?: CardType,
   ): Promise<MembershipPayment> {
     try {
       return await api.post<MembershipPayment>(`/branches/${branchId}/memberships/renew`, {
@@ -38,6 +39,7 @@ export class MembershipHttpDatasource implements IMembershipRepository {
         tierKey,
         periodKey,
         paymentMethod,
+        ...(paymentMethod === 'card' && cardType ? { cardType } : {}),
       });
     } catch (e) {
       // Spec 006: el socio se cobra solo en línea — mismo error tipado que el mock.
@@ -59,6 +61,7 @@ export class MembershipHttpDatasource implements IMembershipRepository {
       tierKey: input.tierKey,
       periodKey: input.periodKey,
       paymentMethod: input.paymentMethod,
+      ...(input.paymentMethod === 'card' && input.cardType ? { cardType: input.cardType } : {}),
       ...(input.fingerprintId ? { fingerprintId: input.fingerprintId } : {}),
     });
   }

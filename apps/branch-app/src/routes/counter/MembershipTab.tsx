@@ -4,7 +4,8 @@ import { MemberRenewsOnlineError, membershipRepository } from '../../lib/reposit
 import { getCurrentBranchId, getCurrentBranchName } from '../../lib/currentBranch';
 import { CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '../../lib/membershipPlans';
 import { captureFingerprint } from '../../lib/fingerprintScanner';
-import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import type { CardType, MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import { CardTypePicker } from '../../components/CardTypePicker';
 import { formatDate, langOf } from '../../lib/dates';
 import { CounterTicket } from '../../components/CounterTicket';
 
@@ -169,6 +170,9 @@ export function MembershipTab() {
   const [tierKey, setTierKey] = useState<TierKey>('single');
   const [periodKey, setPeriodKey] = useState<PlanKey>('monthly');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  // Spec 009: con tarjeta, crédito o débito (forma de pago del CFDI).
+  const [cardType, setCardType] = useState<CardType | null>(null);
+  const chargedCardType = paymentMethod === 'card' ? (cardType ?? undefined) : undefined;
 
   const [memberName, setMemberName] = useState('');
   const [phone, setPhone] = useState('');
@@ -229,6 +233,7 @@ export function MembershipTab() {
         tierKey,
         periodKey,
         paymentMethod,
+        cardType: chargedCardType,
         fingerprintId: enrollMethod === 'fingerprint' ? (fingerprintId ?? undefined) : undefined,
       });
       setSuccessPayment(payment); setSuccessFingerprintId(enrollMethod === 'fingerprint' ? fingerprintId : null); resetForm();
@@ -240,7 +245,7 @@ export function MembershipTab() {
     if (!foundMember) return;
     setSubmitting(true); setSubmitError(null);
     try {
-      const payment = await membershipRepository.renewMembership(getCurrentBranchId(), getCurrentBranchName(), foundMember.qrCode, tierKey, periodKey, paymentMethod);
+      const payment = await membershipRepository.renewMembership(getCurrentBranchId(), getCurrentBranchName(), foundMember.qrCode, tierKey, periodKey, paymentMethod, chargedCardType);
       setSuccessPayment(payment); resetForm();
     } catch (e) {
       console.error(e);
@@ -363,12 +368,14 @@ export function MembershipTab() {
             <div>
               <label className="text-xs font-mono uppercase text-ml-cream-dim block mb-1.5">{t('counter.membership.paymentMethodLabel')}</label>
               <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
+              {paymentMethod === 'card' && <CardTypePicker value={cardType} onChange={setCardType} />}
             </div>
             {submitError && <p className="text-ml-red text-sm">{submitError}</p>}
             <button
               onClick={mode === 'new' ? handleSignUp : handleRenew}
               disabled={
                 submitting ||
+                (paymentMethod === 'card' && !cardType) ||
                 (mode === 'new'
                   ? !memberName.trim() || (enrollMethod === 'fingerprint' && !fingerprintId)
                   : !foundMember || foundMember.renewsOnline)

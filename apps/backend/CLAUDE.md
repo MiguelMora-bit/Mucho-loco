@@ -240,7 +240,7 @@ Probado: unit (`charges.service.spec.ts` + el spec de cada canal) y e2e contra P
 ### Pendiente
 
 - ~~**Paso 2**: emitir CFDI.~~ ✅ Backend (2026-09-15), con un solo RFC para las 15 sucursales — ver "Facturación CFDI" abajo.
-- Mostrador: capturar crédito vs débito (el SAT los distingue: 04 vs 28).
+- ~~Mostrador: capturar crédito vs débito~~ ✅ (2026-09-25, spec 009): `cardType` (`credit`/`debit`, columna nullable en `counter_sales` y `membership_payments`, DTOs con `cardType` opcional) y `counterChargeMethod` registra `card_credit`/`card_debit` → forma de pago 04/28. Sin tipo (cliente viejo) sigue `card` → 04 provisional. El corte de caja no cambió: suma tarjeta en un renglón.
 - ~~Hueco: mostrador podía entregar un pedido de Stripe en `pending_payment` (checkout abandonado).~~ ✅ Corregido (2026-09-15): `getByBranch` ya no lista pedidos en línea sin pagar, y `markDelivered` los rechaza con `ORDER_NOT_PAID`, como `shipments`. El efectivo pendiente se sigue entregando: ahí es donde se cobra. e2e en `branch-ops.e2e-spec.ts`.
 
 ## Facturación CFDI (2026-09-15) — paso 2
@@ -271,7 +271,7 @@ Un solo RFC para las 15 sucursales (CLAUDE.md raíz) → una organización de Fa
 - **El recibo ES la cola (outbox)**, sin tabla genérica. Tomar y arrendar es una sola sentencia (`UPDATE … WHERE "chargeId" IN (SELECT … FOR UPDATE SKIP LOCKED) RETURNING`): dos instancias de ECS nunca toman el mismo, y la llamada a Facturapi va FUERA de la transacción — el arriendo son 5 minutos en `nextAttemptAt`.
 - **`now() AT TIME ZONE 'UTC'`** en ese SQL, no `now()`: Prisma guarda UTC en columnas sin zona, y una sesión en hora de México compararía 6 h corrido. Por lo mismo `ChargesService` escribe `nextAttemptAt` explícito en vez de dejar el default de la base. El e2e lo prueba en los dos sentidos: un recibo nuevo se toma, uno en espera no.
 - **Lugar de expedición = domicilio de la matriz** (el de la organización en Facturapi). El SAT acepta "matriz o sucursal", y así no hay que dar de alta 15 sucursales en el PAC. El recibo no manda `branch`.
-- **Forma de pago** (`PAYMENT_FORM`): efectivo `01` (OXXO también: el cliente paga en efectivo), SPEI/transferencia `03`, crédito `04`, débito `28`. `card` sin distinguir (mostrador) va como `04` — provisional hasta capturar crédito vs débito.
+- **Forma de pago** (`PAYMENT_FORM`): efectivo `01` (OXXO también: el cliente paga en efectivo), SPEI/transferencia `03`, crédito `04`, débito `28`. Mostrador captura crédito/débito desde el spec 009; `card` sin tipo (cliente viejo) va como `04`.
 - **Si el PAC rechaza, primero se pregunta por qué.** Un 4xx al facturar relee el recibo: si ya se autofacturó en el portal o entró a la global, responde ese conflicto (409); solo si sigue abierto es culpa de los datos — 422 `FISCAL_DATA_REJECTED` con el motivo del SAT tal cual, que es lo que el socio tiene que corregir.
 - **Sin backfill**: los cobros anteriores a la migración no tienen recibo (`unavailable`). Darlos de alta hoy los fecharía en este mes, y su ingreso pertenece a otro periodo.
 - **Conceptos** = los renglones del cobro con su clave del SAT congelada, precio con IVA incluido (`tax_included: true`) e IVA a la tasa del renglón. IEPS, cuando el contador lo confirme.

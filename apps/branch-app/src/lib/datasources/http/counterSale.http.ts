@@ -1,4 +1,4 @@
-import type { BranchInventoryLevel, CounterSale, PaymentMethod } from '@mucho-loco/types';
+import type { BranchInventoryLevel, CardType, CounterSale, PaymentMethod } from '@mucho-loco/types';
 import type { ICounterSaleRepository } from '../../repositories/counterSale.repository';
 import { InsufficientStockError, ProductNotFoundError } from '../../repositories/counterSale.errors';
 import { ApiRequestError, api } from './client';
@@ -38,11 +38,13 @@ export class CounterSaleHttpDatasource implements ICounterSaleRepository {
     branchId: number,
     picks: Array<{ productId: string; qty: number }>,
     paymentMethod: PaymentMethod,
+    cardType?: CardType,
   ): Promise<CounterSale> {
     try {
       return await api.post<CounterSale>(`/branches/${branchId}/counter-sales`, {
         picks,
         paymentMethod,
+        ...(paymentMethod === 'card' && cardType ? { cardType } : {}),
       });
     } catch (e) {
       throw toDomainError(e);

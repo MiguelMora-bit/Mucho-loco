@@ -19,6 +19,7 @@ function toCounterSale(row: SaleRow & { items: SaleItemRow[] }): CounterSale {
     })),
     total: row.total,
     paymentMethod: row.paymentMethod as PaymentMethod,
+    ...(row.cardType ? { cardType: row.cardType } : {}),
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -66,6 +67,8 @@ export class CounterSalesService {
           branchId,
           total,
           paymentMethod: dto.paymentMethod,
+          // El tipo solo existe con tarjeta (spec 009).
+          cardType: dto.paymentMethod === 'card' ? (dto.cardType ?? null) : null,
           items: { create: items },
         },
         include: { items: true },

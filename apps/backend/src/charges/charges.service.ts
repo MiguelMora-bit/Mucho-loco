@@ -19,6 +19,19 @@ export const toCents = (pesos: number): number => Math.round(pesos * 100);
 
 type Tx = Prisma.TransactionClient;
 
+/**
+ * Cómo se cobró en mostrador, para el registro (y de ahí la forma de pago del
+ * CFDI): con tarjeta, crédito o débito si el staff lo capturó (spec 009);
+ * sin tipo queda `card` (04 provisional).
+ */
+export function counterChargeMethod(
+  paymentMethod: 'cash' | 'card' | 'transfer',
+  cardType: 'credit' | 'debit' | null | undefined,
+): ChargeMethod {
+  if (paymentMethod === 'card' && cardType) return cardType === 'credit' ? 'card_credit' : 'card_debit';
+  return paymentMethod;
+}
+
 /** El envío es concepto aparte en la factura, con su propia categoría. */
 const SHIPPING_CATEGORY = 'shipping';
 /** Lo que no se puede clasificar: pedidos anteriores a OrderItem.productId, o un producto que ya no existe. */
@@ -153,7 +166,7 @@ export class ChargesService {
     );
     return this.insert(tx, {
       source: 'counter_sale',
-      method: sale.paymentMethod,
+      method: counterChargeMethod(sale.paymentMethod, sale.cardType),
       paidAt: sale.createdAt,
       branchId: sale.branchId,
       userId: null,

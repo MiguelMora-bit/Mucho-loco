@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useBranchInventoryStore } from '../../lib/stores/branchInventory.store';
 import { counterSaleRepository, ProductNotFoundError, InsufficientStockError } from '../../lib/repositories/counterSale.repository';
 import { getCurrentBranchId } from '../../lib/currentBranch';
-import type { PaymentMethod } from '@mucho-loco/types';
+import type { CardType, PaymentMethod } from '@mucho-loco/types';
+import { CardTypePicker } from '../../components/CardTypePicker';
 import { CounterTicket } from '../../components/CounterTicket';
 
 function formatPrice(n: number) {
@@ -15,6 +16,8 @@ export function ProductSaleTab() {
   const { data, loading, error, fetch } = useBranchInventoryStore();
   const [cart, setCart] = useState<Record<string, number>>({});
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  // Spec 009: con tarjeta, crédito o débito (forma de pago del CFDI).
+  const [cardType, setCardType] = useState<CardType | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmedTotal, setConfirmedTotal] = useState<number | null>(null);
@@ -67,11 +70,13 @@ export function ProductSaleTab() {
       const sale = await counterSaleRepository.createSale(
         getCurrentBranchId(),
         cartLines.map((l) => ({ productId: l.productId, qty: l.qty })),
-        paymentMethod
+        paymentMethod,
+        paymentMethod === 'card' ? (cardType ?? undefined) : undefined
       );
       setConfirmedTotal(sale.total);
       setLastSaleId(sale.id);
       setCart({});
+      setCardType(null);
       await fetch(); // reflects the stock already deducted
       setTimeout(() => setConfirmedTotal(null), 3000);
     } catch (e) {
@@ -211,12 +216,17 @@ export function ProductSaleTab() {
             {t('counter.products.cardLabel')}
           </button>
         </div>
+        {paymentMethod === 'card' && (
+          <div className="-mt-2 mb-4">
+            <CardTypePicker value={cardType} onChange={setCardType} />
+          </div>
+        )}
 
         {submitError && <p className="text-ml-red text-xs mb-3">{submitError}</p>}
 
         <button
           onClick={handleConfirm}
-          disabled={cartLines.length === 0 || submitting}
+          disabled={cartLines.length === 0 || submitting || (paymentMethod === 'card' && !cardType)}
           className="w-full py-2.5 rounded bg-ml-red text-ml-cream font-medium hover:bg-ml-red-bright disabled:opacity-40 transition-colors"
         >
           {submitting ? t('counter.products.processing') : t('counter.products.confirm')}

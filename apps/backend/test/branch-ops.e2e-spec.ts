@@ -228,6 +228,34 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
 
     // El cajero no pone el precio. ValidationPipe rechaza el campo extra en
     // vez de ignorarlo en silencio — mismo criterio que CreateOrderDto.
+    // Spec 009: el tipo de tarjeta llega al cobro; sin tipo queda `card` (04 provisional).
+    it('records debit/credit in the charge, and plain card without a type', async () => {
+      const debit = body<CounterSale>(
+        await request(app.getHttpServer())
+          .post('/branches/1/counter-sales')
+          .set(...auth('staff'))
+          .send({ picks: [{ productId: 'p9', qty: 1 }], paymentMethod: 'card', cardType: 'debit' })
+          .expect(201),
+      );
+      expect(debit.cardType).toBe('debit');
+      expect((await prisma.charge.findUniqueOrThrow({ where: { counterSaleId: debit.id } })).method).toBe('card_debit');
+
+      const plain = body<CounterSale>(
+        await request(app.getHttpServer())
+          .post('/branches/1/counter-sales')
+          .set(...auth('staff'))
+          .send({ picks: [{ productId: 'p9', qty: 1 }], paymentMethod: 'card' })
+          .expect(201),
+      );
+      expect((await prisma.charge.findUniqueOrThrow({ where: { counterSaleId: plain.id } })).method).toBe('card');
+
+      await request(app.getHttpServer())
+        .post('/branches/1/counter-sales')
+        .set(...auth('staff'))
+        .send({ picks: [{ productId: 'p9', qty: 1 }], paymentMethod: 'card', cardType: 'amex' })
+        .expect(400);
+    });
+
     it('rejects a sale that tries to smuggle its own total', async () => {
       await request(app.getHttpServer())
         .post('/branches/1/counter-sales')
@@ -576,6 +604,19 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
       expect(result.outcome).toBe('valid');
       expect(result.outcome === 'valid' && result.record.homeBranchId).toBe(3);
       expect(result.outcome === 'valid' && result.record.tierKey).toBe('single');
+    });
+
+    // Spec 009: crédito o débito llega al registro de cobros (forma de pago del CFDI).
+    it('records the card type of a counter renewal in the charge', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/branches/3/memberships/renew')
+        .set(...auth('staff'))
+        .send({ qrCode: signedUp.qrCode, tierKey: 'single', periodKey: 'monthly', paymentMethod: 'card', cardType: 'credit' })
+        .expect(201);
+      const payment = body<MembershipPayment>(res);
+      expect(payment.cardType).toBe('credit');
+      const charge = await prisma.charge.findUniqueOrThrow({ where: { membershipPaymentId: payment.id } });
+      expect(charge.method).toBe('card_credit');
     });
 
     // Spec 006: renovar antes de tiempo ya no le quita días pagados al socio.

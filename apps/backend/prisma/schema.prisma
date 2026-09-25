@@ -53,6 +53,13 @@ enum PaymentMethod {
   transfer
 }
 
+/// Tipo de tarjeta de un cobro de mostrador (spec 009): el SAT distingue la
+/// forma de pago — crédito 04, débito 28. null = no se capturó (04 provisional).
+enum CardType {
+  credit
+  debit
+}
+
 enum ShiftStatus {
   open
   closed
@@ -584,6 +591,8 @@ model CounterSale {
   branch        Branch        @relation(fields: [branchId], references: [id])
   total         Int
   paymentMethod PaymentMethod
+  /// Solo con `paymentMethod = card` (spec 009).
+  cardType      CardType?
   createdAt     DateTime      @default(now())
 
   items  CounterSaleItem[]
@@ -642,6 +651,8 @@ model MembershipPayment {
   periodKey     PlanKey
   amount        Int
   paymentMethod PaymentMethod
+  /// Solo con `paymentMethod = card` (spec 009).
+  cardType      CardType?
   isNewMember   Boolean
   createdAt     DateTime      @default(now())
 

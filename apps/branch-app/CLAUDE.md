@@ -66,6 +66,10 @@ Tres secciones independientes (QR con cámara+manual, huella con manual, nombre 
 
 Datos demo en `lib/data.ts`: Rosa Jiménez (`FP-DEMO-ROSA`, tier `all`, Roma Sur — pasa en cualquier sucursal), Luis Herrera (`FP-DEMO-LUIS`, tier `single`, Interlomas — debe rechazarse con `wrong_branch` si se valida en Roma Sur), y Carlos Vega (comparte nombre de pila con el ya existente Carlos Mendoza, a propósito, para demostrar `ambiguous` al buscar "Carlos").
 
+## Crédito o débito (2026-09-25)
+
+Spec 009. Al cobrar con tarjeta en mostrador (venta, alta, renovación), `components/CardTypePicker.tsx` pide "¿Crédito o débito?" y no deja confirmar sin elegir. Viaja como `cardType` y el backend registra el cobro como `card_credit`/`card_debit` — la forma de pago del CFDI (04/28). El corte de caja sigue sumando tarjeta en un solo renglón (cuadra con el cierre de la terminal).
+
 ## Renovar sin doble cobro (2026-09-25)
 
 Spec en `specs/006-counter-renewal-subscription-guard/`. Al buscar al socio para renovar, `MemberAccessRecord.renewsOnline` dice si Stripe ya se la cobra sola: la pestaña de membresías muestra el aviso y deshabilita el cobro, y si llega igual al backend (otra pestaña, lista vieja) responde `MEMBER_RENEWS_ONLINE` → `MemberRenewsOnlineError` (mismo error en el mock). Con la renovación cancelada en la app, se cobra normal. Renovar una membresía vigente suma desde su vencimiento, no desde hoy. En el mock, Diego (`ML-DIEGO-2026-ALLGYMS`) es el socio que se cobra solo.

@@ -1,6 +1,6 @@
-import { ArrayMinSize, IsIn, IsInt, IsString, Min, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsIn, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { PaymentMethod } from '@mucho-loco/types';
+import type { CardType, PaymentMethod } from '@mucho-loco/types';
 
 const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'card', 'transfer'];
 
@@ -27,4 +27,9 @@ export class CreateCounterSaleDto {
 
   @IsIn(PAYMENT_METHODS)
   paymentMethod!: PaymentMethod;
+
+  /** Crédito o débito (spec 009). Solo cuenta con `card`; sin él, forma de pago 04 provisional. */
+  @IsOptional()
+  @IsIn(['credit', 'debit'])
+  cardType?: CardType;
 }

@@ -1,4 +1,4 @@
-import type { BranchInventoryLevel, CounterSale, PaymentMethod } from '@mucho-loco/types';
+import type { BranchInventoryLevel, CardType, CounterSale, PaymentMethod } from '@mucho-loco/types';
 import { CounterSaleMockDatasource } from '../datasources/mock/counterSale.mock';
 import { CounterSaleHttpDatasource } from '../datasources/http/counterSale.http';
 import { isHttpDatasourceEnabled } from '../datasources/http/config';
@@ -10,7 +10,9 @@ export interface ICounterSaleRepository {
   createSale(
     branchId: number,
     picks: Array<{ productId: string; qty: number }>,
-    paymentMethod: PaymentMethod
+    paymentMethod: PaymentMethod,
+    /** Crédito o débito, solo con `card` (spec 009): el SAT los distingue. */
+    cardType?: CardType
   ): Promise<CounterSale>;
 }
 

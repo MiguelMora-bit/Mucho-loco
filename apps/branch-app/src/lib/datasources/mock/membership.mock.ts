@@ -1,4 +1,4 @@
-import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import type { CardType, MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import { MEMBER_ACCESS_RECORDS, MEMBERSHIP_PAYMENTS } from '../../data';
 import { CURRENT_BRANCH_PRICE, PERIOD_DAYS, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '../../membershipPlans';
 import { delay } from './delay';
@@ -50,7 +50,8 @@ export class MembershipMockDatasource implements IMembershipRepository {
     qrCode: string,
     tierKey: TierKey,
     periodKey: PlanKey,
-    paymentMethod: PaymentMethod
+    paymentMethod: PaymentMethod,
+    cardType?: CardType
   ): Promise<MembershipPayment> {
     await delay(250);
     const member = MEMBER_ACCESS_RECORDS.find((r) => r.qrCode === qrCode.trim());
@@ -80,6 +81,7 @@ export class MembershipMockDatasource implements IMembershipRepository {
       periodKey,
       amount: resolveMembershipTierPrice(tierKey, CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS[periodKey]),
       paymentMethod,
+      ...(paymentMethod === 'card' && cardType ? { cardType } : {}),
       isNewMember: false,
       createdAt: new Date().toISOString(),
     };
@@ -117,6 +119,7 @@ export class MembershipMockDatasource implements IMembershipRepository {
       periodKey: input.periodKey,
       amount: resolveMembershipTierPrice(input.tierKey, CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS[input.periodKey]),
       paymentMethod: input.paymentMethod,
+      ...(input.paymentMethod === 'card' && input.cardType ? { cardType: input.cardType } : {}),
       isNewMember: true,
       createdAt: new Date().toISOString(),
     };

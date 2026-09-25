@@ -30,8 +30,8 @@ export const PAYMENT_FORM: Record<ChargeMethod, string> = {
   transfer: '03',
   card_credit: '04',
   card_debit: '28',
-  // PROVISIONAL: la terminal de mostrador todavía no dice si fue crédito o
-  // débito (ver "Pendiente" en CLAUDE.md), y el SAT los distingue.
+  // Tarjeta sin tipo: solo un cliente viejo de mostrador que no manda
+  // `cardType` (spec 009 lo captura). El SAT distingue 04 de 28.
   card: '04',
 };
 

@@ -1,4 +1,4 @@
-import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import type { CardType, MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import { MembershipMockDatasource } from '../datasources/mock/membership.mock';
 import { MembershipHttpDatasource } from '../datasources/http/membership.http';
 import { isHttpDatasourceEnabled } from '../datasources/http/config';
@@ -11,6 +11,8 @@ export interface SignUpInput {
   tierKey: TierKey;
   periodKey: PlanKey;
   paymentMethod: PaymentMethod;
+  /** Crédito o débito, solo con `card` (spec 009). */
+  cardType?: CardType;
   /** Presente cuando el alta se hizo por huella en vez de QR (ver
    *  CLAUDE.md raíz, "Métodos de acceso") — el registro sigue teniendo un
    *  qrCode interno, pero el acceso real se valida por este id. */
@@ -25,7 +27,8 @@ export interface IMembershipRepository {
     qrCode: string,
     tierKey: TierKey,
     periodKey: PlanKey,
-    paymentMethod: PaymentMethod
+    paymentMethod: PaymentMethod,
+    cardType?: CardType
   ): Promise<MembershipPayment>;
   signUpNewMember(branchId: number, branchName: string, input: SignUpInput): Promise<MembershipPayment>;
 }

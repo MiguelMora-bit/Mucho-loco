@@ -49,6 +49,7 @@
     }
   },
   "counter": {
+    "cardType": { "label": "¿Crédito o débito?", "credit": "Crédito", "debit": "Débito" },
     "title": "Mostrador",
     "productsTab": "Venta de productos",
     "membershipTab": "Membresías",

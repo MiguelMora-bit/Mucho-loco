@@ -100,6 +100,16 @@ describe('CounterSaleHttpDatasource', () => {
     expect(String(init.body)).not.toMatch(/total|unitPrice/);
   });
 
+  // Spec 009: el SAT distingue crédito de débito; solo viaja con tarjeta.
+  it('sends the card type only for card payments', async () => {
+    const spy = stubFetch(201, {});
+    await new CounterSaleHttpDatasource().createSale(1, [{ productId: 'p7', qty: 1 }], 'card', 'debit');
+    await new CounterSaleHttpDatasource().createSale(1, [{ productId: 'p7', qty: 1 }], 'cash', 'debit');
+
+    expect(JSON.parse(String(call(spy, 0).init.body)).cardType).toBe('debit');
+    expect(JSON.parse(String(call(spy, 1).init.body))).not.toHaveProperty('cardType');
+  });
+
   describe('error mapping', () => {
     // El contrato promete errores TIPADOS para que la UI no lea prosa en
     // español — ver counterSale.errors.ts. El código del backend es lo que

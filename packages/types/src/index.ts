@@ -838,12 +838,17 @@ export interface CounterSaleItem {
  *  Order. 'card' here means a physical terminal swipe, not an online charge. */
 export type PaymentMethod = 'cash' | 'card' | 'transfer';
 
+/** Tipo de tarjeta de un cobro de mostrador: el SAT distingue crédito (04) de débito (28). Spec 009. */
+export type CardType = 'credit' | 'debit';
+
 export interface CounterSale {
   id: string;
   branchId: number;
   items: CounterSaleItem[];
   total: number;
   paymentMethod: PaymentMethod;
+  /** Solo con `card`; ausente = no se capturó. */
+  cardType?: CardType;
   createdAt: string;
 }
 
@@ -912,6 +917,8 @@ export interface MembershipPayment {
   periodKey: PlanKey;
   amount: number;
   paymentMethod: PaymentMethod;
+  /** Solo con `card`; ausente = no se capturó. */
+  cardType?: CardType;
   isNewMember: boolean;
   createdAt: string;
 }
