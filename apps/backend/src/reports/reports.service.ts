@@ -6,6 +6,7 @@ import type {
   TopProduct,
 } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
+import { dayDate, mexicoDay } from '../memberships/visit-stats';
 
 /** Cuántos días mira el panel del dueño cuando nadie le dice otra cosa. */
 export const DEFAULT_STATS_WINDOW_DAYS = 30;
@@ -122,7 +123,9 @@ export class ReportsService {
   async getBranchStats(days = DEFAULT_STATS_WINDOW_DAYS): Promise<BranchStatsSummary[]> {
     const since = daysAgo(days);
 
-    const [branches, revenueByBranch, membersByBranch] = await Promise.all([
+    const today = dayDate(mexicoDay(new Date()));
+
+    const [branches, revenueByBranch, membersByBranch, checkInsToday, checkIns] = await Promise.all([
       this.prisma.branch.findMany({ orderBy: { id: 'asc' } }),
       this.prisma.charge.groupBy({
         by: ['branchId'],
@@ -134,7 +137,20 @@ export class ReportsService {
         where: { status: { in: ['active', 'grace'] } },
         _count: { _all: true },
       }),
+      // Spec 014: la afluencia, de las entradas que registró mostrador (spec 012).
+      this.prisma.visit.groupBy({
+        by: ['branchId'],
+        where: { visitDay: today },
+        _count: { _all: true },
+      }),
+      this.prisma.visit.groupBy({
+        by: ['branchId'],
+        where: { visitedAt: { gte: since } },
+        _count: { _all: true },
+      }),
     ]);
+    const countFor = (rows: { branchId: number; _count: { _all: number } }[], branchId: number) =>
+      rows.find((r) => r.branchId === branchId)?._count._all ?? 0;
 
     return branches.map((branch) => ({
       branchId: branch.id,
@@ -144,6 +160,8 @@ export class ReportsService {
       ),
       activeCustomers:
         membersByBranch.find((m) => m.branchId === branch.id)?._count._all ?? 0,
+      checkInsToday: countFor(checkInsToday, branch.id),
+      checkIns: countFor(checkIns, branch.id),
     }));
   }
 }

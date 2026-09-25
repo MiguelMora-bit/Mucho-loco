@@ -12,6 +12,7 @@ describe('ReportsService', () => {
     counterSale: { findMany: jest.Mock };
     branch: { findMany: jest.Mock };
     membership: { groupBy: jest.Mock };
+    visit: { groupBy: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -20,6 +21,7 @@ describe('ReportsService', () => {
       counterSale: { findMany: jest.fn().mockResolvedValue([]) },
       branch: { findMany: jest.fn().mockResolvedValue([]) },
       membership: { groupBy: jest.fn().mockResolvedValue([]) },
+      visit: { groupBy: jest.fn().mockResolvedValue([]) },
     };
     const module = await Test.createTestingModule({
       providers: [ReportsService, { provide: PrismaService, useValue: prisma }],
@@ -170,6 +172,22 @@ describe('ReportsService', () => {
       expect(romaSur.activeCustomers).toBe(312);
       expect(prisma.membership.groupBy).toHaveBeenCalledWith(
         expect.objectContaining({ where: { status: { in: ['active', 'grace'] } } }),
+      );
+    });
+
+    // Spec 014: hoy (día de CDMX) y la ventana, de las entradas registradas.
+    it('counts check-ins per branch for today and for the window', async () => {
+      prisma.visit.groupBy
+        .mockResolvedValueOnce([{ branchId: 1, _count: { _all: 42 } }])
+        .mockResolvedValueOnce([{ branchId: 1, _count: { _all: 900 } }, { branchId: 2, _count: { _all: 15 } }]);
+
+      const [romaSur, romaNorte] = await service.getBranchStats();
+
+      expect(romaSur).toMatchObject({ checkInsToday: 42, checkIns: 900 });
+      expect(romaNorte).toMatchObject({ checkInsToday: 0, checkIns: 15 });
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+      expect(prisma.visit.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { visitDay: new Date(`${today}T00:00:00.000Z`) } }),
       );
     });
   });

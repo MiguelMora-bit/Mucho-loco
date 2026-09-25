@@ -3,8 +3,8 @@ import { calculateExecutiveReport } from './executiveReport';
 import type { BranchStatsSummary, Expense, Payslip } from '@mucho-loco/types';
 
 const branchStats: BranchStatsSummary[] = [
-  { branchId: 1, branchName: 'Roma Sur', revenue: 100000, activeCustomers: 200 },
-  { branchId: 2, branchName: 'Roma Norte', revenue: 50000, activeCustomers: 100 },
+  { branchId: 1, branchName: 'Roma Sur', revenue: 100000, activeCustomers: 200, checkInsToday: 0, checkIns: 0 },
+  { branchId: 2, branchName: 'Roma Norte', revenue: 50000, activeCustomers: 100, checkInsToday: 0, checkIns: 0 },
 ];
 
 const expenses: Expense[] = [
@@ -61,7 +61,7 @@ describe('calculateExecutiveReport', () => {
 
   it('handles a branch with no expenses or payslips yet', () => {
     const report = calculateExecutiveReport(
-      [{ branchId: 9, branchName: 'Nueva Sucursal', revenue: 0, activeCustomers: 0 }],
+      [{ branchId: 9, branchName: 'Nueva Sucursal', revenue: 0, activeCustomers: 0, checkInsToday: 0, checkIns: 0 }],
       [],
       []
     );

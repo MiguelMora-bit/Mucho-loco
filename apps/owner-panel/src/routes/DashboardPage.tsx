@@ -31,6 +31,7 @@ export function DashboardPage() {
 
   const totalRevenue = (branchStats.data ?? []).reduce((sum, b) => sum + b.revenue, 0);
   const totalCustomers = (branchStats.data ?? []).reduce((sum, b) => sum + b.activeCustomers, 0);
+  const totalCheckInsToday = (branchStats.data ?? []).reduce((sum, b) => sum + b.checkInsToday, 0);
 
   return (
     <div className="max-w-4xl mx-auto space-y-10">
@@ -48,6 +49,11 @@ export function DashboardPage() {
           <div className="bg-ml-card border border-ml-border rounded p-4 flex-1">
             <div className="text-xs font-mono uppercase text-ml-cream-dim mb-1">{t('dashboard.activeCustomers')}</div>
             <div className="text-2xl font-bold text-ml-orange">{totalCustomers}</div>
+          </div>
+          {/* Spec 014: afluencia, de las entradas que registra cada sucursal. */}
+          <div className="bg-ml-card border border-ml-border rounded p-4 flex-1">
+            <div className="text-xs font-mono uppercase text-ml-cream-dim mb-1">{t('dashboard.checkInsToday')}</div>
+            <div className="text-2xl font-bold text-ml-cream">{totalCheckInsToday}</div>
           </div>
         </div>
       )}
@@ -70,6 +76,8 @@ export function DashboardPage() {
                 <tr className="text-left text-ml-cream-dim font-mono text-xs uppercase border-b border-ml-border">
                   <th className="py-2">{t('dashboard.branchLabel')}</th>
                   <th className="py-2">{t('dashboard.activeCustomers')}</th>
+                  <th className="py-2">{t('dashboard.checkInsToday')}</th>
+                  <th className="py-2">{t('dashboard.checkIns')}</th>
                   <th className="py-2">{t('dashboard.revenueLabel')}</th>
                 </tr>
               </thead>
@@ -78,6 +86,8 @@ export function DashboardPage() {
                   <tr key={b.branchId} className="border-b border-ml-border">
                     <td className="py-2">{b.branchName}</td>
                     <td className="py-2">{b.activeCustomers}</td>
+                    <td className="py-2">{b.checkInsToday}</td>
+                    <td className="py-2">{b.checkIns}</td>
                     <td className="py-2 font-medium">{formatPrice(b.revenue)}</td>
                   </tr>
                 ))}

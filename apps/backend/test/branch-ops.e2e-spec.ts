@@ -1245,6 +1245,39 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
       expect(stats.every((s) => s.branchName.length > 0)).toBe(true);
     });
 
+    // Spec 014: la afluencia sale de las entradas registradas en mostrador.
+    it('owner stats count the check-ins of each branch, today and in the window', async () => {
+      const statsOf = async (branchId: number) =>
+        body<BranchStatsSummary[]>(
+          await request(app.getHttpServer()).get('/stats/branches').set(...auth('owner')).expect(200),
+        ).find((s) => s.branchId === branchId)!;
+      const signup = await request(app.getHttpServer())
+        .post('/branches/5/memberships/signup')
+        .set(...auth('staff'))
+        .send({
+          memberName: 'Socio Afluencia', phone: '55 3333 4444',
+          tierKey: 'single', periodKey: 'monthly', paymentMethod: 'cash',
+        })
+        .expect(201);
+      const { qrCode } = body<MembershipPayment>(signup);
+      const [santaFeBefore, romaSurBefore] = [await statsOf(5), await statsOf(1)];
+
+      // Permitida en su sucursal; negada en otra (tier single): esa no cuenta.
+      for (const branchId of [5, 1]) {
+        await request(app.getHttpServer())
+          .post(`/branches/${branchId}/check-ins`)
+          .send({ qrCode })
+          .set(...auth('staff'))
+          .expect(200);
+      }
+
+      const [santaFe, romaSur] = [await statsOf(5), await statsOf(1)];
+      expect(santaFe.checkInsToday).toBe(santaFeBefore.checkInsToday + 1);
+      expect(santaFe.checkIns).toBe(santaFeBefore.checkIns + 1);
+      expect(romaSur.checkInsToday).toBe(romaSurBefore.checkInsToday);
+      expect(romaSur.checkIns).toBe(romaSurBefore.checkIns);
+    });
+
     it('owner stats are not visible to a branch manager', async () => {
       await request(app.getHttpServer())
         .get('/stats/branches')

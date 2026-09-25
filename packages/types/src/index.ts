@@ -1030,6 +1030,10 @@ export interface BranchStatsSummary {
   branchName: string;
   revenue: number;
   activeCustomers: number;
+  /** Entradas registradas hoy (día de CDMX), spec 014. */
+  checkInsToday: number;
+  /** Entradas en la misma ventana que `revenue`. */
+  checkIns: number;
 }
 
 export interface GlobalInventoryItem {

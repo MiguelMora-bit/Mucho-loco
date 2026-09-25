@@ -1,10 +1,10 @@
 import type { AttendanceSummary, BranchInventoryLevel, BranchStatsSummary, Employee, Expense, InventoryTransfer, Payslip, PayrollPeriod, ShipmentOrder } from '@mucho-loco/types';
 
 export const BRANCH_STATS: BranchStatsSummary[] = [
-  { branchId: 1, branchName: 'Roma Sur', revenue: 186400, activeCustomers: 312 },
-  { branchId: 2, branchName: 'Roma Norte', revenue: 142200, activeCustomers: 248 },
-  { branchId: 3, branchName: 'Condesa', revenue: 168900, activeCustomers: 287 },
-  { branchId: 5, branchName: 'Santa Fe', revenue: 231500, activeCustomers: 401 },
+  { branchId: 1, branchName: 'Roma Sur', revenue: 186400, activeCustomers: 312, checkInsToday: 118, checkIns: 3240 },
+  { branchId: 2, branchName: 'Roma Norte', revenue: 142200, activeCustomers: 248, checkInsToday: 87, checkIns: 2410 },
+  { branchId: 3, branchName: 'Condesa', revenue: 168900, activeCustomers: 287, checkInsToday: 102, checkIns: 2790 },
+  { branchId: 5, branchName: 'Santa Fe', revenue: 231500, activeCustomers: 401, checkInsToday: 151, checkIns: 4320 },
 ];
 
 // Per-branch stock — statsRepository.getGlobalInventory() sums this at call
