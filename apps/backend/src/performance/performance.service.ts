@@ -4,6 +4,7 @@ import type {
   LocalizedString,
   PerformanceStat,
   PersonalRecord,
+  StatColor,
   Workout,
 } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,12 +15,27 @@ import type {
   HeatmapCell as HeatmapCellRow,
 } from '@prisma/client';
 
+const STAT_COLORS: readonly StatColor[] = ['red', 'orange', 'yellow', 'gold', 'green', 'cream'];
+/** Los dos hex que traía el seed antes del spec 010. */
+const LEGACY_HEX: Record<string, StatColor> = { '#6dd56d': 'green', '#ffe066': 'gold' };
+
+/**
+ * El color como nombre de la paleta (spec 010). Acepta lo que la base pudiera
+ * tener de antes — `var(--orange)` o uno de los dos hex históricos — para que
+ * una fila sin migrar no rompa ningún cliente. Desconocido → `cream`.
+ */
+export function statColorOf(value: string): StatColor {
+  const raw = value.trim().toLowerCase();
+  const name = /^var\(--([a-z-]+)\)$/.exec(raw)?.[1] ?? LEGACY_HEX[raw] ?? raw;
+  return (STAT_COLORS as readonly string[]).includes(name) ? (name as StatColor) : 'cream';
+}
+
 function toStat(row: StatRow): PerformanceStat {
   return {
     lbl: row.lbl as LocalizedString,
     num: row.num,
     sub: row.sub as LocalizedString,
-    color: row.color,
+    color: statColorOf(row.color),
   };
 }
 

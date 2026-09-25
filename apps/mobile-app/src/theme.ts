@@ -21,6 +21,7 @@ export const colors = {
   creamDim: '#b8a99c',
   muted: '#6b5a52',
   green: '#6dd56d',
+  gold: '#ffe066',
 } as const;
 
 /**

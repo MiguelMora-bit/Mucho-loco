@@ -161,6 +161,9 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
   await test.step('rendimiento: resumen, entrenamientos y heatmap', async () => {
     await page.getByRole('button', { name: 'RENDIMIENTO', exact: true }).click();
     await expect(page.getByText('PRESS DE BANCA')).toBeVisible();
+    // El color llega como nombre de la paleta (spec 010) y se pinta con theme.ts.
+    await expect(page.getByText('94K', { exact: true })).toHaveCSS('color', 'rgb(225, 20, 28)');
+    await expect(page.getByText('7d', { exact: true })).toHaveCSS('color', 'rgb(255, 224, 102)');
     await page.getByRole('button', { name: 'ENTRENAMIENTOS', exact: true }).click();
     await expect(page.getByText('Push Day · Pecho & Hombros')).toBeVisible();
     await page.getByRole('button', { name: 'HEATMAP', exact: true }).click();

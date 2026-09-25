@@ -48,6 +48,8 @@
   --cream:      #f4ebe0;
   --cream-dim:  #b8a99c;
   --muted:      #6b5a52;
+  --green:      #6dd56d;
+  --gold:       #ffe066;
 }
 
 /* ── Base overrides (Tailwind Preflight ya incluye reset) ── */

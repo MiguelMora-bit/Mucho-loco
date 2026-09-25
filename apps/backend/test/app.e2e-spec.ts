@@ -188,6 +188,8 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
         .set(...fakeAuthHeader('perf@mucholoco.mx'))
         .expect(200);
       expect(body<PerformanceStat[]>(res)).toHaveLength(4);
+      // Nombre de la paleta, no CSS: el móvil no sabe qué es `var(--orange)`.
+      expect(body<PerformanceStat[]>(res).map((s) => s.color)).toEqual(['orange', 'red', 'gold', 'green']);
     });
 
     it('GET /performance/heatmap returns a fixed 52-week x 7-day grid, deterministic across requests', async () => {

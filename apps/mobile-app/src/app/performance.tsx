@@ -3,7 +3,6 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import type { HeatmapLevel } from '@mucho-loco/types';
 import { formatDate } from '@mucho-loco/customer-core/dates';
 import { Body, Card, Chip, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
-import { resolveColor } from '@/lib/css-color';
 import { useT } from '@/lib/i18n';
 import { performanceRepository } from '@/lib/repositories';
 import { useResource } from '@/lib/use-resource';
@@ -59,7 +58,7 @@ export default function PerformanceScreen() {
             {state.data.stats.map((s) => (
               <Card key={s.lbl.es} style={styles.stat}>
                 <Mono>{s.lbl[lang]}</Mono>
-                <Display style={[styles.statNum, { color: resolveColor(s.color) }]}>{s.num}</Display>
+                <Display style={[styles.statNum, { color: colors[s.color] ?? colors.cream }]}>{s.num}</Display>
                 <Body style={styles.small}>{s.sub[lang]}</Body>
               </Card>
             ))}

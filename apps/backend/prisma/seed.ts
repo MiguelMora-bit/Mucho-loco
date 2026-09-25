@@ -178,10 +178,10 @@ const socialFeedPosts = [
 // reemplaza por un patrón fijo (mismo request, misma respuesta). Sin
 // personalizar por usuario (ver comentario en schema.prisma sobre este dominio).
 const performanceStats = [
-  { lbl: { es: 'ENTRENAMIENTOS ESTE MES', en: 'WORKOUTS THIS MONTH' }, num: '18', sub: { es: '+3 vs mes anterior', en: '+3 vs last month' }, color: 'var(--orange)' },
-  { lbl: { es: 'VOLUMEN TOTAL (KG)', en: 'TOTAL VOLUME (KG)' }, num: '94K', sub: { es: '↑ 12% vs mes anterior', en: '↑ 12% vs last month' }, color: 'var(--red)' },
-  { lbl: { es: 'RACHA ACTUAL', en: 'CURRENT STREAK' }, num: '7d', sub: { es: 'Mejor: 14 días', en: 'Best: 14 days' }, color: '#ffe066' },
-  { lbl: { es: 'PRs ESTE MES', en: 'PRs THIS MONTH' }, num: '3', sub: { es: 'Press · Peso muerto · Hip thrust', en: 'Bench press · Deadlift · Hip thrust' }, color: '#6dd56d' },
+  { lbl: { es: 'ENTRENAMIENTOS ESTE MES', en: 'WORKOUTS THIS MONTH' }, num: '18', sub: { es: '+3 vs mes anterior', en: '+3 vs last month' }, color: 'orange' },
+  { lbl: { es: 'VOLUMEN TOTAL (KG)', en: 'TOTAL VOLUME (KG)' }, num: '94K', sub: { es: '↑ 12% vs mes anterior', en: '↑ 12% vs last month' }, color: 'red' },
+  { lbl: { es: 'RACHA ACTUAL', en: 'CURRENT STREAK' }, num: '7d', sub: { es: 'Mejor: 14 días', en: 'Best: 14 days' }, color: 'gold' },
+  { lbl: { es: 'PRs ESTE MES', en: 'PRs THIS MONTH' }, num: '3', sub: { es: 'Press · Peso muerto · Hip thrust', en: 'Bench press · Deadlift · Hip thrust' }, color: 'green' },
 ];
 
 const personalRecords = [

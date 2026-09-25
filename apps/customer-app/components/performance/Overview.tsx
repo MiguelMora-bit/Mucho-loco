@@ -16,7 +16,7 @@ export function Overview({ t, lang, stats, records }: OverviewProps) {
         {stats.map((s, i) => (
           <div key={i} className="rend-stat">
             <div className="font-mono text-10 text-ml-cream-dim uppercase tracking-wide-xl mb-1.5">{s.lbl[lang]}</div>
-            <div className="font-display text-5xl leading-none" style={{ color: s.color }}>{s.num}</div>
+            <div className="font-display text-5xl leading-none" style={{ color: `var(--${s.color})` }}>{s.num}</div>
             <div className="text-11 text-ml-cream-dim mt-2">{s.sub[lang]}</div>
           </div>
         ))}

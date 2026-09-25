@@ -1163,11 +1163,18 @@ export interface Workout {
   duration: string;
 }
 
+/**
+ * Color de marca de una cifra de rendimiento — un nombre de la paleta, no CSS
+ * (spec 010): cada cliente lo pinta con su tema (`var(--x)` en la web,
+ * `colors.x` en el móvil).
+ */
+export type StatColor = 'red' | 'orange' | 'yellow' | 'gold' | 'green' | 'cream';
+
 export interface PerformanceStat {
   lbl: LocalizedString;
   num: string;
   sub: LocalizedString;
-  color: string;
+  color: StatColor;
 }
 
 export interface PersonalRecord {
