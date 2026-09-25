@@ -8,6 +8,7 @@ import type {
   FeedPost,
   HeatmapLevel,
   MembershipInfo,
+  MembershipTier,
   Order,
   PerformanceSummary,
   PersonalRecord,
@@ -163,6 +164,23 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
         type: 'fiesta',
         emoji: '🎉',
       });
+    });
+  });
+
+  // Sin orderBy, Postgres devuelve el orden físico de las filas, y un UPDATE
+  // (lo que hace cada re-seed con upsert) mueve la fila al final: el landing
+  // pintaba los planes al revés. El orden es el de la declaración del enum.
+  describe('catalog order', () => {
+    it('lists tiers and social links in their declared order even after a row is rewritten', async () => {
+      const single = await prisma.membershipTier.findUniqueOrThrow({ where: { key: 'single' } });
+      await prisma.membershipTier.update({ where: { key: 'single' }, data: { factor: single.factor } });
+      const instagram = await prisma.socialLink.findUniqueOrThrow({ where: { key: 'instagram' } });
+      await prisma.socialLink.update({ where: { key: 'instagram' }, data: { handle: instagram.handle } });
+
+      const tiers = body<MembershipTier[]>(await request(app.getHttpServer()).get('/membership-tiers').expect(200));
+      expect(tiers.map((t) => t.key)).toEqual(['single', 'all']);
+      const links = body<SocialLink[]>(await request(app.getHttpServer()).get('/social/links').expect(200));
+      expect(links.map((l) => l.key)).toEqual(['instagram', 'tiktok', 'youtube', 'facebook']);
     });
   });
 

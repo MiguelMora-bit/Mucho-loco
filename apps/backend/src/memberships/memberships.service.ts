@@ -80,7 +80,8 @@ export class MembershipsService {
   constructor(private prisma: PrismaService) {}
 
   async getTiers(): Promise<MembershipTier[]> {
-    const rows = await this.prisma.membershipTier.findMany();
+    // Orden del enum (`single`, `all`), no el físico de las filas: un re-seed lo cambiaba.
+    const rows = await this.prisma.membershipTier.findMany({ orderBy: { key: 'asc' } });
     return rows.map(toMembershipTier);
   }
 

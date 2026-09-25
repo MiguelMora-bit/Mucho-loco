@@ -89,7 +89,7 @@ export class PayrollService {
    */
   async getAttendanceSummaries(): Promise<AttendanceSummary[]> {
     const [periods, entries] = await Promise.all([
-      this.prisma.payrollPeriod.findMany(),
+      this.prisma.payrollPeriod.findMany({ orderBy: { startDate: 'asc' } }),
       this.prisma.attendanceEntry.findMany({
         where: { clockOut: { not: null }, employeeId: { not: null } },
         select: { employeeId: true, clockIn: true },

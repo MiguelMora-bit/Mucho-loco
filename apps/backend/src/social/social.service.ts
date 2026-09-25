@@ -32,7 +32,8 @@ export class SocialService {
   constructor(private prisma: PrismaService) {}
 
   async getLinks(): Promise<SocialLink[]> {
-    const rows = await this.prisma.socialLink.findMany();
+    // Orden del enum (instagram, tiktok, youtube, facebook), no el físico de las filas.
+    const rows = await this.prisma.socialLink.findMany({ orderBy: { key: 'asc' } });
     return rows.map(toSocialLink);
   }
 
