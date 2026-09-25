@@ -1,22 +1,11 @@
-import type { HeatmapLevel, NewWorkout, PerformanceStat, PersonalRecord, Workout } from '@mucho-loco/types';
-import { withProgress, workoutProblem } from '../workouts';
+import type { HeatmapLevel, NewWorkout, PerformanceSummary, PersonalRecord, Workout } from '@mucho-loco/types';
+import { latestRecords, summarize, withProgress, workoutProblem } from '../workouts';
 import { heatmapFromVisits } from '../heatmap';
 import { UserMockDatasource } from './user.mock';
 import { delay } from './delay';
 import type { IPerformanceRepository } from '../contract';
 
-const MOCK_STATS: PerformanceStat[] = [
-  { lbl: { es: 'ENTRENAMIENTOS ESTE MES', en: 'WORKOUTS THIS MONTH' }, num: '18', sub: { es: '+3 vs mes anterior', en: '+3 vs last month' }, color: 'orange' },
-  { lbl: { es: 'VOLUMEN TOTAL (KG)', en: 'TOTAL VOLUME (KG)' }, num: '94K', sub: { es: '↑ 12% vs mes anterior', en: '↑ 12% vs last month' }, color: 'red' },
-  { lbl: { es: 'RACHA ACTUAL', en: 'CURRENT STREAK' }, num: '7d', sub: { es: 'Mejor: 14 días', en: 'Best: 14 days' }, color: 'gold' },
-  { lbl: { es: 'PRs ESTE MES', en: 'PRs THIS MONTH' }, num: '3', sub: { es: 'Press · Peso muerto · Hip thrust', en: 'Bench press · Deadlift · Hip thrust' }, color: 'green' },
-];
 
-const MOCK_RECORDS: PersonalRecord[] = [
-  { exercise: { es: 'PRESS DE BANCA', en: 'BENCH PRESS' }, weight: '110 KG', date: '2026-06-18', delta: '+5kg' },
-  { exercise: { es: 'PESO MUERTO', en: 'DEADLIFT' }, weight: '155 KG', date: '2026-06-14', delta: '+10kg' },
-  { exercise: { es: 'HIP THRUST', en: 'HIP THRUST' }, weight: '170 KG', date: '2026-06-07', delta: '+5kg' },
-];
 
 type Logged = NewWorkout & { id: string };
 
@@ -64,14 +53,25 @@ const WORKOUTS: Record<string, Logged[]> = { 'diego@mucholoco.mx': DIEGO_WORKOUT
 let sequence = 0;
 
 export class PerformanceMockDatasource implements IPerformanceRepository {
-  async getStats(): Promise<PerformanceStat[]> {
+  /**
+   * Mismas cifras que el backend (spec 018). La racha es la de la membresía del
+   * mock — en el backend ambas salen de las mismas visitas, así el panel y
+   * Rendimiento no se contradicen.
+   */
+  async getSummary(email: string): Promise<PerformanceSummary> {
     await delay(140);
-    return MOCK_STATS;
+    const membership = await new UserMockDatasource().getMembership(email);
+    const streak = membership?.streak ?? 0;
+    return {
+      ...summarize(withProgress(WORKOUTS[email] ?? [])),
+      streak,
+      bestStreak: Math.max(streak, membership?.bestStreak ?? 0),
+    };
   }
 
-  async getPersonalRecords(): Promise<PersonalRecord[]> {
+  async getPersonalRecords(email: string): Promise<PersonalRecord[]> {
     await delay(120);
-    return MOCK_RECORDS;
+    return latestRecords(withProgress(WORKOUTS[email] ?? []));
   }
 
   async getWorkouts(email: string): Promise<Workout[]> {

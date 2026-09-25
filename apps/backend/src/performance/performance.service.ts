@@ -1,67 +1,57 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  HeatmapLevel,
-  LocalizedString,
-  PerformanceStat,
-  PersonalRecord,
-  StatColor,
-} from '@mucho-loco/types';
+import type { HeatmapLevel, PerformanceSummary, PersonalRecord } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
-import type {
-  PerformanceStat as StatRow,
-  PersonalRecord as RecordRow,
-} from '@prisma/client';
-import { HEATMAP_WEEKS, dayDate, heatmapOf, heatmapStart } from '../memberships/visit-stats';
+import {
+  HEATMAP_WEEKS,
+  currentStreak,
+  dayDate,
+  heatmapOf,
+  heatmapStart,
+  longestStreak,
+} from '../memberships/visit-stats';
+import { WorkoutsService } from './workouts.service';
+import { latestRecords, summarize } from './workout-progress';
 
-const STAT_COLORS: readonly StatColor[] = ['red', 'orange', 'yellow', 'gold', 'green', 'cream'];
-/** Los dos hex que traía el seed antes del spec 010. */
-const LEGACY_HEX: Record<string, StatColor> = { '#6dd56d': 'green', '#ffe066': 'gold' };
+/** Un año de días de asistencia: alcanza para la racha actual y la mejor. */
+const STREAK_WINDOW_DAYS = 366;
 
 /**
- * El color como nombre de la paleta (spec 010). Acepta lo que la base pudiera
- * tener de antes — `var(--orange)` o uno de los dos hex históricos — para que
- * una fila sin migrar no rompa ningún cliente. Desconocido → `cream`.
+ * Rendimiento del socio: todo sale de lo que registró (entrenamientos,
+ * spec 017) y de su asistencia (visitas, spec 012). Ya no queda nada sembrado.
  */
-export function statColorOf(value: string): StatColor {
-  const raw = value.trim().toLowerCase();
-  const name = /^var\(--([a-z-]+)\)$/.exec(raw)?.[1] ?? LEGACY_HEX[raw] ?? raw;
-  return (STAT_COLORS as readonly string[]).includes(name) ? (name as StatColor) : 'cream';
-}
-
-function toStat(row: StatRow): PerformanceStat {
-  return {
-    lbl: row.lbl as LocalizedString,
-    num: row.num,
-    sub: row.sub as LocalizedString,
-    color: statColorOf(row.color),
-  };
-}
-
-function toRecord(row: RecordRow): PersonalRecord {
-  return {
-    exercise: row.exercise as LocalizedString,
-    weight: row.weight,
-    date: row.date.toISOString().slice(0, 10),
-    delta: row.delta,
-  };
-}
-
 @Injectable()
 export class PerformanceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private workouts: WorkoutsService,
+  ) {}
 
-  async getStats(): Promise<PerformanceStat[]> {
-    const rows = await this.prisma.performanceStat.findMany({
-      orderBy: { sortOrder: 'asc' },
-    });
-    return rows.map(toStat);
+  /**
+   * La pestaña Resumen (spec 018), en números. La racha es de asistencia: la
+   * misma que muestra el panel, no una segunda racha de "días con registro".
+   */
+  async getSummary(userId: string, now = new Date()): Promise<PerformanceSummary> {
+    const [workouts, visits] = await Promise.all([
+      this.workouts.list(userId),
+      this.prisma.visit.findMany({
+        where: { userId },
+        select: { visitDay: true },
+        orderBy: { visitDay: 'desc' },
+        take: STREAK_WINDOW_DAYS,
+      }),
+    ]);
+    const days = visits.map((v) => v.visitDay.toISOString().slice(0, 10));
+    const streak = currentStreak(days, now);
+    return {
+      ...summarize(workouts, now),
+      streak,
+      bestStreak: Math.max(streak, longestStreak(days)),
+    };
   }
 
-  async getPersonalRecords(): Promise<PersonalRecord[]> {
-    const rows = await this.prisma.personalRecord.findMany({
-      orderBy: { sortOrder: 'asc' },
-    });
-    return rows.map(toRecord);
+  /** Los últimos 3 récords que marcó la regla del spec 017, con el peso que superaron. */
+  async getPersonalRecords(userId: string): Promise<PersonalRecord[]> {
+    return latestRecords(await this.workouts.list(userId));
   }
 
   /**

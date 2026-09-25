@@ -9,7 +9,8 @@ import type {
   HeatmapLevel,
   MembershipInfo,
   Order,
-  PerformanceStat,
+  PerformanceSummary,
+  PersonalRecord,
   Product,
   SocialLink,
   UserProfile,
@@ -104,7 +105,7 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
     });
 
     it('requires auth for /performance and /community (account content, not landing)', async () => {
-      await request(app.getHttpServer()).get('/performance/stats').expect(401);
+      await request(app.getHttpServer()).get('/performance/summary').expect(401);
       await request(app.getHttpServer()).get('/community/posts').expect(401);
     });
   });
@@ -185,15 +186,54 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
     });
   });
 
-  describe('performance (seeded data, authenticated but not personalized)', () => {
-    it('GET /performance/stats returns the 4 seeded stats', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/performance/stats')
-        .set(...fakeAuthHeader('perf@mucholoco.mx'))
-        .expect(200);
-      expect(body<PerformanceStat[]>(res)).toHaveLength(4);
-      // Nombre de la paleta, no CSS: el móvil no sabe qué es `var(--orange)`.
-      expect(body<PerformanceStat[]>(res).map((s) => s.color)).toEqual(['orange', 'red', 'gold', 'green']);
+  describe('performance (the member\'s own: workouts, attendance)', () => {
+    // Spec 018: el resumen y los récords salen de lo registrado (017) y de la asistencia (012).
+    it('GET /performance/summary and /records derive from the member\'s workouts and visits', async () => {
+      const member = 'summary-e2e@mucholoco.mx';
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+      const [year, month] = today.split('-').map(Number);
+      const lastMonth = `${new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 7)}-01`;
+      const lift = (date: string, weightKg: number) => ({
+        date,
+        name: 'Push',
+        durationMinutes: null,
+        exercises: [{ name: 'Press de banca', sets: [{ reps: 10, weightKg }] }],
+      });
+      try {
+        for (const input of [lift(lastMonth, 50), lift(today, 60)]) {
+          await request(app.getHttpServer())
+            .post('/performance/workouts')
+            .set(...fakeAuthHeader(member))
+            .send(input)
+            .expect(201);
+        }
+        const user = await prisma.user.findUniqueOrThrow({ where: { email: member } });
+        await prisma.visit.create({
+          data: { userId: user.id, branchId: 1, visitedAt: new Date(), visitDay: new Date(`${today}T00:00:00.000Z`) },
+        });
+
+        const summary = body<PerformanceSummary>(
+          await request(app.getHttpServer()).get('/performance/summary').set(...fakeAuthHeader(member)).expect(200),
+        );
+        expect(summary).toEqual({
+          workoutsThisMonth: 1,
+          workoutsLastMonth: 1,
+          volumeThisMonthKg: 600,
+          volumeLastMonthKg: 500,
+          streak: 1,
+          bestStreak: 1,
+          prsThisMonth: 1,
+          prExercisesThisMonth: ['Press de banca'],
+        });
+        const records = body<PersonalRecord[]>(
+          await request(app.getHttpServer()).get('/performance/records').set(...fakeAuthHeader(member)).expect(200),
+        );
+        expect(records).toEqual([{ exercise: 'Press de banca', weightKg: 60, date: today, previousKg: 50 }]);
+      } finally {
+        await prisma.workout.deleteMany({ where: { user: { email: member } } });
+        await prisma.visit.deleteMany({ where: { user: { email: member } } });
+        await prisma.user.deleteMany({ where: { email: member } });
+      }
     });
 
     // Spec 016: el heatmap es la asistencia real del socio, no una cuadrícula sembrada.
@@ -419,7 +459,7 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
 
     it('marks a record when the best previous weight is beaten, newest first', async () => {
       const saved = body<Workout>(await log(me, bench(day(0), 75)).expect(201));
-      expect(saved.prs).toEqual([{ exercise: 'Press de banca', weightKg: 75 }]);
+      expect(saved.prs).toEqual([{ exercise: 'Press de banca', weightKg: 75, previousKg: 70 }]);
       expect((await list(me)).map((w) => w.date)).toEqual([day(0), day(-1)]);
     });
 

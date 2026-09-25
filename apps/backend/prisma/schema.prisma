@@ -492,35 +492,6 @@ model CommunityComment {
   @@map("community_comments")
 }
 
-/// Rendimiento (PRs/stats) — todavía contenido fijo semillado, IGUAL para
-/// cualquier usuario: se derivan de los entrenamientos registrados en el
-/// spec 018. Los entrenamientos ya son del socio (spec 017, abajo) y el
-/// heatmap sale de sus visitas (spec 016).
-model PerformanceStat {
-  id    String @id @default(uuid())
-  /// LocalizedString
-  lbl   Json
-  num   String
-  /// LocalizedString
-  sub   Json
-  color String
-  sortOrder Int @default(0)
-
-  @@map("performance_stats")
-}
-
-model PersonalRecord {
-  id       String   @id @default(uuid())
-  /// LocalizedString
-  exercise Json
-  weight   String
-  date     DateTime
-  delta    String
-  sortOrder Int @default(0)
-
-  @@map("personal_records")
-}
-
 /// Entrenamiento que registra el socio (spec 017) — antes era contenido
 /// sembrado, igual para todos. Series, volumen y récords NO se guardan: se
 /// derivan al leer (`workout-progress.ts`), así borrar un entrenamiento

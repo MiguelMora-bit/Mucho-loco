@@ -265,12 +265,12 @@ describe('PerformanceHttpDatasource', () => {
     const spy = stubFetch([]);
     const ds = new PerformanceHttpDatasource(client().api);
 
-    await ds.getStats();
-    await ds.getPersonalRecords();
+    await ds.getSummary('ignorado@test.mx');
+    await ds.getPersonalRecords('ignorado@test.mx');
     await ds.getWorkouts('ignorado@test.mx');
     await ds.getHeatmap('ignorado@test.mx');
 
-    expect(call(spy, 0).url).toBe('http://api.test/performance/stats');
+    expect(call(spy, 0).url).toBe('http://api.test/performance/summary');
     expect(call(spy, 1).url).toBe('http://api.test/performance/records');
     expect(call(spy, 2).url).toBe('http://api.test/performance/workouts');
     expect(call(spy, 3).url).toBe('http://api.test/performance/heatmap');

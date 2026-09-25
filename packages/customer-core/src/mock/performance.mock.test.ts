@@ -36,3 +36,33 @@ describe('PerformanceMockDatasource workouts', () => {
     ).rejects.toThrow('WORKOUT_INVALID');
   });
 });
+
+// Spec 018: el resumen y los récords salen de lo registrado, con la misma regla.
+describe('PerformanceMockDatasource summary and records', () => {
+  const ds = new PerformanceMockDatasource();
+
+  it("derives Diego's latest records with the weight they beat", async () => {
+    expect(await ds.getPersonalRecords('diego@mucholoco.mx')).toEqual([
+      { exercise: 'Press de banca', weightKg: 105, date: '2026-06-18', previousKg: 95 },
+      { exercise: 'Sentadilla', weightKg: 120, date: '2026-06-16', previousKg: 60 },
+      { exercise: 'Press de banca', weightKg: 95, date: '2026-06-12', previousKg: 60 },
+    ]);
+  });
+
+  it('counts only what a member logged, with the streak of their membership', async () => {
+    const email = `summary.${Date.now()}@test.mx`;
+    await ds.logWorkout(email, { date: workoutDay(0), name: 'Push', durationMinutes: null, exercises: [{ name: 'Press', sets: [{ reps: 10, weightKg: 50 }] }] });
+    expect(await ds.getSummary(email)).toEqual({
+      workoutsThisMonth: 1,
+      workoutsLastMonth: 0,
+      volumeThisMonthKg: 500,
+      volumeLastMonthKg: 0,
+      streak: 0,
+      bestStreak: 0,
+      prsThisMonth: 0,
+      prExercisesThisMonth: [],
+    });
+    // Diego: racha curada de su membresía (la misma que muestra el panel).
+    expect(await ds.getSummary('diego@mucholoco.mx')).toMatchObject({ streak: 7, bestStreak: 14 });
+  });
+});

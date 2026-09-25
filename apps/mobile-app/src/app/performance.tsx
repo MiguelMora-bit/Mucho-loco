@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import type { HeatmapLevel } from '@mucho-loco/types';
 import { formatDate, formatDuration } from '@mucho-loco/customer-core/dates';
+import { performanceCards } from '@mucho-loco/customer-core/performance-cards';
 import { formatKg } from '@mucho-loco/customer-core/workouts';
 import { Body, Button, Card, Chip, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
 import { useT } from '@/lib/i18n';
@@ -30,13 +31,13 @@ export default function PerformanceScreen() {
   const heatmapScroll = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
-    const [stats, records, workouts, heatmap] = await Promise.all([
-      performanceRepository.getStats(),
-      performanceRepository.getPersonalRecords(),
+    const [summary, records, workouts, heatmap] = await Promise.all([
+      performanceRepository.getSummary(email),
+      performanceRepository.getPersonalRecords(email),
       performanceRepository.getWorkouts(email),
       performanceRepository.getHeatmap(email),
     ]);
-    return { stats, records, workouts, heatmap };
+    return { summary, records, workouts, heatmap };
   }, [email]);
   const { state, reload } = useResource(load);
   const router = useRouter();
@@ -89,11 +90,12 @@ export default function PerformanceScreen() {
       {state.status === 'ready' && view === 'overview' && (
         <>
           <View style={styles.grid}>
-            {state.data.stats.map((s) => (
-              <Card key={s.lbl.es} style={styles.stat}>
-                <Mono>{s.lbl[lang]}</Mono>
-                <Display style={[styles.statNum, { color: colors[s.color] ?? colors.cream }]}>{s.num}</Display>
-                <Body style={styles.small}>{s.sub[lang]}</Body>
+            {/* Spec 018: las mismas tarjetas que la web, de los números del socio. */}
+            {performanceCards(t, lang, state.data.summary).map((card) => (
+              <Card key={card.label} style={styles.stat}>
+                <Mono>{card.label}</Mono>
+                <Display style={[styles.statNum, { color: colors[card.color] ?? colors.cream }]}>{card.value}</Display>
+                <Body style={styles.small}>{card.sub}</Body>
               </Card>
             ))}
           </View>
@@ -101,14 +103,19 @@ export default function PerformanceScreen() {
             {p.overview.recordsPrefix} <Heading style={styles.red}>{p.overview.recordsHighlight}</Heading>{' '}
             {p.overview.recordsSuffix}
           </Heading>
+          {state.data.records.length === 0 && <Body>{p.overview.noRecords}</Body>}
           {state.data.records.map((pr) => (
-            <Card key={pr.exercise.es} style={styles.record}>
+            <Card key={`${pr.exercise}-${pr.date}`} style={styles.record}>
               <Mono style={styles.orange}>🏆 PR</Mono>
-              <Heading>{pr.exercise[lang]}</Heading>
-              <Display style={[styles.statNum, styles.red]}>{pr.weight}</Display>
+              <Heading>{pr.exercise}</Heading>
+              <Display style={[styles.statNum, styles.red]}>
+                {formatKg(pr.weightKg, lang)} {p.workouts.kgUnit.toUpperCase()}
+              </Display>
               <Mono>
                 {formatDate(pr.date, lang, { day: '2-digit', month: 'short' })} ·{' '}
-                <Mono style={styles.green}>{pr.delta}</Mono>
+                <Mono style={styles.green}>
+                  +{formatKg(pr.weightKg - pr.previousKg, lang)} {p.workouts.kgUnit}
+                </Mono>
               </Mono>
             </Card>
           ))}

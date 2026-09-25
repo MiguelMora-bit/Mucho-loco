@@ -105,6 +105,10 @@ EXPO_PUBLIC_COGNITO_DOMAIN=<terraform output cognito_domain>    # solo login soc
 
 Spec 017. Rendimiento → Entrenamientos tiene "REGISTRAR ENTRENAMIENTO" → pantalla `workout/new` (nombre, Hoy/Ayer, duración opcional, ejercicios con series reps × kg; "+ SERIE" copia la anterior; kg vacío = peso corporal; valida con `workoutProblem` de customer-core antes de mandar). La lista muestra series, volumen (`formatKg`) y los récords que calculó la regla, y "Borrar" pide un segundo toque. La pantalla relee al volver (`useFocusEffect`). La captura vive solo aquí: es lo que el socio trae en el gimnasio. Walkthrough: rechazo sin nombre de ejercicio → guardar → récord de 110 kg y "1 series · 550 kg vol" → borrar.
 
+## Resumen de Rendimiento (2026-09-25)
+
+Spec 018. Las tarjetas de Resumen salen de `PerformanceSummary` con `performanceCards` de customer-core (el mismo helper que la web: texto traducido y color de paleta), y los récords son los últimos que marcó la regla ("105 KG · +10 kg"). En mock, la racha es la de la membresía curada (7, mejor 14) y los entrenamientos de Diego son de junio: este mes sale en cero, honesto.
+
 ## Heatmap de asistencia (2026-09-25)
 
 Spec 016. `performanceRepository.getHeatmap(email)` devuelve la asistencia real (en mock, del historial de visitas con `heatmapFromVisits` de customer-core — antes `Math.random()` en cada llamada). Una columna por semana; el scroll horizontal abre en la semana actual (`scrollToEnd` al medir el contenido). El walkthrough cuenta las 6 visitas de Diego.

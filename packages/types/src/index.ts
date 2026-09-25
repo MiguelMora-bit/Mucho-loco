@@ -732,6 +732,15 @@ export interface Translations {
       recordsPrefix: string;
       recordsHighlight: string;
       recordsSuffix: string;
+      /** Tarjetas calculadas (spec 018). */
+      workoutsLabel: string;
+      volumeLabel: string;
+      streakLabel: string;
+      prsLabel: string;
+      vsLastMonth: string;
+      bestStreak: string;
+      noPrs: string;
+      noRecords: string;
     };
     workouts: {
       historyPrefix: string;
@@ -1254,6 +1263,8 @@ export interface NewWorkout {
 export interface WorkoutRecord {
   exercise: string;
   weightKg: number;
+  /** El mejor peso anterior que superó (spec 018: "+10 kg"). */
+  previousKg: number;
 }
 
 export interface Workout extends NewWorkout {
@@ -1271,18 +1282,32 @@ export interface Workout extends NewWorkout {
  */
 export type StatColor = 'red' | 'orange' | 'yellow' | 'gold' | 'green' | 'cream';
 
-export interface PerformanceStat {
-  lbl: LocalizedString;
-  num: string;
-  sub: LocalizedString;
-  color: StatColor;
+/**
+ * La pestaña Resumen de Rendimiento (spec 018), en números: el texto ("+3 vs
+ * mes anterior", "94K") y el color de cada tarjeta los pone quien pinta
+ * (`performanceCards` de customer-core). Antes era `PerformanceStat`, con todo
+ * eso armado y sembrado en el servidor.
+ */
+export interface PerformanceSummary {
+  workoutsThisMonth: number;
+  workoutsLastMonth: number;
+  volumeThisMonthKg: number;
+  volumeLastMonthKg: number;
+  /** Racha de asistencia (spec 012): la misma que muestra el panel. */
+  streak: number;
+  bestStreak: number;
+  prsThisMonth: number;
+  /** Ejercicios con récord este mes, sin repetir. */
+  prExercisesThisMonth: string[];
 }
 
+/** Un récord que marcó la regla del spec 017, con el peso que superó. */
 export interface PersonalRecord {
-  exercise: LocalizedString;
-  weight: string;
+  exercise: string;
+  weightKg: number;
+  /** Día del entrenamiento (fecha sin hora). */
   date: string;
-  delta: string;
+  previousKg: number;
 }
 
 export type HeatmapLevel = '' | 'l1' | 'l2' | 'l3';

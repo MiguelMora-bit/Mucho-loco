@@ -173,10 +173,13 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
 
   await test.step('rendimiento: resumen, entrenamientos y heatmap', async () => {
     await page.getByRole('button', { name: 'RENDIMIENTO', exact: true }).click();
-    await expect(page.getByText('PRESS DE BANCA')).toBeVisible();
-    // El color llega como nombre de la paleta (spec 010) y se pinta con theme.ts.
-    await expect(page.getByText('94K', { exact: true })).toHaveCSS('color', 'rgb(225, 20, 28)');
-    await expect(page.getByText('7d', { exact: true })).toHaveCSS('color', 'rgb(255, 224, 102)');
+    // Spec 018: las tarjetas salen de los números del socio (racha 7, mejor 14) y
+    // se pintan con el color de la paleta (spec 010) desde theme.ts.
+    await expect(page.getByText('Mejor: 14', { exact: true })).toBeVisible();
+    await expect(page.getByText('7', { exact: true }).filter({ visible: true })).toHaveCSS('color', 'rgb(255, 224, 102)');
+    // Los récords son los que marcó la regla: press de banca 105 kg, superando 95.
+    await expect(page.getByText('105 KG', { exact: true })).toBeVisible();
+    await expect(page.getByText('+10 kg', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'ENTRENAMIENTOS', exact: true }).click();
     await expect(page.getByText('Push Day · Pecho & Hombros')).toBeVisible();
     // Spec 017: los récords salen de la regla sobre lo registrado, no de un texto.

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
 import type {
   HeatmapLevel,
-  PerformanceStat,
+  PerformanceSummary,
   PersonalRecord,
   Workout,
 } from '@mucho-loco/types';
@@ -13,8 +13,9 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import type { IdTokenClaims } from '../auth/cognito';
 
 /** Detrás de CognitoAuthGuard por defecto (no @Public()) — contenido de la
- *  cuenta ("mi rendimiento"). Entrenamientos (spec 017) y heatmap (spec 016)
- *  son del socio; stats y récords siguen sembrados hasta el spec 018. */
+ *  cuenta ("mi rendimiento"), todo del socio: entrenamientos (spec 017),
+ *  resumen y récords derivados de ellos (spec 018), heatmap de su asistencia
+ *  (spec 016). */
 @Controller('performance')
 export class PerformanceController {
   constructor(
@@ -23,14 +24,17 @@ export class PerformanceController {
     private users: UsersService,
   ) {}
 
-  @Get('stats')
-  getStats(): Promise<PerformanceStat[]> {
-    return this.performance.getStats();
+  /** La pestaña Resumen, en números (spec 018): el texto lo pone quien pinta. */
+  @Get('summary')
+  async getSummary(@CurrentUser() user: IdTokenClaims): Promise<PerformanceSummary> {
+    const dbUser = await this.users.findOrCreateByCognito(user);
+    return this.performance.getSummary(dbUser.id);
   }
 
   @Get('records')
-  getPersonalRecords(): Promise<PersonalRecord[]> {
-    return this.performance.getPersonalRecords();
+  async getPersonalRecords(@CurrentUser() user: IdTokenClaims): Promise<PersonalRecord[]> {
+    const dbUser = await this.users.findOrCreateByCognito(user);
+    return this.performance.getPersonalRecords(dbUser.id);
   }
 
   /** Los entrenamientos que registró el socio (spec 017), el más reciente primero. */

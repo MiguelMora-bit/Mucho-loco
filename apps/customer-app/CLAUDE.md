@@ -131,6 +131,8 @@ Spec, plan y tareas en `specs/001-member-cfdi-invoicing/` (primera funcionalidad
 
 Spec 007. `SignupForm` pide teléfono (obligatorio, con la nota de que ahí llegan los avisos de WhatsApp) en lugar del cumpleaños, que nunca se enviaba. `AccountClient` valida con `toE164` de customer-core antes de enviar; `/api/auth/register` revalida (400 `INVALID_PHONE`) y agrega `phone_number` a Cognito — el backend lo guarda al crear al socio. Tests en `app/api/auth/register/route.test.ts`. Sin probar el registro de punta a punta (necesita User Pool vivo).
 
+**Resumen de Rendimiento (spec 018)**: `Overview` pinta las tarjetas con `performanceCards` (customer-core) desde `PerformanceSummary`, y los récords con `formatKg` y la diferencia contra `previousKg`.
+
 **Entrenamientos (spec 017)**: `WorkoutsList` muestra lo que registró el socio (series, volumen con `formatKg`, récords, `formatDuration`) y, vacío, que se registran desde la app del teléfono — la web no captura.
 
 **Heatmap de asistencia (spec 016)**: `/performance` pasa el email de la sesión a `getHeatmap` (redirige a `/account` sin sesión) y la cuadrícula ahora fluye por columnas (`grid-auto-flow: column`, 7 filas en `globals.css`): antes llenaba por filas, así que una columna NO era una semana aunque el texto lo dijera — con datos aleatorios no se notaba.

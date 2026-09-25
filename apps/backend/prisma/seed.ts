@@ -173,23 +173,8 @@ const socialFeedPosts = [
   { net: 'instagram' as const, img: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=1000&q=70', cap: { es: 'Domingo de cardio al aire libre ☀️', en: 'Sunday outdoor cardio ☀️' }, likes: '2.0K', ago: '3d', url: '#' },
 ];
 
-// Performance: mismo contenido que performance.mock.ts, salvo el heatmap —
-// el mock lo generaba random en cada llamada (Math.random), aquí se
-// reemplaza por un patrón fijo (mismo request, misma respuesta). Sin
-// personalizar por usuario (ver comentario en schema.prisma sobre este dominio).
-const performanceStats = [
-  { lbl: { es: 'ENTRENAMIENTOS ESTE MES', en: 'WORKOUTS THIS MONTH' }, num: '18', sub: { es: '+3 vs mes anterior', en: '+3 vs last month' }, color: 'orange' },
-  { lbl: { es: 'VOLUMEN TOTAL (KG)', en: 'TOTAL VOLUME (KG)' }, num: '94K', sub: { es: '↑ 12% vs mes anterior', en: '↑ 12% vs last month' }, color: 'red' },
-  { lbl: { es: 'RACHA ACTUAL', en: 'CURRENT STREAK' }, num: '7d', sub: { es: 'Mejor: 14 días', en: 'Best: 14 days' }, color: 'gold' },
-  { lbl: { es: 'PRs ESTE MES', en: 'PRs THIS MONTH' }, num: '3', sub: { es: 'Press · Peso muerto · Hip thrust', en: 'Bench press · Deadlift · Hip thrust' }, color: 'green' },
-];
-
-const personalRecords = [
-  { exercise: { es: 'PRESS DE BANCA', en: 'BENCH PRESS' }, weight: '110 KG', date: new Date('2026-06-18'), delta: '+5kg' },
-  { exercise: { es: 'PESO MUERTO', en: 'DEADLIFT' }, weight: '155 KG', date: new Date('2026-06-14'), delta: '+10kg' },
-  { exercise: { es: 'HIP THRUST', en: 'HIP THRUST' }, weight: '170 KG', date: new Date('2026-06-07'), delta: '+5kg' },
-];
-
+// Performance no se siembra: todo sale de lo que registra cada socio
+// (entrenamientos, spec 017) y de su asistencia (visitas, spec 012).
 
 
 // --- Operación de sucursal y HQ (2026-09-12) ---------------------------------
@@ -284,21 +269,13 @@ async function main() {
     await prisma.socialLink.upsert({ where: { key: link.key }, create: link, update: link });
   }
 
-  // SocialFeedPost/PerformanceStat/PersonalRecord/Workout no tienen una key
+  // SocialFeedPost no tiene una key
   // natural en el mock (nunca fueron editables ahí) — a diferencia de
   // branches/products/tiers/announcements/socialLinks, se re-siembran por
   // completo (delete + create) en vez de upsert por id generado.
   await prisma.socialFeedPost.deleteMany();
   await prisma.socialFeedPost.createMany({
     data: socialFeedPosts.map((post, i) => ({ ...post, sortOrder: i })),
-  });
-  await prisma.performanceStat.deleteMany();
-  await prisma.performanceStat.createMany({
-    data: performanceStats.map((stat, i) => ({ ...stat, sortOrder: i })),
-  });
-  await prisma.personalRecord.deleteMany();
-  await prisma.personalRecord.createMany({
-    data: personalRecords.map((record, i) => ({ ...record, sortOrder: i })),
   });
 
   for (const level of branchInventory) {
@@ -321,7 +298,7 @@ async function main() {
   console.log(
     `Seeded ${branches.length} branches, ${products.length} products, ${membershipTiers.length} membership tiers, ` +
       `${announcements.length} announcements, ${socialLinks.length} social links, ${socialFeedPosts.length} social feed posts, ` +
-      `${performanceStats.length} performance stats, ${personalRecords.length} personal records, ` +
+      `` +
       `${branchInventory.length} inventory levels, ${employees.length} employees, ${expenses.length} expenses, ${payrollPeriods.length} payroll periods.`,
   );
 }

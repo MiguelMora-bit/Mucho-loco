@@ -10,7 +10,7 @@ import type {
   OfflinePaymentMethod,
   Order,
   OrderDelivery,
-  PerformanceStat,
+  PerformanceSummary,
   PersonalRecord,
   ShippingAddress,
   UserProfile,
@@ -133,11 +133,11 @@ export class PerformanceHttpDatasource implements IPerformanceRepository {
     this.api = api;
   }
 
-  getStats(): Promise<PerformanceStat[]> {
-    return this.api.get<PerformanceStat[]>('/performance/stats', ACCOUNT);
+  getSummary(_email: string): Promise<PerformanceSummary> {
+    return this.api.get<PerformanceSummary>('/performance/summary', ACCOUNT);
   }
 
-  getPersonalRecords(): Promise<PersonalRecord[]> {
+  getPersonalRecords(_email: string): Promise<PersonalRecord[]> {
     return this.api.get<PersonalRecord[]>('/performance/records', ACCOUNT);
   }
 

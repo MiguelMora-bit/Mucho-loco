@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NewWorkout } from '@mucho-loco/types';
-import { exerciseKey, formatKg, withProgress, workoutDay, workoutProblem } from './workouts';
+import { exerciseKey, formatKg, latestRecords, summarize, withProgress, workoutDay, workoutProblem } from './workouts';
 
 // Viernes 25 de septiembre de 2026, 12:00 en CDMX.
 const NOW = new Date('2026-09-25T18:00:00.000Z');
@@ -61,7 +61,7 @@ describe('withProgress (spec 017)', () => {
       lift('c', '2026-09-23', 'Press de Banca', 75),
       lift('d', '2026-09-24', 'Sentadilla', 100),
     ]);
-    expect(result.map((w) => w.prs)).toEqual([[], [], [{ exercise: 'Press de Banca', weightKg: 75 }], []]);
+    expect(result.map((w) => w.prs)).toEqual([[], [], [{ exercise: 'Press de Banca', weightKg: 75, previousKg: 70 }], []]);
   });
 
   it('counts the heaviest set of a repeated exercise once', () => {
@@ -77,7 +77,7 @@ describe('withProgress (spec 017)', () => {
         }),
       },
     ]);
-    expect(second.prs).toEqual([{ exercise: 'remo', weightKg: 60 }]);
+    expect(second.prs).toEqual([{ exercise: 'remo', weightKg: 60, previousKg: 50 }]);
   });
 });
 
@@ -90,5 +90,39 @@ describe('formatKg and workoutDay', () => {
   it('gives today and yesterday in Mexico City', () => {
     expect(workoutDay(0, new Date('2026-09-26T05:30:00.000Z'))).toBe('2026-09-25');
     expect(workoutDay(-1, NOW)).toBe('2026-09-24');
+  });
+});
+
+describe('summarize and latestRecords (spec 018)', () => {
+  const lift = (id: string, date: string, weightKg: number, name = 'Press de banca') => ({
+    id,
+    ...workout({ date, exercises: [{ name, sets: [{ reps: 10, weightKg }] }] }),
+  });
+  // Agosto: 1 entrenamiento (línea base). Septiembre: 2, el segundo con récord.
+  const workouts = withProgress([
+    lift('a', '2026-08-20', 500),
+    lift('b', '2026-09-02', 300, 'Sentadilla'),
+    lift('c', '2026-09-20', 510),
+  ]);
+
+  it('counts this month against the last one, with volume and records', () => {
+    expect(summarize(workouts, NOW)).toEqual({
+      workoutsThisMonth: 2,
+      workoutsLastMonth: 1,
+      volumeThisMonthKg: 8100,
+      volumeLastMonthKg: 5000,
+      prsThisMonth: 1,
+      prExercisesThisMonth: ['Press de banca'],
+    });
+  });
+
+  it('goes back to December in January', () => {
+    const january = withProgress([lift('a', '2025-12-31', 50), lift('b', '2026-01-02', 60)]);
+    expect(summarize(january, new Date('2026-01-10T18:00:00.000Z'))).toMatchObject({ workoutsThisMonth: 1, workoutsLastMonth: 1, prsThisMonth: 1 });
+  });
+
+  it('lists the latest records first, with the weight they beat', () => {
+    expect(latestRecords(workouts)).toEqual([{ exercise: 'Press de banca', weightKg: 510, date: '2026-09-20', previousKg: 500 }]);
+    expect(latestRecords(withProgress([]))).toEqual([]);
   });
 });

@@ -9,6 +9,7 @@
     "./http": "./src/http/index.ts",
     "./data": "./src/data.ts",
     "./pricing": "./src/pricing.ts",
+    "./performance-cards": "./src/performance-cards.ts",
     "./dates": "./src/dates.ts",
     "./order-status": "./src/orderStatus.ts",
     "./translations": "./src/translations.ts",

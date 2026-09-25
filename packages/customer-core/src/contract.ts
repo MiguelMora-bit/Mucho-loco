@@ -28,7 +28,7 @@ import type {
   OfflinePaymentMethod,
   Order,
   OrderDelivery,
-  PerformanceStat,
+  PerformanceSummary,
   PersonalRecord,
   Product,
   SocialLink,
@@ -159,8 +159,10 @@ export interface IPaymentRepository {
 }
 
 export interface IPerformanceRepository {
-  getStats(): Promise<PerformanceStat[]>;
-  getPersonalRecords(): Promise<PersonalRecord[]>;
+  /** La pestaña Resumen en números (spec 018): de sus entrenamientos y su asistencia. */
+  getSummary(email: string): Promise<PerformanceSummary>;
+  /** Los últimos 3 récords que marcó la regla del spec 017, con el peso que superaron. */
+  getPersonalRecords(email: string): Promise<PersonalRecord[]>;
   /** Los que registró el socio, el más reciente primero, con series, volumen y récords (spec 017). */
   getWorkouts(email: string): Promise<Workout[]>;
   /** Guarda lo que registró y lo devuelve con sus derivados. Forma inválida → error ('WORKOUT_INVALID'). */

@@ -473,7 +473,15 @@
     "overview": {
       "recordsPrefix": "LATEST PERSONAL",
       "recordsHighlight": "RECORDS",
-      "recordsSuffix": ""
+      "recordsSuffix": "",
+      "workoutsLabel": "WORKOUTS THIS MONTH",
+      "volumeLabel": "VOLUME THIS MONTH (KG)",
+      "streakLabel": "CURRENT STREAK (DAYS)",
+      "prsLabel": "PRs THIS MONTH",
+      "vsLastMonth": "vs last month",
+      "bestStreak": "Best:",
+      "noPrs": "No records this month",
+      "noRecords": "Log your workouts and your records will show up here."
     },
     "workouts": {
       "historyPrefix": "WORKOUT",

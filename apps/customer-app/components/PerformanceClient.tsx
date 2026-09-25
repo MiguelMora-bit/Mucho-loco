@@ -4,19 +4,19 @@ import { useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useT } from '@/lib/hooks/useT';
 import { Overview, WorkoutsList, Heatmap } from './performance';
-import type { Workout, PerformanceStat, PersonalRecord, HeatmapLevel } from '@/lib/types/performance';
+import type { Workout, PerformanceSummary, PersonalRecord, HeatmapLevel } from '@/lib/types/performance';
 import type { Lang } from '@mucho-loco/types';
 
 type ViewKey = 'overview' | 'workouts' | 'heatmap';
 
 interface PerformanceClientProps {
-  stats: PerformanceStat[];
+  summary: PerformanceSummary;
   records: PersonalRecord[];
   workouts: Workout[];
   heatmap: HeatmapLevel[][];
 }
 
-export default function PerformanceClient({ stats, records, workouts, heatmap }: PerformanceClientProps) {
+export default function PerformanceClient({ summary, records, workouts, heatmap }: PerformanceClientProps) {
   const t = useT();
   const lang = useLocale() as Lang;
   const [view, setView] = useState<ViewKey>('overview');
@@ -37,7 +37,7 @@ export default function PerformanceClient({ stats, records, workouts, heatmap }:
         </div>
       </div>
 
-      {view === 'overview' && <Overview t={t} lang={lang} stats={stats} records={records} />}
+      {view === 'overview' && <Overview t={t} lang={lang} summary={summary} records={records} />}
       {view === 'workouts' && <WorkoutsList t={t} lang={lang} workouts={workouts} />}
       {view === 'heatmap' && <Heatmap t={t} heatmap={heatmap} />}
     </div>

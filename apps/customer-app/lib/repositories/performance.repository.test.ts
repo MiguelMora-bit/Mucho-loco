@@ -2,13 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { performanceRepository } from './performance.repository';
 
 describe('performanceRepository', () => {
-  it('getStats returns labeled stat cards', async () => {
-    const stats = await performanceRepository.getStats();
-    expect(stats.length).toBeGreaterThan(0);
-    for (const s of stats) {
-      expect(s).toHaveProperty('lbl');
-      expect(s).toHaveProperty('num');
-    }
+  it("getSummary returns the member's numbers, not preformatted text", async () => {
+    const summary = await performanceRepository.getSummary('diego@mucholoco.mx');
+    expect(typeof summary.workoutsThisMonth).toBe('number');
+    expect(summary.streak).toBe(7);
   });
 
   it("getWorkouts returns the member's logged workouts with derived numbers", async () => {

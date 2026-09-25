@@ -473,7 +473,15 @@
     "overview": {
       "recordsPrefix": "ÚLTIMOS",
       "recordsHighlight": "RECORDS",
-      "recordsSuffix": "PERSONALES"
+      "recordsSuffix": "PERSONALES",
+      "workoutsLabel": "ENTRENAMIENTOS ESTE MES",
+      "volumeLabel": "VOLUMEN DEL MES (KG)",
+      "streakLabel": "RACHA ACTUAL (DÍAS)",
+      "prsLabel": "PRs ESTE MES",
+      "vsLastMonth": "vs mes anterior",
+      "bestStreak": "Mejor:",
+      "noPrs": "Sin récords este mes",
+      "noRecords": "Registra tus entrenamientos y aquí aparecerán tus récords."
     },
     "workouts": {
       "historyPrefix": "HISTORIAL DE",
