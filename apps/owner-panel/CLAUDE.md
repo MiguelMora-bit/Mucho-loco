@@ -32,6 +32,18 @@ Mismo patrón mock-first: `datasources/mock/stats.mock.ts` (un solo datasource c
 
 Transferencias (`inventoryTransfer.repository.ts` / `.mock.ts` / `.errors.ts`) es su propio dominio, no una tercera vista del mismo datasource de `stats.mock.ts` — a diferencia de branch stats/inventario (solo lectura), transferencias muta `BRANCH_INVENTORY` (decrementa origen, incrementa o abre nivel en destino) y valida (`SameBranchError`, `InsufficientStockError`), mismo patrón que `counterSale.mock.ts` de `branch-app`. Dos stores (`branchInventory.store.ts`, `inventoryTransfers.store.ts`); tras `create()` la página vuelve a pedir ambos (`fetch()`), nunca confía en la copia previa — mismo patrón que el resto del monorepo.
 
+## Facturas (CFDI) — `/invoicing` (2026-09-24)
+
+Spec en `specs/004-owner-cfdi-panel/`. Los CFDI emitidos (un solo RFC para las 15 sucursales), sobre los endpoints de dueño del módulo `invoicing` del backend.
+
+- **Mes** (`<input type="month">`, default el mes actual de CDMX, `lib/currentMonth.ts`): `GET /invoicing/cfdis?month=YYYY-MM` trae TODAS las del mes — sin mes el backend corta en 200, y eso escondería facturas al contador.
+- **Buscar** por folio, RFC o nombre (así se encuentra la factura que un socio reporta por WhatsApp desde customer-app/mobile-app). **PDF/XML** por `api.getFile` + Blob.
+- **Cancelar** solo vigentes, con motivo 02 o 03 explicado; errores tipados en `invoicing.errors.ts` (`CancellationRejectedError` con el motivo del SAT tal cual, `CfdiAlreadyCanceledError` → recarga, `InvoicingUnavailableError`). Cancelada una factura de socio, su cobro vuelve a poder facturarse (lo resuelve el backend).
+- **Resumen** de recibos por estado, con los fallidos resaltados.
+- **Exportar CSV** del mes (`lib/cfdiCsv.ts`): UTF-8 con BOM para Excel en español, comillas escapadas, fecha local de CDMX, total con 2 decimales.
+- Mock: `SAT_REJECTS_CANCEL_UUID` simula un rechazo del SAT. La carga va dentro del efecto con `setState` solo en el callback de la promesa (el lint prohíbe `setState` síncrono en efectos).
+- **Sin verificar en navegador** (iniciar sesión necesita User Pool vivo) y **sin probar contra Facturapi**. Verificado: unit (HTTP, mock, CSV, mes), `tsc -b`, lint, build, integración de rutas.
+
 ## Swap de datasource: mock ↔ backend NestJS (2026-09-12)
 
 Los **4 repositorios están migrados** (`stats`, `inventoryTransfer`, `expenses`, `payroll`). Igual que en los otros dos apps, el default sigue siendo mock: sin configurar nada esto arranca sin Postgres ni backend.

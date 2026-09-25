@@ -3,6 +3,7 @@ import { StatsHttpDatasource } from './stats.http';
 import { InventoryTransferHttpDatasource } from './inventoryTransfer.http';
 import { ExpensesHttpDatasource } from './expenses.http';
 import { PayrollHttpDatasource } from './payroll.http';
+import { InvoicingHttpDatasource } from './invoicing.http';
 import { ApiRequestError } from './client';
 import { apiBaseUrl } from './config';
 import { useAuthStore } from '../../stores/auth.store';
@@ -59,6 +60,8 @@ beforeEach(() => {
 
 afterEach(() => useAuthStore.getState().clear());
 
+const invoicing = new InvoicingHttpDatasource();
+
 describe('HQ endpoints are there and guarded', () => {
   const calls: Array<[string, () => Promise<unknown>]> = [
     ['stats.getBranchStats', () => stats.getBranchStats()],
@@ -75,6 +78,10 @@ describe('HQ endpoints are there and guarded', () => {
     ['payroll.getAttendance', () => payroll.getAttendance()],
     ['payroll.getPayslips', () => payroll.getPayslips()],
     ['payroll.runPayroll', () => payroll.runPayroll('period-2')],
+    ['invoicing.listCfdis', () => invoicing.listCfdis('2026-09')],
+    ['invoicing.getSummary', () => invoicing.getSummary()],
+    ['invoicing.cancel', () => invoicing.cancel('cfdi-1', '02')],
+    ['invoicing.download', () => invoicing.download('cfdi-1', 'pdf')],
   ];
 
   it.each(calls)('%s hits a real route and is rejected with 401', async (_name, call) => {

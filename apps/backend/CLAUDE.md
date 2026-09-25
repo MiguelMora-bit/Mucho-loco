@@ -286,7 +286,8 @@ Probado: unit (`fiscal-mapping`, `fiscal-receipts.service`, `invoicing.service`)
 
 - ~~Frontend de `customer-app`~~ ✅ (2026-09-23, ver "Facturar (CFDI)" en su CLAUDE.md). Para eso `GET /users/me/charges` ganó `invoice.uuid` (folio del SAT; solo con `invoiced`, `null` en `closed` porque ese CFDI es la global) — el socio lo manda por WhatsApp y HQ busca con él.
 - ~~Frontend de `mobile-app`~~ ✅ (2026-09-24, ver "Facturar (CFDI)" en su CLAUDE.md).
-- Frontends: `branch-app` (clave o QR de autofactura en el ticket — el recibo se crea en segundo plano, así que el ticket tiene que pedirlo), `owner-panel` (CFDI, cancelaciones, resumen, export para el contador).
+- ~~Frontend de `branch-app`~~ ✅ (2026-09-24): `GET /branches/:branchId/tickets/:kind/:sourceId` (`kind` = `sale` | `membership`, `sourceId` = el id de la venta o pago, el mismo de `ShiftTransaction.id`) arma el ticket desde el registro de cobros con `selfInvoice` (`pending`/`ready`/`invoiced`/`unavailable`; sin llave de Facturapi un `pending` se reporta `unavailable`). `@Roles('staff')`; otra sucursal → 404 `TICKET_NOT_FOUND`. e2e en `test/tickets.e2e-spec.ts`.
+- ~~Frontend de `owner-panel`~~ ✅ (2026-09-24, `/invoicing`): para exportar el mes completo, `GET /invoicing/cfdis` acepta `?month=YYYY-MM` (hora de CDMX vía `mexicoMonthRange`, sin el tope de 200; 400 si el mes no es válido).
 - Cuenta de Facturapi: organización, CSD, domicilio fiscal de la matriz, periodicidad de la global, alta del webhook.
 - Contador: claves SAT reales, IEPS, y el plazo para facturar (es la vigencia del recibo en Facturapi).
 - Cancelación con sustitución (motivo `01`) y notas de crédito, cuando exista la política de devoluciones.

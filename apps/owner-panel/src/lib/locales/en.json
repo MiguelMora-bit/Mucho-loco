@@ -24,7 +24,8 @@
     "transfers": "Transfers",
     "payroll": "Payroll",
     "reports": "Reports",
-    "shipments": "Shipments"
+    "shipments": "Shipments",
+    "invoicing": "Invoices"
   },
   "shipments": {
     "title": "Home deliveries",
@@ -163,5 +164,59 @@
     "categoryLabel": "Category",
     "totalLabel": "Total",
     "corporateExpensesNote": "Includes corporate expenses (not assigned to a branch):"
+  },
+  "invoicing": {
+    "title": "Invoices",
+    "subtitle": "CFDI issued by Mucho Loco (one tax ID for all 15 branches).",
+    "month": "Month",
+    "search": "Search by folio, tax ID or name",
+    "export": "Export CSV",
+    "refresh": "Retry",
+    "empty": "No invoices this month.",
+    "loadError": "We couldn't load the invoices.",
+    "columns": {
+      "uuid": "Tax folio",
+      "kind": "Type",
+      "issuedAt": "Date",
+      "customer": "Recipient",
+      "total": "Total",
+      "status": "Status",
+      "actions": ""
+    },
+    "kind": {
+      "individual": "Individual",
+      "global": "Global"
+    },
+    "status": {
+      "valid": "Valid",
+      "canceled": "Canceled"
+    },
+    "cancellationPending": "Cancellation in process",
+    "cancel": "Cancel",
+    "cancelTitle": "Cancel invoice",
+    "cancelMotive": "Reason (SAT)",
+    "motive": {
+      "02": "02 — Issued with errors, no replacement (wrong data; the customer can invoice again)",
+      "03": "03 — The transaction didn't happen"
+    },
+    "cancelConfirm": "Confirm cancellation",
+    "cancelBack": "Back",
+    "canceling": "Canceling…",
+    "canceled": "Invoice canceled. If it was a member's payment, they can invoice it again.",
+    "errors": {
+      "rejected": "The SAT rejected the cancellation:",
+      "already": "That invoice was already canceled; the list was refreshed.",
+      "unavailable": "Invoicing isn't available right now. Nothing was canceled.",
+      "generic": "Something went wrong. Try again."
+    },
+    "summary": {
+      "title": "Tax receipts",
+      "pending": "Queued",
+      "open": "Open",
+      "invoicedToCustomer": "Invoiced to customer",
+      "invoicedGlobally": "In global invoice",
+      "canceled": "Canceled",
+      "failed": "Failed — review"
+    }
   }
 }

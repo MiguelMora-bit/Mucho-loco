@@ -8,6 +8,7 @@ import { TransfersPage } from './routes/TransfersPage';
 import { PayrollPage } from './routes/PayrollPage';
 import { ExecutiveReportsPage } from './routes/ExecutiveReportsPage';
 import { ShipmentsPage } from './routes/ShipmentsPage';
+import { InvoicingPage } from './routes/InvoicingPage';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="expenses" element={<ExpensesPage />} />
             <Route path="transfers" element={<TransfersPage />} />
             <Route path="shipments" element={<ShipmentsPage />} />
+            <Route path="invoicing" element={<InvoicingPage />} />
             <Route path="payroll" element={<PayrollPage />} />
             <Route path="reports" element={<ExecutiveReportsPage />} />
           </Route>

@@ -24,7 +24,8 @@
     "transfers": "Transferencias",
     "payroll": "Nómina",
     "reports": "Reportes",
-    "shipments": "Envíos"
+    "shipments": "Envíos",
+    "invoicing": "Facturas"
   },
   "shipments": {
     "title": "Envíos a domicilio",
@@ -163,5 +164,59 @@
     "categoryLabel": "Categoría",
     "totalLabel": "Total",
     "corporateExpensesNote": "Incluye gastos corporativos (no asignados a una sucursal):"
+  },
+  "invoicing": {
+    "title": "Facturas",
+    "subtitle": "CFDI emitidos a nombre de Mucho Loco (un solo RFC para las 15 sucursales).",
+    "month": "Mes",
+    "search": "Buscar por folio, RFC o nombre",
+    "export": "Exportar CSV",
+    "refresh": "Reintentar",
+    "empty": "No hay facturas en este mes.",
+    "loadError": "No pudimos cargar las facturas.",
+    "columns": {
+      "uuid": "Folio fiscal",
+      "kind": "Tipo",
+      "issuedAt": "Fecha",
+      "customer": "Receptor",
+      "total": "Total",
+      "status": "Estado",
+      "actions": ""
+    },
+    "kind": {
+      "individual": "Individual",
+      "global": "Global"
+    },
+    "status": {
+      "valid": "Vigente",
+      "canceled": "Cancelada"
+    },
+    "cancellationPending": "Cancelación en proceso",
+    "cancel": "Cancelar",
+    "cancelTitle": "Cancelar factura",
+    "cancelMotive": "Motivo ante el SAT",
+    "motive": {
+      "02": "02 — Comprobante emitido con errores sin relación (datos equivocados; el cliente puede volver a facturar)",
+      "03": "03 — No se llevó a cabo la operación"
+    },
+    "cancelConfirm": "Confirmar cancelación",
+    "cancelBack": "Volver",
+    "canceling": "Cancelando…",
+    "canceled": "Factura cancelada. Si fue un cobro de socio, ya puede volver a facturarlo.",
+    "errors": {
+      "rejected": "El SAT rechazó la cancelación:",
+      "already": "Esa factura ya estaba cancelada; actualizamos la lista.",
+      "unavailable": "La facturación no está disponible en este momento. No se canceló nada.",
+      "generic": "Algo salió mal. Intenta de nuevo."
+    },
+    "summary": {
+      "title": "Recibos fiscales",
+      "pending": "En cola",
+      "open": "Abiertos",
+      "invoicedToCustomer": "Facturados al cliente",
+      "invoicedGlobally": "En factura global",
+      "canceled": "Cancelados",
+      "failed": "Fallidos — revisar"
+    }
   }
 }
