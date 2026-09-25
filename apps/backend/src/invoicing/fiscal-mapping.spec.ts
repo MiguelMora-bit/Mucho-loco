@@ -4,8 +4,11 @@ import {
   PAYMENT_FORM,
   cfdiFromInvoice,
   customerFromProfile,
+  mexicoMonthRange,
   receiptItems,
   receiptStatus,
+  selfInvoiceOf,
+  toCounterTicket,
   toMemberCharge,
 } from './fiscal-mapping';
 
@@ -221,6 +224,111 @@ describe('fiscal mapping', () => {
         cfdiId: null,
         uuid: null,
       });
+    });
+  });
+
+  describe('selfInvoiceOf (ticket de mostrador)', () => {
+    const receipt = (
+      status: FiscalReceipt['status'],
+      extra: Partial<FiscalReceipt> = {},
+    ): FiscalReceipt => ({
+      chargeId: 'c1',
+      status,
+      attempts: 0,
+      nextAttemptAt: new Date(),
+      lastError: null,
+      facturapiId: null,
+      key: null,
+      selfInvoiceUrl: null,
+      expiresAt: null,
+      cfdiId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...extra,
+    });
+    const none = { key: null, url: null, expiresAt: null };
+
+    it('waits for the worker while invoicing is configured', () => {
+      expect(selfInvoiceOf(receipt('pending'), true)).toEqual({ status: 'pending', ...none });
+    });
+
+    // Sin llave de Facturapi el worker nunca corre: "en proceso" sería mentira.
+    it('says unavailable when invoicing is off, failed, canceled or missing', () => {
+      expect(selfInvoiceOf(receipt('pending'), false).status).toBe('unavailable');
+      expect(selfInvoiceOf(receipt('failed'), true).status).toBe('unavailable');
+      expect(selfInvoiceOf(receipt('canceled'), true).status).toBe('unavailable');
+      expect(selfInvoiceOf(null, true).status).toBe('unavailable');
+    });
+
+    it('prints the key and portal once the receipt is open', () => {
+      expect(
+        selfInvoiceOf(
+          receipt('open', {
+            key: 'KEY1',
+            selfInvoiceUrl: 'https://factura.space/mucholoco/KEY1',
+            expiresAt: new Date('2026-10-05T00:00:00.000Z'),
+          }),
+          true,
+        ),
+      ).toEqual({
+        status: 'ready',
+        key: 'KEY1',
+        url: 'https://factura.space/mucholoco/KEY1',
+        expiresAt: '2026-10-05T00:00:00.000Z',
+      });
+    });
+
+    it('an invoiced receipt (by the member or the global) has no key to print', () => {
+      expect(selfInvoiceOf(receipt('invoiced_to_customer'), true)).toEqual({ status: 'invoiced', ...none });
+      expect(selfInvoiceOf(receipt('invoiced_globally'), true)).toEqual({ status: 'invoiced', ...none });
+    });
+
+    it('builds the ticket from the charge record', () => {
+      const ticket = toCounterTicket(
+        {
+          id: 'c1',
+          totalCents: 129900,
+          paidAt: new Date('2026-09-24T18:00:00.000Z'),
+          method: 'cash',
+          lines: [line()],
+          fiscalReceipt: receipt('pending'),
+          branch: { name: 'Roma Sur' },
+        } as unknown as Parameters<typeof toCounterTicket>[0],
+        'sale',
+        'sale-1',
+        true,
+      );
+      expect(ticket).toEqual({
+        kind: 'sale',
+        sourceId: 'sale-1',
+        branchName: 'Roma Sur',
+        paidAt: '2026-09-24T18:00:00.000Z',
+        lines: [{ description: 'Pre-Entreno Bestia · Mango Chamoy', qty: 2, unitPrice: 649.5 }],
+        total: 1299,
+        method: 'cash',
+        selfInvoice: { status: 'pending', key: null, url: null, expiresAt: null },
+      });
+    });
+  });
+
+  describe('mexicoMonthRange', () => {
+    it('is the month in Mexico City time, as a UTC range', () => {
+      expect(mexicoMonthRange('2026-09')).toEqual({
+        from: new Date('2026-09-01T06:00:00.000Z'),
+        to: new Date('2026-10-01T06:00:00.000Z'),
+      });
+    });
+
+    it('an invoice on the 31st at 23:00 local stays in its month', () => {
+      const range = mexicoMonthRange('2026-12')!;
+      const lastNight = new Date('2027-01-01T05:00:00.000Z'); // 31 dic, 23:00 CDMX
+      expect(lastNight >= range.from && lastNight < range.to).toBe(true);
+    });
+
+    it('rejects what is not a month', () => {
+      expect(mexicoMonthRange('2026-13')).toBeNull();
+      expect(mexicoMonthRange('2026-9')).toBeNull();
+      expect(mexicoMonthRange('septiembre')).toBeNull();
     });
   });
 });

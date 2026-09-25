@@ -595,6 +595,26 @@ describe('Invoicing (e2e)', () => {
           'UUID-inv_e2e_global',
         ]),
       );
+
+      // El mes completo (hora de CDMX): es lo que se exporta al contador.
+      const now = new Date(Date.now() - 6 * 3600_000);
+      const month = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+      const monthRes = await request(app.getHttpServer())
+        .get(`/invoicing/cfdis?month=${month}`)
+        .set(...auth(OWNER, 'owner'))
+        .expect(200);
+      expect(body<Cfdi[]>(monthRes).map((c) => c.uuid)).toEqual(
+        expect.arrayContaining(['UUID-inv_e2e_1', 'UUID-inv_e2e_2']),
+      );
+      await request(app.getHttpServer())
+        .get('/invoicing/cfdis?month=1999-01')
+        .set(...auth(OWNER, 'owner'))
+        .expect(200)
+        .expect([]);
+      await request(app.getHttpServer())
+        .get('/invoicing/cfdis?month=septiembre')
+        .set(...auth(OWNER, 'owner'))
+        .expect(400);
     });
 
     it('counts receipts by status', async () => {

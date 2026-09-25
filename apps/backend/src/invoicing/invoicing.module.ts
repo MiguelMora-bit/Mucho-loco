@@ -5,6 +5,8 @@ import { FiscalReceiptsService } from './fiscal-receipts.service';
 import { InvoicingService } from './invoicing.service';
 import { InvoicingController } from './invoicing.controller';
 import { MemberInvoicingController } from './member-invoicing.controller';
+import { TicketsController } from './tickets.controller';
+import { TicketsService } from './tickets.service';
 
 /**
  * Facturación CFDI 4.0 vía Facturapi — paso 2, sobre el registro de cobros
@@ -14,7 +16,7 @@ import { MemberInvoicingController } from './member-invoicing.controller';
  */
 @Module({
   imports: [UsersModule],
-  providers: [FacturapiService, FiscalReceiptsService, InvoicingService],
-  controllers: [MemberInvoicingController, InvoicingController],
+  providers: [FacturapiService, FiscalReceiptsService, InvoicingService, TicketsService],
+  controllers: [MemberInvoicingController, InvoicingController, TicketsController],
 })
 export class InvoicingModule {}

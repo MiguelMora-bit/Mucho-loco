@@ -48,7 +48,8 @@ export type ApiErrorCode =
   | 'INVOICING_PROVIDER_ERROR'
   | 'CFDI_NOT_FOUND'
   | 'CFDI_ALREADY_CANCELED'
-  | 'CANCELLATION_REJECTED';
+  | 'CANCELLATION_REJECTED'
+  | 'TICKET_NOT_FOUND';
 
 export interface ApiErrorBody {
   code: ApiErrorCode;
@@ -301,4 +302,12 @@ export const cancellationRejected = (
   message: detail,
   cfdiId,
   detail,
+});
+
+/** Un ticket de otra sucursal responde igual que uno que no existe. */
+export const ticketNotFound = (kind: string, sourceId: string): ApiErrorBody => ({
+  code: 'TICKET_NOT_FOUND',
+  message: `Ticket not found: ${kind}/${sourceId}`,
+  kind,
+  sourceId,
 });

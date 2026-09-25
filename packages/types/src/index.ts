@@ -1226,6 +1226,37 @@ export interface Cfdi {
  */
 export type CfdiCancellationMotive = '02' | '03';
 
+/** Qué puede hacer un cliente de mostrador con la clave de su ticket. */
+export type SelfInvoiceStatus = 'pending' | 'ready' | 'invoiced' | 'unavailable';
+
+/** Cómo se cobró, tal como quedó en el registro de cobros. */
+export type ChargeMethodKey = 'cash' | 'card' | 'card_credit' | 'card_debit' | 'oxxo' | 'spei' | 'transfer';
+
+/**
+ * El ticket de un cobro de mostrador (venta o membresía), armado del registro
+ * de cobros, con su clave de autofactura (spec 003).
+ */
+export interface CounterTicket {
+  kind: 'sale' | 'membership';
+  /** Id de la venta o del pago de membresía — el mismo de `ShiftTransaction.id`. */
+  sourceId: string;
+  branchName: string;
+  /** ISO — instante del cobro. */
+  paidAt: string;
+  lines: { description: string; qty: number; unitPrice: number }[];
+  /** Pesos con centavos, IVA incluido. */
+  total: number;
+  method: ChargeMethodKey;
+  selfInvoice: {
+    status: SelfInvoiceStatus;
+    key: string | null;
+    /** Portal de autofactura de este cobro (Facturapi). */
+    url: string | null;
+    /** ISO; hasta cuándo deja autofacturar el portal. */
+    expiresAt: string | null;
+  };
+}
+
 /** Cuántos recibos hay en cada estado: `failed` es lo que HQ tiene que revisar. */
 export interface InvoicingSummary {
   receipts: {

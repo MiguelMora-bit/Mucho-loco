@@ -10,6 +10,7 @@ import {
   Post,
   Req,
   StreamableFile,
+  Query,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import type { Cfdi, InvoicingSummary } from '@mucho-loco/types';
@@ -19,6 +20,7 @@ import { FacturapiService } from './facturapi.provider';
 import { FiscalReceiptsService } from './fiscal-receipts.service';
 import { InvoicingService, type CfdiFormat } from './invoicing.service';
 import { CancelCfdiDto } from './dto/fiscal-profile.dto';
+import { mexicoMonthRange } from './fiscal-mapping';
 
 const FORMATS = { pdf: 'pdf', xml: 'xml' } as const;
 
@@ -34,10 +36,15 @@ export class InvoicingController {
     private facturapi: FacturapiService,
   ) {}
 
+  /** `?month=YYYY-MM` (hora de CDMX) trae el mes completo, para exportar. */
   @Roles('owner')
   @Get('cfdis')
-  listCfdis(): Promise<Cfdi[]> {
-    return this.invoicing.listCfdis();
+  listCfdis(@Query('month') month?: string): Promise<Cfdi[]> {
+    if (month === undefined) return this.invoicing.listCfdis();
+    const range = mexicoMonthRange(month);
+    if (!range)
+      throw new BadRequestException('month debe tener la forma YYYY-MM');
+    return this.invoicing.listCfdis(range);
   }
 
   @Roles('owner')

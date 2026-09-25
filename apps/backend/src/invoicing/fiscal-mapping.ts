@@ -11,6 +11,7 @@ import type {
   Cfdi,
   CfdiUse,
   ChargeInvoiceStatus,
+  CounterTicket,
   FiscalProfile,
   MemberCharge,
 } from '@mucho-loco/types';
@@ -166,4 +167,81 @@ export function toMemberCharge(
         status === 'invoiced' ? (row.fiscalReceipt?.cfdi?.uuid ?? null) : null,
     },
   };
+}
+
+/**
+ * Qué puede hacer el cliente de mostrador con su ticket. `configured` = hay
+ * llave de Facturapi: sin ella el worker nunca corre y un recibo `pending` se
+ * quedaría "en proceso" para siempre, así que se dice "no disponible".
+ */
+export function selfInvoiceOf(
+  receipt: FiscalReceipt | null,
+  configured: boolean,
+): CounterTicket['selfInvoice'] {
+  const none = { key: null, url: null, expiresAt: null };
+  if (!receipt) return { status: 'unavailable', ...none };
+  switch (receipt.status) {
+    case 'pending':
+      return { status: configured ? 'pending' : 'unavailable', ...none };
+    case 'open':
+      return receipt.key && receipt.selfInvoiceUrl
+        ? {
+            status: 'ready',
+            key: receipt.key,
+            url: receipt.selfInvoiceUrl,
+            expiresAt: receipt.expiresAt?.toISOString() ?? null,
+          }
+        : { status: configured ? 'pending' : 'unavailable', ...none };
+    case 'invoiced_to_customer':
+    case 'invoiced_globally':
+      return { status: 'invoiced', ...none };
+    case 'failed':
+    case 'canceled':
+      return { status: 'unavailable', ...none };
+  }
+}
+
+/** El ticket de un cobro de mostrador, armado del registro de cobros (la verdad del dinero). */
+export function toCounterTicket(
+  row: Charge & {
+    lines: ChargeLine[];
+    fiscalReceipt: FiscalReceipt | null;
+    branch: { name: string } | null;
+  },
+  kind: CounterTicket['kind'],
+  sourceId: string,
+  configured: boolean,
+): CounterTicket {
+  return {
+    kind,
+    sourceId,
+    branchName: row.branch?.name ?? '',
+    paidAt: row.paidAt.toISOString(),
+    lines: row.lines.map((line) => ({
+      description: line.description,
+      qty: line.qty,
+      unitPrice: line.unitPriceCents / 100,
+    })),
+    total: row.totalCents / 100,
+    method: row.method,
+    selfInvoice: selfInvoiceOf(row.fiscalReceipt, configured),
+  };
+}
+
+const MONTH = /^(\d{4})-(0[1-9]|1[0-2])$/;
+
+/**
+ * El mes `YYYY-MM` en hora de Ciudad de México (UTC-6 fijo desde que México
+ * quitó el horario de verano en 2022), como rango UTC `[from, to)`. Así una
+ * factura del día 31 a las 23:00 local cae en su mes, no en el siguiente.
+ * `null` si el texto no es un mes válido.
+ */
+export function mexicoMonthRange(month: string): { from: Date; to: Date } | null {
+  const match = MONTH.exec(month);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const index = Number(match[2]) - 1;
+  const from = new Date(Date.UTC(year, index, 1, 6));
+  const to = new Date(Date.UTC(year, index + 1, 1, 6));
+  return { from, to };
 }

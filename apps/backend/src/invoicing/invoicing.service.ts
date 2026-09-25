@@ -226,10 +226,16 @@ export class InvoicingService {
     };
   }
 
-  async listCfdis(): Promise<Cfdi[]> {
+  /**
+   * Sin mes: las 200 más recientes (la vista rápida). Con mes: TODAS las de
+   * ese mes en hora de CDMX — es lo que se exporta al contador, y cortar en
+   * 200 le escondería facturas.
+   */
+  async listCfdis(range?: { from: Date; to: Date }): Promise<Cfdi[]> {
     const rows = await this.prisma.cfdi.findMany({
+      where: range ? { issuedAt: { gte: range.from, lt: range.to } } : undefined,
       orderBy: { issuedAt: 'desc' },
-      take: 200,
+      take: range ? undefined : 200,
     });
     return rows.map(toCfdi);
   }
