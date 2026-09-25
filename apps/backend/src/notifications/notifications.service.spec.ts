@@ -162,6 +162,17 @@ describe('NotificationsService', () => {
       expect(whatsapp.sendTemplate).not.toHaveBeenCalled();
     });
 
+    // Canceló la renovación en el portal: esta vez sí vence, hay que avisarle.
+    it('warns a member who canceled the renewal', async () => {
+      prisma.membership.findMany.mockResolvedValue([
+        member({ expiresAt: daysFromNow(3), stripeSubscriptionId: 'sub_1', renewalCanceled: true }),
+      ]);
+
+      await service.runMembershipSweep();
+
+      expect(whatsapp.sendTemplate).toHaveBeenCalled();
+    });
+
     // La llave es la FECHA de vencimiento, no "quedan N días": así los tres
     // avisos comparten llave y el socio recibe uno solo por ciclo. Si renueva,
     // la fecha cambia y el siguiente ciclo vuelve a avisar.

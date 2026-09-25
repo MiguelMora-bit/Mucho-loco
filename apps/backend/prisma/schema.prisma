@@ -298,6 +298,10 @@ model Membership {
   /// suscripción, el estado lo decide Stripe (ver MembershipBillingService);
   /// sin ella, vence sola al pasar `expiresAt` (ver membership-status.ts).
   stripeSubscriptionId String? @unique
+  /// El socio canceló la renovación en el portal de Stripe: la suscripción
+  /// sigue viva hasta el fin del periodo pagado (`cancel_at_period_end`), pero
+  /// ya no se va a cobrar. Lo copia `syncSubscription`; nunca se escribe a mano.
+  renewalCanceled Boolean @default(false)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

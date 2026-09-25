@@ -299,6 +299,17 @@ describe('PaymentHttpDatasource — membresía', () => {
     expect(url).toBe('http://api.test/payments/membership-invoice');
     expect(String(init.body)).not.toContain('otro@mucholoco.mx');
   });
+
+  it('opens the Stripe portal with the return url and language, never the email (spec 005)', async () => {
+    const spy = stubFetch({ url: 'https://billing.stripe.com/p/x' });
+    const res = await new PaymentHttpDatasource(client().api).openBillingPortal('otro@mucholoco.mx', 'https://x/es/dashboard', 'es');
+
+    const { url, init, auth } = call(spy);
+    expect(url).toBe('http://api.test/payments/billing-portal-sessions');
+    expect(JSON.parse(String(init.body))).toEqual({ returnUrl: 'https://x/es/dashboard', lang: 'es' });
+    expect(auth).toBe('Bearer id-token');
+    expect(res.url).toBe('https://billing.stripe.com/p/x');
+  });
 });
 
 describe('PaymentHttpDatasource', () => {

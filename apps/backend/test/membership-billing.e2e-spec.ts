@@ -63,6 +63,11 @@ describe('Membership billing (e2e)', () => {
         configured: true,
         stripe: {
           checkout: { sessions: { create: sessionsCreate } },
+          billingPortal: {
+            sessions: {
+              create: jest.fn().mockResolvedValue({ url: 'https://billing.stripe.com/p/session_e2e' }),
+            },
+          },
           paymentIntents: {
             retrieve: jest.fn().mockResolvedValue({
               latest_charge: {
@@ -192,6 +197,14 @@ describe('Membership billing (e2e)', () => {
 
     userId = (await prisma.user.findUniqueOrThrow({ where: { email: MEMBER } }))
       .id;
+
+    // Sin suscripción no hay nada que administrar en el portal (spec 005).
+    const portal = await request(server())
+      .post('/payments/billing-portal-sessions')
+      .set(...auth())
+      .send({ returnUrl: 'http://localhost:3000/es/dashboard', lang: 'es' })
+      .expect(409);
+    expect(body<{ code: string }>(portal).code).toBe('NO_BILLING_ACCOUNT');
   });
 
   let sessionId: string;
@@ -267,6 +280,36 @@ describe('Membership billing (e2e)', () => {
   it('refuses a second subscription while this one is alive — it would charge twice', async () => {
     const res = await checkout().expect(409);
     expect(body<{ code: string }>(res).code).toBe('ALREADY_SUBSCRIBED');
+  });
+
+  it('opens the Stripe portal to manage the subscription (spec 005)', async () => {
+    const res = await request(server())
+      .post('/payments/billing-portal-sessions')
+      .set(...auth())
+      .send({ returnUrl: 'http://localhost:3000/es/dashboard', lang: 'es' })
+      .expect(201);
+    expect(body<{ url: string }>(res).url).toBe('https://billing.stripe.com/p/session_e2e');
+    expect((await getMembership()).hasSubscription).toBe(true);
+  });
+
+  it('canceling the renewal in the portal keeps access but stops auto-renewing', async () => {
+    currentSub = { ...activeSub(periodEnd), cancel_at_period_end: true };
+    await deliver('customer.subscription.updated', { id: SUB });
+
+    expect(await getMembership()).toMatchObject({
+      status: 'active',
+      autoRenews: false,
+      hasSubscription: true,
+    });
+    // La suscripción sigue viva: contratar otra encima seguiría cobrando dos veces.
+    expect(body<{ code: string }>(await checkout().expect(409)).code).toBe('ALREADY_SUBSCRIBED');
+  });
+
+  it('reactivating it in the portal brings auto-renewal back', async () => {
+    currentSub = activeSub(periodEnd);
+    await deliver('customer.subscription.updated', { id: SUB });
+
+    expect(await getMembership()).toMatchObject({ autoRenews: true, hasSubscription: true });
   });
 
   it('a failed renewal puts the member in grace, with access and a deadline', async () => {

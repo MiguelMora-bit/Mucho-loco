@@ -77,6 +77,8 @@ export interface MembershipGrant {
    * tenga: una visita suelta no cancela ni desliga nada.
    */
   stripeSubscriptionId?: string | null;
+  /** El socio canceló la renovación en el portal (`cancel_at_period_end`). Solo junto con la suscripción. */
+  renewalCanceled?: boolean;
 }
 
 @Injectable()
@@ -153,7 +155,10 @@ export class MembershipsService {
       status: 'active' as const,
       graceEndsAt: null,
       ...(grant.stripeSubscriptionId !== undefined
-        ? { stripeSubscriptionId: grant.stripeSubscriptionId }
+        ? {
+            stripeSubscriptionId: grant.stripeSubscriptionId,
+            renewalCanceled: grant.renewalCanceled ?? false,
+          }
         : {}),
     };
     await db.membership.upsert({
@@ -190,7 +195,7 @@ export class MembershipsService {
   async detachSubscription(stripeSubscriptionId: string): Promise<void> {
     await this.prisma.membership.updateMany({
       where: { stripeSubscriptionId },
-      data: { stripeSubscriptionId: null },
+      data: { stripeSubscriptionId: null, renewalCanceled: false },
     });
   }
 
@@ -257,7 +262,14 @@ function toMembershipInfo(membership: MembershipWithBranch): MembershipInfo {
       status === 'grace'
         ? (membership.graceEndsAt?.toISOString() ?? null)
         : null,
+    // "Se renueva sola" solo si la suscripción vive Y el socio no canceló la
+    // renovación en el portal; con la renovación cancelada sigue teniendo
+    // suscripción (y acceso) hasta el fin del periodo.
     autoRenews:
+      membership.stripeSubscriptionId !== null &&
+      !membership.renewalCanceled &&
+      status !== 'expired',
+    hasSubscription:
       membership.stripeSubscriptionId !== null && status !== 'expired',
   };
 }

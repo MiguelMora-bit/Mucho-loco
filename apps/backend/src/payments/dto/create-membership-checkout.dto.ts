@@ -43,3 +43,12 @@ export class CreateMembershipCheckoutDto implements MembershipPlanChoice {
   @IsString()
   cancelUrl!: string;
 }
+
+/** Abrir el portal de cliente de Stripe (spec 005): solo a dónde volver y en qué idioma. */
+export class BillingPortalDto {
+  @IsString()
+  returnUrl!: string;
+
+  @IsIn(LANGS)
+  lang!: Lang;
+}

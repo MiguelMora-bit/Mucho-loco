@@ -122,6 +122,12 @@ export interface MembershipInfo {
    * (se pagó en mostrador, fue una visita, o canceló la suscripción).
    */
   autoRenews: boolean;
+  /**
+   * Tiene una suscripción de Stripe viva, aunque haya cancelado la renovación
+   * (spec 005). Decide "Administrar suscripción" y que no se pueda contratar
+   * otra encima (el backend respondería ALREADY_SUBSCRIBED).
+   */
+  hasSubscription: boolean;
 }
 
 /**
@@ -546,6 +552,11 @@ export interface Translations {
       paymentProcessingTitle: string;
       paymentProcessingBody: string;
       autoRenewsPrefix: string;
+      /** Spec 005: portal de Stripe y renovación cancelada. */
+      manageSubscription: string;
+      renewalCanceledPrefix: string;
+      reactivateRenewal: string;
+      portalError: string;
     };
     access: {
       expiresLabel: string;

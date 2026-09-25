@@ -18,12 +18,16 @@ interface HomePaneProps {
   onRetryPayment: () => void;
   retryingPayment: boolean;
   retryError: string | null;
+  /** Abre el portal de Stripe (spec 005). */
+  onManageSubscription: () => void;
+  managingSubscription: boolean;
+  manageError: string | null;
 }
 
 const BANNER_CLASS = 'flex items-center gap-4 px-5.5 py-4 mb-7 [background:linear-gradient(90deg,rgba(225,20,28,0.18),rgba(225,20,28,0.04))] border border-ml-red border-l-[4px] border-l-ml-red-bright';
 const BANNER_BUTTON_CLASS = 'px-5 py-2.5 bg-ml-red text-ml-cream font-bebas tracking-wide text-sm border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 
-export function HomePane({ t, lang, active, profile, membership, justPaid, planHref, onRetryPayment, retryingPayment, retryError }: HomePaneProps) {
+export function HomePane({ t, lang, active, profile, membership, justPaid, planHref, onRetryPayment, retryingPayment, retryError, onManageSubscription, managingSubscription, manageError }: HomePaneProps) {
   const stats = [
     { lbl: t.dashboard.home.statVisits, num: membership?.visits ?? 0, delta: t.dashboard.home.statVisitsDelta, up: true },
     { lbl: t.dashboard.home.statStreak, num: membership?.streak ?? 0, delta: t.dashboard.home.statStreakDelta },
@@ -90,8 +94,10 @@ export function HomePane({ t, lang, active, profile, membership, justPaid, planH
         </div>
       )}
 
-      {/* Con suscripción no hay nada que renovar: Stripe cobra solo. */}
-      {membership?.status === 'active' && !membership.autoRenews && membership.daysLeft <= 15 && (
+      {/* Con suscripción no hay nada que renovar: Stripe cobra solo. Con la
+          renovación cancelada la suscripción sigue viva: se reactiva en el
+          portal, no contratando otra (el backend respondería ALREADY_SUBSCRIBED). */}
+      {membership?.status === 'active' && !membership.hasSubscription && membership.daysLeft <= 15 && (
         <div className={BANNER_CLASS}>
           <span className="text-[26px]">⚠️</span>
           <div className="flex-1">
@@ -102,8 +108,27 @@ export function HomePane({ t, lang, active, profile, membership, justPaid, planH
         </div>
       )}
 
+      {membership?.status === 'active' && membership.hasSubscription && !membership.autoRenews && (
+        <div className={BANNER_CLASS}>
+          <span className="text-[26px]">⏸️</span>
+          <div className="flex-1">
+            <b className="font-display text-lg tracking-[0.04em]">{t.dashboard.home.renewalCanceledPrefix} {formatDate(membership.expiresAt, lang)}.</b>
+            {manageError && <p className="text-xs text-ml-red-bright mt-1">{manageError}</p>}
+          </div>
+          <button onClick={onManageSubscription} disabled={managingSubscription} className={BANNER_BUTTON_CLASS}>
+            {managingSubscription ? t.common.updating : t.dashboard.home.reactivateRenewal}
+          </button>
+        </div>
+      )}
+
       {membership?.status === 'active' && membership.autoRenews && (
-        <p className="text-sm text-ml-cream-dim -mt-4 mb-7">{t.dashboard.home.autoRenewsPrefix} {formatDate(membership.expiresAt, lang)}.</p>
+        <div className="flex items-center gap-4 -mt-4 mb-7">
+          <p className="text-sm text-ml-cream-dim">{t.dashboard.home.autoRenewsPrefix} {formatDate(membership.expiresAt, lang)}.</p>
+          <button onClick={onManageSubscription} disabled={managingSubscription} className="text-xs underline text-ml-cream-dim bg-transparent border-none cursor-pointer disabled:opacity-50">
+            {managingSubscription ? t.common.updating : t.dashboard.home.manageSubscription}
+          </button>
+          {manageError && <p className="text-xs text-ml-red-bright">{manageError}</p>}
+        </div>
       )}
 
       <div className="grid grid-cols-4 gap-4 mb-7">

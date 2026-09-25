@@ -299,7 +299,11 @@
       "choosePlan": "ELEGIR PLAN",
       "paymentProcessingTitle": "ESTAMOS CONFIRMANDO TU PAGO",
       "paymentProcessingBody": "Tu membresía se activa en cuanto Stripe nos confirme el cobro. Recarga la página en un momento.",
-      "autoRenewsPrefix": "Se renueva sola el"
+      "autoRenewsPrefix": "Se renueva sola el",
+      "manageSubscription": "ADMINISTRAR SUSCRIPCIÓN",
+      "renewalCanceledPrefix": "Cancelaste la renovación: tienes acceso hasta el",
+      "reactivateRenewal": "REACTIVAR RENOVACIÓN",
+      "portalError": "No pudimos abrir la administración de tu suscripción. Intenta de nuevo."
     },
     "access": {
       "expiresLabel": "VENCE",

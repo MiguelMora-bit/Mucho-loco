@@ -12,7 +12,7 @@ import { PaymentsService, type CheckoutSessionResult } from './payments.service'
 import { MembershipBillingService } from './membership-billing.service';
 import { StripeService } from './stripe.provider';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
-import { CreateMembershipCheckoutDto } from './dto/create-membership-checkout.dto';
+import { BillingPortalDto, CreateMembershipCheckoutDto } from './dto/create-membership-checkout.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { IdTokenClaims } from '../auth/cognito';
 import { UsersService } from '../users/users.service';
@@ -45,6 +45,16 @@ export class PaymentsController {
   async openMembershipInvoice(@CurrentUser() user: IdTokenClaims): Promise<{ url: string }> {
     const dbUser = await this.users.findOrCreateByCognito(user);
     return this.membershipBilling.openPendingInvoice(dbUser.id);
+  }
+
+  /** Portal de cliente de Stripe: cancelar la renovación o cambiar la tarjeta (spec 005). */
+  @Post('billing-portal-sessions')
+  async openBillingPortal(
+    @CurrentUser() user: IdTokenClaims,
+    @Body() dto: BillingPortalDto,
+  ): Promise<{ url: string }> {
+    const dbUser = await this.users.findOrCreateByCognito(user);
+    return this.membershipBilling.openBillingPortal(dbUser.id, dto.returnUrl, dto.lang);
   }
 
   /** El pedido se crea aquí, a nombre del socio del token — nunca de un email del body. */

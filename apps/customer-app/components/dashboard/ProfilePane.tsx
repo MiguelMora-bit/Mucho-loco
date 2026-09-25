@@ -48,7 +48,7 @@ export function ProfilePane({ t, lang, active, profile, membership, planHref }: 
           )}
           {/* Con suscripción viva no hay nada que renovar: Stripe cobra solo. */}
           {!membership && <Link href={planHref} className={PLAN_BUTTON_CLASS}>{t.dashboard.home.choosePlan}</Link>}
-          {membership && !(membership.autoRenews && membership.status === 'active') && (
+          {membership && !(membership.hasSubscription && membership.status === 'active') && (
             <Link href={planHref} className={PLAN_BUTTON_CLASS}>{t.dashboard.profile.renewMembership}</Link>
           )}
         </div>

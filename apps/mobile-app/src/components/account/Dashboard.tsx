@@ -80,6 +80,28 @@ export function Dashboard({ email }: { email: string }) {
     }
   }
 
+  const [managing, setManaging] = useState(false);
+  const [manageFailed, setManageFailed] = useState(false);
+
+  // Portal de Stripe (spec 005): cancelar/reactivar la renovación o cambiar la
+  // tarjeta. Lo que el socio haga ahí llega al backend por webhook; al volver
+  // se relee la membresía.
+  async function manageSubscription() {
+    setManaging(true);
+    setManageFailed(false);
+    try {
+      const returnUrl = Linking.createURL('/account');
+      const { url } = await paymentRepository.openBillingPortal(email, returnUrl, lang);
+      // El mock responde con returnUrl (ya "hizo algo en el portal"): no hay página que abrir.
+      if (!url.startsWith(returnUrl)) await WebBrowser.openAuthSessionAsync(url, returnUrl);
+      reload();
+    } catch {
+      setManageFailed(true);
+    } finally {
+      setManaging(false);
+    }
+  }
+
   if (state.status === 'loading') {
     return (
       <Screen>
@@ -137,8 +159,9 @@ export function Dashboard({ email }: { email: string }) {
           <Button title={retrying ? t.common.updating : home.retryPayment} onPress={payPendingInvoice} loading={retrying} />
         </Card>
       )}
-      {/* Con suscripción no hay nada que renovar: Stripe cobra solo. */}
-      {membership?.status === 'active' && !membership.autoRenews && membership.daysLeft <= 15 && (
+      {/* Con suscripción no hay nada que renovar: Stripe cobra solo. Con la
+          renovación cancelada se reactiva en el portal, no contratando otra. */}
+      {membership?.status === 'active' && !membership.hasSubscription && membership.daysLeft <= 15 && (
         <Card style={styles.banner}>
           <Heading>
             ⚠️ {home.membershipExpiringPrefix} {membership.daysLeft} {home.membershipExpiringSuffix}
@@ -149,10 +172,23 @@ export function Dashboard({ email }: { email: string }) {
           <Button title={home.renew} onPress={() => router.push('/membership')} />
         </Card>
       )}
+      {membership?.status === 'active' && membership.hasSubscription && !membership.autoRenews && (
+        <Card style={styles.banner}>
+          <Heading>
+            ⏸️ {home.renewalCanceledPrefix} {formatDate(membership.expiresAt, lang)}.
+          </Heading>
+          {manageFailed && <Body style={styles.error}>{home.portalError}</Body>}
+          <Button title={managing ? t.common.updating : home.reactivateRenewal} onPress={manageSubscription} loading={managing} />
+        </Card>
+      )}
       {membership?.status === 'active' && membership.autoRenews && (
-        <Body>
-          {home.autoRenewsPrefix} {formatDate(membership.expiresAt, lang)}.
-        </Body>
+        <>
+          <Body>
+            {home.autoRenewsPrefix} {formatDate(membership.expiresAt, lang)}.
+          </Body>
+          {manageFailed && <Body style={styles.error}>{home.portalError}</Body>}
+          <Button title={home.manageSubscription} variant="outline" onPress={manageSubscription} loading={managing} />
+        </>
       )}
 
       {membership && (

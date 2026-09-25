@@ -1,0 +1,8 @@
+# Research: Administrar la suscripción (portal de Stripe)
+
+- **R1. Portal hospedado** — `stripe.billingPortal.sessions.create({ customer, return_url, locale })`. Configuración única en el dashboard de Stripe: cancelar al fin del periodo, actualizar método de pago, historial; sin cambio de plan (precios dinámicos por sucursal/tier vía `price_data` no son elegibles en el portal).
+- **R2. Renovación cancelada** — el portal deja la suscripción `active` con `cancel_at_period_end = true` (o `cancel_at`). Hueco encontrado: `syncSubscription` no lo guardaba y `autoRenews` seguía `true`. Columna nueva `Membership.renewalCanceled` (migración `membership_renewal_canceled`), copiada en cada `syncSubscription`, limpiada al desligar.
+- **R3. `hasSubscription`** — nuevo en `MembershipInfo`: suscripción viva aunque la renovación esté cancelada. `purchaseBlock`/`renewalStartsOn` de customer-core pasan de `autoRenews` a `hasSubscription`: con la renovación cancelada contratar otra encima sigue siendo `ALREADY_SUBSCRIBED` en el backend; se reactiva en el portal.
+- **R4. Avisos** — el barrido de "por vencer" ahora incluye `renewalCanceled` (antes omitía a todo suscrito).
+- **R5. Mock** — sin Stripe, "hacer algo en el portal" = alternar la renovación (`UserMockDatasource.toggleRenewal`), y regresar a `returnUrl`. Así web y móvil muestran los dos estados sin backend.
+- **R6. Deep link del móvil** — `return_url = Linking.createURL('/account')`; en Expo Go es `exp://…`. Mismo pendiente que el checkout ("Stripe con deep link", `apps/mobile-app/CLAUDE.md`): confirmar en teléfono que Stripe acepte el scheme; si no, página https puente.

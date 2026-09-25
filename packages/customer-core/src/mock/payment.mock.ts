@@ -43,6 +43,13 @@ export class PaymentMockDatasource implements IPaymentRepository {
     return { url: successUrl };
   }
 
+  /** Sin Stripe: "hacer algo en el portal" = alternar la renovación, y regresar. */
+  async openBillingPortal(email: string, returnUrl: string, _lang: Lang): Promise<RedirectSession> {
+    await delay(300);
+    new UserMockDatasource().toggleRenewal(email);
+    return { url: returnUrl };
+  }
+
   async openMembershipInvoice(email: string, returnUrl: string): Promise<RedirectSession> {
     await delay(300);
     new UserMockDatasource().settleMembershipInvoice(email);

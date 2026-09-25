@@ -105,6 +105,10 @@ EXPO_PUBLIC_COGNITO_DOMAIN=<terraform output cognito_domain>    # solo login soc
 
 Un socio nuevo nace **sin membresía** (`getMembership()` → `null`) hasta su primer cobro — antes el mock y el backend le regalaban una. El panel lo dice y lleva a la pantalla `membership`: sucursal, tier y periodo → `paymentRepository.createMembershipCheckout` → Stripe con `WebBrowser.openAuthSessionAsync` y regreso por deep link (`mucholoco://membership?paid=1`), el mismo patrón del checkout. En gracia, "REINTENTAR PAGO" abre la factura pendiente de Stripe (`openMembershipInvoice`) con `WebBrowser.openBrowserAsync`. Las reglas (qué rechazaría el backend, respetar lo ya pagado) salen de `@mucho-loco/customer-core/membership-rules`, las mismas que la web; `renewalStartsOn()` se llama al cargar datos, no al pintar (el lint prohíbe `Date.now()` en el render). Detalle del cobro en "Membresías con Stripe Billing" de `apps/backend/CLAUDE.md`. El walkthrough de Playwright cubre la compra: cuenta nueva sin membresía → elige plan → paga (mock) → vuelve con QR y "se renueva sola".
 
+## Administrar suscripción — portal de Stripe (2026-09-24)
+
+Spec 005. En el panel de Cuenta, "Administrar suscripción" (con "Se renueva sola") y el banner de renovación cancelada con "Reactivar renovación": `paymentRepository.openBillingPortal` + `WebBrowser.openAuthSessionAsync(url, Linking.createURL('/account'))`, y al volver se relee la membresía. Mismo pendiente que el checkout: confirmar en un teléfono que Stripe acepte el scheme custom como `return_url`. Walkthrough: cancelar → reactivar (mock).
+
 ## Facturar (CFDI) — 2026-09-24
 
 Spec en `specs/002-mobile-cfdi-invoicing/`. Misma funcionalidad que `/invoicing` de la web, sobre el MISMO contrato de customer-core (`IInvoicingRepository`, mock/HTTP, `invoicingErrorOf`, catálogo `./fiscal`, textos `invoicing`) — aquí solo hay UI.

@@ -160,7 +160,8 @@ export class NotificationsService {
 
       // Quien tiene suscripción no "vence": Stripe le cobra solo. Avisarle
       // "renueva o pierdes el acceso" sería falso y lo haría pagar dos veces.
-      if (!membership.stripeSubscriptionId && EXPIRY_WARNING_DAYS.includes(daysLeft)) {
+      // Con suscripción viva Stripe cobra solo; con la renovación cancelada, sí hay que avisar.
+      if ((!membership.stripeSubscriptionId || membership.renewalCanceled) && EXPIRY_WARNING_DAYS.includes(daysLeft)) {
         const ok = await this.notifyOnce({
           userId: membership.userId,
           kind: 'membership_expiring',

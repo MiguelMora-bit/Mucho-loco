@@ -70,6 +70,7 @@ describe('MembershipBillingService', () => {
           email: 'diego@mucholoco.mx',
           stripeCustomerId: null,
         }),
+        findUnique: jest.fn(),
         updateMany: jest.fn(),
       },
       membershipPurchase: {
@@ -306,7 +307,22 @@ describe('MembershipBillingService', () => {
         periodKey: 'monthly',
         paidThrough: new Date(1_800_000_000 * 1000),
         stripeSubscriptionId: 'sub_1',
+        renewalCanceled: false,
       });
+    });
+
+    // Cancelar en el portal deja la suscripción viva hasta el fin del periodo:
+    // sigue con acceso, pero la app ya no puede decir "se renueva sola".
+    it('active but canceled in the portal: keeps access and marks the renewal canceled', async () => {
+      stripe.subscriptions.retrieve.mockResolvedValue(
+        subscription({ cancel_at_period_end: true }),
+      );
+
+      await service.syncSubscription('sub_1');
+
+      expect(memberships.grant).toHaveBeenCalledWith(
+        expect.objectContaining({ stripeSubscriptionId: 'sub_1', renewalCanceled: true }),
+      );
     });
 
     it('past_due: grace period, not suspension', async () => {
@@ -568,6 +584,31 @@ describe('MembershipBillingService', () => {
 
       expect(prisma.membershipPurchase.findUnique).not.toHaveBeenCalled();
       expect(memberships.grant).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('openBillingPortal', () => {
+    it("opens the Stripe portal for the member's own customer, in their language", async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', stripeCustomerId: 'cus_1' });
+      memberships.findByUser.mockResolvedValue({ stripeSubscriptionId: 'sub_1' });
+      stripe.billingPortal = { sessions: { create: jest.fn().mockResolvedValue({ url: 'https://billing.stripe.com/p/x' }) } };
+
+      expect(await service.openBillingPortal('user-1', 'http://localhost:3000/es/dashboard', 'en')).toEqual({
+        url: 'https://billing.stripe.com/p/x',
+      });
+      expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
+        customer: 'cus_1',
+        return_url: 'http://localhost:3000/es/dashboard',
+        locale: 'en',
+      });
+    });
+
+    it('409s NO_BILLING_ACCOUNT without a live subscription', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', stripeCustomerId: 'cus_1' });
+      memberships.findByUser.mockResolvedValue({ stripeSubscriptionId: null });
+      await expect(service.openBillingPortal('user-1', 'http://x', 'es')).rejects.toMatchObject({
+        response: { code: 'NO_BILLING_ACCOUNT' },
+      });
     });
   });
 

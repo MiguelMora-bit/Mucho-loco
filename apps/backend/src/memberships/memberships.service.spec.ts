@@ -125,6 +125,23 @@ describe('MembershipsService', () => {
       const info = await service.getForUser('user-1');
       expect(info.status).toBe('active');
       expect(info.autoRenews).toBe(true);
+      expect(info.hasSubscription).toBe(true);
+    });
+
+    // Cancelada en el portal: la suscripción sigue viva (no se puede contratar
+    // otra encima), pero ya no se renueva.
+    it('a subscription with its renewal canceled does not auto-renew, but is still there', async () => {
+      prisma.membership.findUnique.mockResolvedValue({
+        ...row,
+        status: 'active',
+        expiresAt: daysFromNow(20),
+        stripeSubscriptionId: 'sub_1',
+        renewalCanceled: true,
+      });
+
+      const info = await service.getForUser('user-1');
+      expect(info.autoRenews).toBe(false);
+      expect(info.hasSubscription).toBe(true);
     });
   });
 

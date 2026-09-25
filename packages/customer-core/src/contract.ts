@@ -146,6 +146,15 @@ export interface IPaymentRepository {
    * Falla con 'NOTHING_TO_PAY' si no hay factura pendiente.
    */
   openMembershipInvoice(email: string, returnUrl: string): Promise<RedirectSession>;
+
+  /**
+   * Portal de cliente de Stripe (spec 005): cancelar o reactivar la
+   * renovación, cambiar la tarjeta. Solo con `membership.hasSubscription`;
+   * si no, 'NO_BILLING_ACCOUNT'. Lo que el socio haga ahí llega por webhook:
+   * al volver, se relee la membresía. En el mock, cada visita alterna la
+   * renovación cancelada/activa, para poder ver los dos estados sin Stripe.
+   */
+  openBillingPortal(email: string, returnUrl: string, lang: Lang): Promise<RedirectSession>;
 }
 
 export interface IPerformanceRepository {

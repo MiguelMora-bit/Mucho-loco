@@ -126,6 +126,10 @@ Spec, plan y tareas en `specs/001-member-cfdi-invoicing/` (primera funcionalidad
 - La descripción del cobro llega del backend en español (es el concepto fiscal) y no se traduce — limitación conocida.
 - **Sin verificar en navegador**: typecheck, lint, `next build`, unit (rutas incluidas) e integración de rutas contra el backend local. `tests/e2e/invoicing.spec.ts` está escrito pero necesita User Pool vivo para correr. **Sin probar contra Facturapi** (no hay cuenta).
 
+## Administrar suscripción — portal de Stripe (2026-09-24)
+
+Spec en `specs/005-stripe-billing-portal/`. En el inicio del panel, junto a "Se renueva sola el …", el botón "Administrar suscripción" → `POST /api/membership/portal` → portal hospedado de Stripe (cancelar/reactivar la renovación, cambiar tarjeta) y regreso al panel, que el Server Component relee. Con la renovación cancelada (`hasSubscription && !autoRenews`) el panel lo dice con banner y "Reactivar renovación" (también en el portal): NO manda a contratar un plan nuevo, porque la suscripción sigue viva y el backend respondería `ALREADY_SUBSCRIBED`. `purchaseBlock` de customer-core usa `hasSubscription` por lo mismo. En mock, cada visita al "portal" alterna la renovación.
+
 ## Pedidos a domicilio: dirección de envío (2026-09-14)
 
 Antes, `PaymentStep` pedía calle, ciudad y CP en inputs sueltos que nadie leía: el pedido a domicilio se creaba sin dirección. Ahora son campos controlados (calle, colonia, alcaldía o municipio, estado, CP, teléfono del repartidor, referencias) en `CheckoutClient`, validados al confirmar con `parseShippingAddress` de `@mucho-loco/customer-core/shipping` (mismas reglas que el backend; normaliza el teléfono a E.164) y mandados como `OrderDelivery`. `/api/orders` y `/api/checkout` rechazan con 400 un `delivery` mal formado antes de tocar el repositorio. El detalle del pedido muestra "SE ENVÍA A" con la dirección en vez del QR de retiro, y el estado 'ready' de un envío dice "PREPARANDO ENVÍO" (`orderStatusLabel` recibe `delivery`).

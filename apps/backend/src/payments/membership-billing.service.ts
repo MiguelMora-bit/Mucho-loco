@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { MembershipPlanChoice, PlanKey, TierKey } from '@mucho-loco/types';
+import type { Lang, MembershipPlanChoice, PlanKey, TierKey } from '@mucho-loco/types';
 import type { Membership } from '@prisma/client';
 import type Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
@@ -29,6 +29,7 @@ import {
   alreadySubscribed,
   branchNotFound,
   membershipStillActive,
+  noBillingAccount,
   nothingToPay,
 } from '../common/error-codes';
 import type { CreateMembershipCheckoutDto } from './dto/create-membership-checkout.dto';
@@ -170,7 +171,7 @@ export class MembershipBillingService {
     const now = new Date();
     const status = membership ? effectiveStatus(membership, now) : null;
     // Una segunda suscripción viva le cobraría dos veces. Cambiar de plan o
-    // cancelar es cosa del portal de cliente (pendiente), no de volver a pagar.
+    // cancelar es cosa del portal de cliente (`openBillingPortal`), no de volver a pagar.
     if (membership?.stripeSubscriptionId && status === 'active') {
       throw new ConflictException(alreadySubscribed());
     }
@@ -290,6 +291,32 @@ export class MembershipBillingService {
   }
 
   /**
+   * Portal de cliente de Stripe (spec 005): cancelar o reactivar la
+   * renovación, cambiar la tarjeta, ver sus cobros. Solo con una suscripción
+   * viva — sin ella no hay nada que administrar. Lo que el socio haga ahí
+   * llega por los mismos webhooks de siempre (`customer.subscription.updated`).
+   */
+  async openBillingPortal(
+    userId: string,
+    returnUrl: string,
+    lang: Lang,
+  ): Promise<{ url: string }> {
+    const [user, membership] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId } }),
+      this.memberships.findByUser(userId),
+    ]);
+    if (!user?.stripeCustomerId || !membership?.stripeSubscriptionId) {
+      throw new ConflictException(noBillingAccount());
+    }
+    const session = await this.stripe.stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: returnUrl,
+      locale: lang === 'en' ? 'en' : 'es',
+    });
+    return { url: session.url };
+  }
+
+  /**
    * Procesa un evento ya verificado. Devuelve `false` si no era de
    * membresías, para que `PaymentsService` lo trate como de la tienda.
    */
@@ -374,6 +401,8 @@ export class MembershipBillingService {
           ...plan,
           paidThrough: new Date(periodEnd * 1000),
           stripeSubscriptionId: sub.id,
+          // Cancelada en el portal: sigue viva hasta el fin del periodo, pero ya no se cobra.
+          renewalCanceled: Boolean(sub.cancel_at_period_end || sub.cancel_at),
         });
         return;
       }

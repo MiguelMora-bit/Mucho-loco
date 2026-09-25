@@ -201,7 +201,7 @@ Backend local + `stripe listen` + Postgres dev. Sin User Pool vivo no hay token 
 
 ### Pendiente
 
-- **Portal de cliente de Stripe** (cambiar plan, actualizar tarjeta, cancelar): hoy el socio no puede cancelar desde la app.
+- ~~**Portal de cliente de Stripe**~~ ✅ (2026-09-24, spec 005): `POST /payments/billing-portal-sessions { returnUrl, lang }` → portal hospedado (409 `NO_BILLING_ACCOUNT` sin suscripción viva). Cancelar ahí deja la suscripción viva con `cancel_at_period_end`: `syncSubscription` lo copia a `Membership.renewalCanceled` (columna nueva), `autoRenews` pasa a `false` y `MembershipInfo.hasSubscription` (nuevo) sigue `true` — contratar otra encima sigue siendo `ALREADY_SUBSCRIBED`, se reactiva en el portal. El barrido de "por vencer" ya avisa a quien canceló la renovación. **Configurar el portal en el dashboard de Stripe** (cancelar al fin del periodo, método de pago, historial; sin cambio de plan: los precios son `price_data` dinámicos). Sin probar contra Stripe real.
 - `branch-app` renovando en mostrador a un socio con suscripción viva le cobraría dos veces — el mostrador no sabe de la suscripción.
 - ~~Los reportes de `owner-panel` no suman las membresías cobradas en línea~~ — ✅ resuelto (2026-09-14): los reportes leen el registro de cobros, ver abajo.
 - Al recrear el User Pool, diego/valeria entran SIN membresía (el seed no crea membresías): se contrata con la tarjeta `4242…`.

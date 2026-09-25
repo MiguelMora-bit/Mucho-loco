@@ -16,8 +16,9 @@ export type PurchaseBlock = Extract<MembershipErrorCode, 'ALREADY_SUBSCRIBED' | 
 
 /** Por qué el backend rechazaría esta compra, o `null` si la acepta. */
 export function purchaseBlock(membership: MembershipInfo | null, periodKey: PlanKey): PurchaseBlock | null {
-  // Una segunda suscripción viva le cobraría dos veces.
-  if (membership?.autoRenews && membership.status === 'active') return 'ALREADY_SUBSCRIBED';
+  // Una segunda suscripción viva le cobraría dos veces — también si canceló la
+  // renovación en el portal: sigue viva hasta el fin del periodo (spec 005).
+  if (membership?.hasSubscription && membership.status === 'active') return 'ALREADY_SUBSCRIBED';
   // Una visita encima de una membresía vigente no le agrega nada.
   if (periodKey === 'visit' && membership && membership.status !== 'expired') return 'MEMBERSHIP_STILL_ACTIVE';
   return null;
@@ -33,6 +34,6 @@ export function purchaseBlock(membership: MembershipInfo | null, periodKey: Plan
  * cargar los datos y no al pintar.
  */
 export function renewalStartsOn(membership: MembershipInfo | null, now: number = Date.now()): string | null {
-  if (!membership || membership.autoRenews || membership.status !== 'active') return null;
+  if (!membership || membership.hasSubscription || membership.status !== 'active') return null;
   return Date.parse(membership.expiresAt) - now > MIN_CARRY_OVER_MS ? membership.expiresAt : null;
 }

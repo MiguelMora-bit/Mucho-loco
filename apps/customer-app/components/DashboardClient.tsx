@@ -49,6 +49,24 @@ export default function DashboardClient({ profile, membership, justPaid, history
     });
   }
 
+  const { loading: managingSubscription, error: manageError, run: runManageSubscription } = useAsyncSubmit({
+    errorMessage: t.dashboard.home.portalError,
+    connectionErrorMessage: t.common.connectionError,
+  });
+
+  // Portal de Stripe (spec 005): cancelar/reactivar la renovación o cambiar
+  // la tarjeta. Lo que el socio haga ahí llega por webhook; al volver a esta
+  // página el Server Component relee la membresía.
+  async function handleManageSubscription() {
+    await runManageSubscription(async () => {
+      const { url } = await postJson<{ url: string }>('/api/membership/portal', {
+        returnUrl: `${window.location.origin}/${lang}/dashboard`,
+        lang,
+      });
+      window.location.href = url;
+    });
+  }
+
   const { loading: postingCommunityPost, error: communityError, run: runCommunityAction } = useAsyncSubmit({
     errorMessage: t.dashboard.community.postError,
     connectionErrorMessage: t.common.connectionError,
@@ -94,6 +112,9 @@ export default function DashboardClient({ profile, membership, justPaid, history
         onRetryPayment={handleRetryPayment}
         retryingPayment={retryingPayment}
         retryError={retryError}
+        onManageSubscription={handleManageSubscription}
+        managingSubscription={managingSubscription}
+        manageError={manageError}
       />
       <AccessPane t={t} lang={lang} active={isActive('access')} profile={profile} membership={membership} planHref={planHref} history={history} onShowQr={() => setQrOpen(true)} />
       <OrdersPane t={t} lang={lang} active={isActive('orders')} orders={orders} onSelectOrder={setSelectedOrder} />

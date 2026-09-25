@@ -19,6 +19,7 @@ function member(overrides: Partial<MembershipInfo> = {}): MembershipInfo {
     status: 'active',
     graceEndsAt: null,
     autoRenews: false,
+    hasSubscription: false,
     ...overrides,
   };
 }
@@ -30,12 +31,18 @@ describe('purchaseBlock', () => {
   });
 
   it('refuses a second live subscription — it would charge twice', () => {
-    expect(purchaseBlock(member({ autoRenews: true }), 'annual')).toBe('ALREADY_SUBSCRIBED');
+    expect(purchaseBlock(member({ autoRenews: true, hasSubscription: true }), 'annual')).toBe('ALREADY_SUBSCRIBED');
+  });
+
+  // Canceló la renovación en el portal, pero la suscripción sigue viva hasta
+  // el fin del periodo: contratar otra encima también cobraría dos veces.
+  it('also refuses it while the renewal is canceled but the subscription is alive', () => {
+    expect(purchaseBlock(member({ autoRenews: false, hasSubscription: true }), 'monthly')).toBe('ALREADY_SUBSCRIBED');
   });
 
   // Desde gracia puede volver a contratar: la suscripción nueva reemplaza a la que falla.
   it('lets a member in grace subscribe again', () => {
-    expect(purchaseBlock(member({ autoRenews: true, status: 'grace' }), 'monthly')).toBeNull();
+    expect(purchaseBlock(member({ autoRenews: true, hasSubscription: true, status: 'grace' }), 'monthly')).toBeNull();
   });
 
   it('refuses a day pass on top of a valid membership, allows it once expired', () => {
@@ -54,7 +61,7 @@ describe('renewalStartsOn', () => {
   });
 
   it('does not apply to an auto-renewing or lapsed membership', () => {
-    expect(renewalStartsOn(member({ autoRenews: true }), NOW)).toBeNull();
+    expect(renewalStartsOn(member({ autoRenews: true, hasSubscription: true }), NOW)).toBeNull();
     expect(renewalStartsOn(member({ status: 'expired' }), NOW)).toBeNull();
     expect(renewalStartsOn(null, NOW)).toBeNull();
   });

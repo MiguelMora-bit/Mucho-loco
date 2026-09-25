@@ -102,6 +102,7 @@ function seedRecords(): Record<string, UserRecord> {
       status: 'active',
       graceEndsAt: null,
       autoRenews: true,
+      hasSubscription: true,
     },
     history: [
       { visitedAt: '2026-06-18T07:30:00.000Z', branch: 'Roma Sur',   durationMinutes: 84 },
@@ -162,6 +163,7 @@ function seedRecords(): Record<string, UserRecord> {
       graceEndsAt: '2026-06-22',
       // Gracia solo existe con suscripción: es un cobro automático que falló.
       autoRenews: true,
+      hasSubscription: true,
     },
     // Todas las visitas en Condesa a propósito — su membresía no da acceso a
     // otra sucursal (ver CLAUDE.md raíz, "Membresía y alcance de acceso").
@@ -263,8 +265,22 @@ export class UserMockDatasource implements IUserRepository {
       status: 'active',
       graceEndsAt: null,
       autoRenews: plan.periodKey !== 'visit',
+      hasSubscription: plan.periodKey !== 'visit',
     };
     record.profile.branch = branch.name;
+    return record.membership;
+  }
+
+  /**
+   * Lo que en el backend hace el portal de Stripe + el webhook: cancelar la
+   * renovación (si se renovaba) o reactivarla (si estaba cancelada). Solo con
+   * suscripción viva, igual que `openBillingPortal` del backend.
+   */
+  toggleRenewal(email: string): MembershipInfo {
+    const record = getRecord(email);
+    const current = record.membership;
+    if (!current?.hasSubscription) throw new MembershipError('NO_BILLING_ACCOUNT');
+    record.membership = { ...current, autoRenews: !current.autoRenews };
     return record.membership;
   }
 

@@ -299,7 +299,11 @@
       "choosePlan": "CHOOSE A PLAN",
       "paymentProcessingTitle": "CONFIRMING YOUR PAYMENT",
       "paymentProcessingBody": "Your membership turns on as soon as Stripe confirms the charge. Reload the page in a moment.",
-      "autoRenewsPrefix": "Renews automatically on"
+      "autoRenewsPrefix": "Renews automatically on",
+      "manageSubscription": "MANAGE SUBSCRIPTION",
+      "renewalCanceledPrefix": "You canceled the renewal: you have access until",
+      "reactivateRenewal": "REACTIVATE RENEWAL",
+      "portalError": "We couldn't open your subscription settings. Try again."
     },
     "access": {
       "expiresLabel": "EXPIRES",

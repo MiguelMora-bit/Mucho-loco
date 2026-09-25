@@ -187,4 +187,9 @@ export class PaymentHttpDatasource implements IPaymentRepository {
   openMembershipInvoice(_email: string, _returnUrl: string): Promise<RedirectSession> {
     return this.api.post<RedirectSession>('/payments/membership-invoice', {}, ACCOUNT);
   }
+
+  /** `POST /payments/billing-portal-sessions`. */
+  openBillingPortal(_email: string, returnUrl: string, lang: Lang): Promise<RedirectSession> {
+    return this.api.post<RedirectSession>('/payments/billing-portal-sessions', { returnUrl, lang }, ACCOUNT);
+  }
 }

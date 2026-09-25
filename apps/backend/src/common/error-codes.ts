@@ -31,6 +31,7 @@ export type ApiErrorCode =
   | 'ALREADY_SUBSCRIBED'
   | 'MEMBERSHIP_STILL_ACTIVE'
   | 'NOTHING_TO_PAY'
+  | 'NO_BILLING_ACCOUNT'
   | 'PICKUP_REQUIRES_MEMBERSHIP'
   | 'ADDRESS_REQUIRED'
   | 'NOT_A_HOME_ORDER'
@@ -179,6 +180,12 @@ export const membershipStillActive = (): ApiErrorBody => ({
 export const nothingToPay = (): ApiErrorBody => ({
   code: 'NOTHING_TO_PAY',
   message: 'No hay ningún cobro pendiente de tu membresía',
+});
+
+/** Sin suscripción viva no hay nada que administrar en el portal de Stripe. */
+export const noBillingAccount = (): ApiErrorBody => ({
+  code: 'NO_BILLING_ACCOUNT',
+  message: 'No tienes una suscripción que administrar',
 });
 
 /** "Recoger en gym" hoy sale de la sucursal de la membresía; sin membresía no hay dónde. */

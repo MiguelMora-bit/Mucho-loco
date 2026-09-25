@@ -8,12 +8,14 @@ export type MembershipErrorCode =
   | 'ALREADY_SUBSCRIBED'
   | 'MEMBERSHIP_STILL_ACTIVE'
   | 'NOTHING_TO_PAY'
+  | 'NO_BILLING_ACCOUNT'
   | 'BRANCH_NOT_FOUND';
 
 const CODES: readonly string[] = [
   'ALREADY_SUBSCRIBED',
   'MEMBERSHIP_STILL_ACTIVE',
   'NOTHING_TO_PAY',
+  'NO_BILLING_ACCOUNT',
   'BRANCH_NOT_FOUND',
 ];
 

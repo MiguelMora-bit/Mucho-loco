@@ -326,5 +326,15 @@ test('un socio nuevo se registra con teléfono, confirma el código y entra', as
     await expect(page.getByText(/Se renueva sola el/)).toBeVisible();
   });
 
+  // Spec 005: en el mock, cada visita al portal de Stripe alterna la renovación.
+  await test.step('administrar suscripción: cancela la renovación y la reactiva', async () => {
+    await page.getByRole('button', { name: 'ADMINISTRAR SUSCRIPCIÓN', exact: true }).click();
+    await expect(page.getByText(/Cancelaste la renovación: tienes acceso hasta el/)).toBeVisible();
+    await expect(page.getByText(/Se renueva sola el/)).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'REACTIVAR RENOVACIÓN', exact: true }).click();
+    await expect(page.getByText(/Se renueva sola el/)).toBeVisible();
+  });
+
   expect(browserErrors).toEqual([]);
 });
