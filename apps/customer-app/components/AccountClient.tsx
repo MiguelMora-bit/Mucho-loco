@@ -10,6 +10,7 @@ import { useFireCanvas } from '../lib/hooks/useFireCanvas';
 import { useAuthStore } from '../lib/stores/auth.store';
 import { postJson, ApiError } from '../lib/api-client';
 import { NEXT_PARAM } from '../lib/auth';
+import { toE164 } from '@mucho-loco/customer-core/phone';
 import { useT } from '../lib/hooks/useT';
 import { LoginForm, SignupForm, ConfirmForm } from './account';
 
@@ -23,6 +24,7 @@ function errorMessageFor(t: Translations, code?: string): string {
     case 'CODE_EXPIRED': return t.account.errors.codeExpired;
     case 'TOO_MANY_ATTEMPTS': return t.account.errors.tooManyAttempts;
     case 'SOCIAL_LOGIN_FAILED': return t.account.errors.socialLoginFailed;
+    case 'INVALID_PHONE': return t.account.errors.invalidPhone;
     default: return t.account.errorLogin;
   }
 }
@@ -72,11 +74,16 @@ export default function AccountClient() {
     }
   }
 
-  async function performRegister(name: string, email: string, password: string) {
+  async function performRegister(name: string, email: string, password: string, phone: string) {
+    // Mismo criterio que la ruta (y que el registro del móvil): 10 dígitos o con +52.
+    if (!toE164(phone)) {
+      setError(t.account.errors.invalidPhone);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      await postJson<{ ok: boolean }>('/api/auth/register', { email, password, name });
+      await postJson<{ ok: boolean }>('/api/auth/register', { email, password, name, phone });
       setPendingConfirm({ email, password });
       setResent(false);
       setTab('confirm');
@@ -138,7 +145,8 @@ export default function AccountClient() {
     const name = (form.get('name') as string | null) ?? '';
     const email = (form.get('email') as string | null) ?? '';
     const password = (form.get('password') as string | null) ?? '';
-    await performRegister(name, email, password);
+    const phone = (form.get('phone') as string | null) ?? '';
+    await performRegister(name, email, password, phone);
   }
 
   async function handleConfirmSubmit(e: SubmitEvent<HTMLFormElement>) {

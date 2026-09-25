@@ -126,6 +126,10 @@ Spec, plan y tareas en `specs/001-member-cfdi-invoicing/` (primera funcionalidad
 - La descripción del cobro llega del backend en español (es el concepto fiscal) y no se traduce — limitación conocida.
 - **Sin verificar en navegador**: typecheck, lint, `next build`, unit (rutas incluidas) e integración de rutas contra el backend local. `tests/e2e/invoicing.spec.ts` está escrito pero necesita User Pool vivo para correr. **Sin probar contra Facturapi** (no hay cuenta).
 
+## Registro con teléfono (2026-09-25)
+
+Spec 007. `SignupForm` pide teléfono (obligatorio, con la nota de que ahí llegan los avisos de WhatsApp) en lugar del cumpleaños, que nunca se enviaba. `AccountClient` valida con `toE164` de customer-core antes de enviar; `/api/auth/register` revalida (400 `INVALID_PHONE`) y agrega `phone_number` a Cognito — el backend lo guarda al crear al socio. Tests en `app/api/auth/register/route.test.ts`. Sin probar el registro de punta a punta (necesita User Pool vivo).
+
 ## Administrar suscripción — portal de Stripe (2026-09-24)
 
 Spec en `specs/005-stripe-billing-portal/`. En el inicio del panel, junto a "Se renueva sola el …", el botón "Administrar suscripción" → `POST /api/membership/portal` → portal hospedado de Stripe (cancelar/reactivar la renovación, cambiar tarjeta) y regreso al panel, que el Server Component relee. Con la renovación cancelada (`hasSubscription && !autoRenews`) el panel lo dice con banner y "Reactivar renovación" (también en el portal): NO manda a contratar un plan nuevo, porque la suscripción sigue viva y el backend respondería `ALREADY_SUBSCRIBED`. `purchaseBlock` de customer-core usa `hasSubscription` por lo mismo. En mock, cada visita al "portal" alterna la renovación.

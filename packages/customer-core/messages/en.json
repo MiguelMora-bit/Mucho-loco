@@ -212,7 +212,8 @@
       "codeMismatch": "Wrong code. Check it and try again.",
       "codeExpired": "That code expired. Ask for a new one.",
       "tooManyAttempts": "Too many attempts. Wait a bit and try again.",
-      "socialLoginFailed": "We couldn't finish logging you in with that network. Try again or use your email."
+      "socialLoginFailed": "We couldn't finish logging you in with that network. Try again or use your email.",
+      "invalidPhone": "Check your phone: 10 digits, or starting with +52."
     },
     "confirm": {
       "sentPrefix": "We sent a 6-digit code to",
@@ -238,7 +239,8 @@
       "nameLabel": "Full name",
       "emailLabel": "Email",
       "passwordLabel": "Password",
-      "birthdayLabel": "Birthday",
+      "phoneLabel": "Phone (WhatsApp)",
+      "phoneNote": "We'll message you here when your membership is about to expire and when your order is ready.",
       "submit": "UNLEASH THE BEAST",
       "submitting": "CREATING ACCOUNT...",
       "orDivider": "OR SIGN UP WITH",

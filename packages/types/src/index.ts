@@ -465,6 +465,7 @@ export interface Translations {
       codeExpired: string;
       tooManyAttempts: string;
       socialLoginFailed: string;
+      invalidPhone: string;
     };
     confirm: {
       sentPrefix: string;
@@ -490,7 +491,8 @@ export interface Translations {
       nameLabel: string;
       emailLabel: string;
       passwordLabel: string;
-      birthdayLabel: string;
+      phoneLabel: string;
+      phoneNote: string;
       submit: string;
       submitting: string;
       orDivider: string;

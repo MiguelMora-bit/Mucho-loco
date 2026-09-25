@@ -25,11 +25,13 @@ export function SignupForm({ t, loading, onSubmit, next }: SignupFormProps) {
           <label>{t.account.signup.passwordLabel}</label>
           <input name="password" type="password" placeholder="••••••••" required />
         </div>
+        {/* Spec 007: el canal de los avisos (vencimiento, pedido listo). */}
         <div className="field">
-          <label>{t.account.signup.birthdayLabel}</label>
-          <input name="birthday" type="date" required />
+          <label htmlFor="signup-phone">{t.account.signup.phoneLabel}</label>
+          <input id="signup-phone" name="phone" type="tel" autoComplete="tel" placeholder="55 1234 5678" required />
         </div>
       </div>
+      <p className="text-xs text-ml-cream-dim -mt-2 mb-4">{t.account.signup.phoneNote}</p>
       <button className="submit-btn" type="submit" disabled={loading}>
         {loading ? t.account.signup.submitting : t.account.signup.submit}
       </button>

@@ -119,7 +119,7 @@ Sin esas dos variables el resto del backend funciona igual; solo `/payments/*` f
 
 ### Pendiente
 
-- **El registro web no pide teléfono.** mobile-app sí (desde 2026-09-12): lo manda como `phone_number` y `findOrCreateByCognito` lo guarda (ver "Auth" abajo). Falta lo mismo en `SignupForm` de customer-app — que además pide cumpleaños y nunca lo manda a Cognito.
+- ~~**El registro web no pide teléfono.**~~ ✅ (2026-09-25, spec 007): `SignupForm` de customer-app pide teléfono (obligatorio, `toE164` en el navegador y en `/api/auth/register`, que responde 400 `INVALID_PHONE`) y lo manda como `phone_number`, igual que el móvil. Se quitó el cumpleaños, que nunca se enviaba. El login social (Google/Facebook) sigue sin teléfono.
 - **PayPal y Mercado Pago.** El modelo `Payment` ya tiene `provider`, así que agregarlos es un módulo más, no un rediseño. Hay skill oficial de PayPal instalada; para Mercado Pago no hay y se diseña directo con el usuario.
 - ~~**Membresía recurrente.**~~ ✅ Hecho (2026-09-13) — ver "Membresías con Stripe Billing" abajo.
 - **Reembolsos.** `providerPaymentIntentId` se guarda justo para eso, pero no hay endpoint todavía (y la política de devoluciones sigue sin decidirse — ver "Pendiente de decidir" en el CLAUDE.md raíz).
