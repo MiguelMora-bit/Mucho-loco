@@ -190,14 +190,6 @@ const personalRecords = [
   { exercise: { es: 'HIP THRUST', en: 'HIP THRUST' }, weight: '170 KG', date: new Date('2026-06-07'), delta: '+5kg' },
 ];
 
-const workouts = [
-  { date: new Date('2026-06-18'), name: { es: 'Push Day · Pecho & Hombros', en: 'Push Day · Chest & Shoulders' }, sets: 18, vol: '12,400 kg', pr: { es: 'Press plano: 110kg', en: 'Flat bench: 110kg' }, duration: '1h 24m' },
-  { date: new Date('2026-06-16'), name: { es: 'Leg Day · Cuadriceps', en: 'Leg Day · Quads' }, sets: 22, vol: '18,900 kg', pr: null, duration: '58m' },
-  { date: new Date('2026-06-14'), name: { es: 'Pull Day · Espalda & Bíceps', en: 'Pull Day · Back & Biceps' }, sets: 20, vol: '14,200 kg', pr: { es: 'Peso muerto: 155kg', en: 'Deadlift: 155kg' }, duration: '2h 02m' },
-  { date: new Date('2026-06-12'), name: { es: 'Push Day · Tríceps', en: 'Push Day · Triceps' }, sets: 16, vol: '9,800 kg', pr: null, duration: '1h 11m' },
-  { date: new Date('2026-06-10'), name: { es: 'Full Body HIIT', en: 'Full Body HIIT' }, sets: 24, vol: '6,500 kg', pr: null, duration: '1h 45m' },
-  { date: new Date('2026-06-07'), name: { es: 'Leg Day · Isquiotibiales', en: 'Leg Day · Hamstrings' }, sets: 20, vol: '16,200 kg', pr: { es: 'Hip thrust: 170kg', en: 'Hip thrust: 170kg' }, duration: '1h 33m' },
-];
 
 
 // --- Operación de sucursal y HQ (2026-09-12) ---------------------------------
@@ -308,10 +300,6 @@ async function main() {
   await prisma.personalRecord.createMany({
     data: personalRecords.map((record, i) => ({ ...record, sortOrder: i })),
   });
-  await prisma.workout.deleteMany();
-  await prisma.workout.createMany({
-    data: workouts.map((w) => ({ ...w, pr: w.pr ?? Prisma.JsonNull })),
-  });
 
   for (const level of branchInventory) {
     await prisma.branchInventory.upsert({
@@ -333,7 +321,7 @@ async function main() {
   console.log(
     `Seeded ${branches.length} branches, ${products.length} products, ${membershipTiers.length} membership tiers, ` +
       `${announcements.length} announcements, ${socialLinks.length} social links, ${socialFeedPosts.length} social feed posts, ` +
-      `${performanceStats.length} performance stats, ${personalRecords.length} personal records, ${workouts.length} workouts, ` +
+      `${performanceStats.length} performance stats, ${personalRecords.length} personal records, ` +
       `${branchInventory.length} inventory levels, ${employees.length} employees, ${expenses.length} expenses, ${payrollPeriods.length} payroll periods.`,
   );
 }

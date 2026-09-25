@@ -78,7 +78,11 @@ describe('account endpoints are really guarded', () => {
 
     expect(await statusOf(() => ds.getStats())).toBe(401);
     expect(await statusOf(() => ds.getPersonalRecords())).toBe(401);
-    expect(await statusOf(() => ds.getWorkouts())).toBe(401);
+    expect(await statusOf(() => ds.getWorkouts('diego@mucholoco.mx'))).toBe(401);
+    // Spec 017.
+    const workout = { date: '2026-09-25', name: 'Push', durationMinutes: null, exercises: [{ name: 'Press', sets: [{ reps: 8, weightKg: 60 }] }] };
+    expect(await statusOf(() => ds.logWorkout('diego@mucholoco.mx', workout))).toBe(401);
+    expect(await statusOf(() => ds.deleteWorkout('diego@mucholoco.mx', 'w-1'))).toBe(401);
     expect(await statusOf(() => ds.getHeatmap('diego@mucholoco.mx'))).toBe(401);
   });
 

@@ -6,12 +6,13 @@ import type {
   MembershipInfo,
   MembershipPlanChoice,
   NewOrderLine,
+  NewWorkout,
   OfflinePaymentMethod,
   Order,
   OrderDelivery,
   PerformanceStat,
-  ShippingAddress,
   PersonalRecord,
+  ShippingAddress,
   UserProfile,
   Visit,
   Workout,
@@ -140,8 +141,18 @@ export class PerformanceHttpDatasource implements IPerformanceRepository {
     return this.api.get<PersonalRecord[]>('/performance/records', ACCOUNT);
   }
 
-  getWorkouts(): Promise<Workout[]> {
+  getWorkouts(_email: string): Promise<Workout[]> {
     return this.api.get<Workout[]>('/performance/workouts', ACCOUNT);
+  }
+
+  /** Solo lo que el socio registró: series, volumen y récords los calcula el servidor. */
+  logWorkout(_email: string, input: NewWorkout): Promise<Workout> {
+    const { date, name, durationMinutes, exercises } = input;
+    return this.api.post<Workout>('/performance/workouts', { date, name, durationMinutes, exercises }, ACCOUNT);
+  }
+
+  deleteWorkout(_email: string, workoutId: string): Promise<void> {
+    return this.api.delete(`/performance/workouts/${encodeURIComponent(workoutId)}`, ACCOUNT);
   }
 
   getHeatmap(_email: string): Promise<HeatmapLevel[][]> {

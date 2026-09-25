@@ -51,7 +51,8 @@ export type ApiErrorCode =
   | 'CFDI_NOT_FOUND'
   | 'CFDI_ALREADY_CANCELED'
   | 'CANCELLATION_REJECTED'
-  | 'TICKET_NOT_FOUND';
+  | 'TICKET_NOT_FOUND'
+  | 'WORKOUT_NOT_FOUND';
 
 export interface ApiErrorBody {
   code: ApiErrorCode;
@@ -328,4 +329,11 @@ export const ticketNotFound = (kind: string, sourceId: string): ApiErrorBody => 
   message: `Ticket not found: ${kind}/${sourceId}`,
   kind,
   sourceId,
+});
+
+/** Spec 017: no existe o es de otro socio — mismo 404, no se distingue. */
+export const workoutNotFound = (workoutId: string): ApiErrorBody => ({
+  code: 'WORKOUT_NOT_FOUND',
+  message: `Workout not found: ${workoutId}`,
+  workoutId,
 });

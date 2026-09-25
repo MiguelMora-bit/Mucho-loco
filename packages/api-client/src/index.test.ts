@@ -266,6 +266,22 @@ describe('put', () => {
   });
 });
 
+describe('delete', () => {
+  it('sends DELETE without a body and resolves a 204 as undefined', async () => {
+    const spy = stubFetch(() => new Response(null, { status: 204 }));
+    await expect(client({ getToken: () => 'tok' }).delete('/performance/workouts/w1')).resolves.toBeUndefined();
+
+    expect(spy.mock.calls[0][1]?.method).toBe('DELETE');
+    expect(spy.mock.calls[0][1]?.body).toBeUndefined();
+    expect(headersOf(spy).Authorization).toBe('Bearer tok');
+  });
+
+  it('turns a 404 into an ApiRequestError with the backend code', async () => {
+    stubFetch(() => jsonResponse({ code: 'WORKOUT_NOT_FOUND' }, 404));
+    await expect(client().delete('/x')).rejects.toMatchObject({ status: 404, code: 'WORKOUT_NOT_FOUND' });
+  });
+});
+
 describe('getFile', () => {
   // Bytes que no son UTF-8 válido: leerlos como texto (lo que hacen get/post)
   // los reemplazaría por U+FFFD y el PDF llegaría corrupto.

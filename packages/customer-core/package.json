@@ -21,6 +21,7 @@
     "./membership-rules": "./src/membership-rules.ts",
     "./phone": "./src/phone.ts",
     "./shipping": "./src/shipping.ts",
+    "./workouts": "./src/workouts.ts",
     "./messages/*": "./messages/*"
   },
   "scripts": {

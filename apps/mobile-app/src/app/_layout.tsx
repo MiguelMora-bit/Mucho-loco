@@ -82,6 +82,7 @@ export default function RootLayout() {
         <Stack.Screen name="performance" options={{ title: t.dashboard.nav.performance }} />
         <Stack.Screen name="membership" options={{ title: t.membershipCheckout.eyebrow }} />
         <Stack.Screen name="invoicing" options={{ title: t.invoicing.title }} />
+        <Stack.Screen name="workout/new" options={{ title: t.performance.workouts.logTitle }} />
       </Stack>
     </ThemeProvider>
   );

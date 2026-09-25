@@ -179,6 +179,30 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
     await expect(page.getByText('7d', { exact: true })).toHaveCSS('color', 'rgb(255, 224, 102)');
     await page.getByRole('button', { name: 'ENTRENAMIENTOS', exact: true }).click();
     await expect(page.getByText('Push Day · Pecho & Hombros')).toBeVisible();
+    // Spec 017: los récords salen de la regla sobre lo registrado, no de un texto.
+    await expect(page.getByText('🏆 Press de banca · 105 kg')).toBeVisible();
+  });
+
+  await test.step('registrar un entrenamiento: valida, calcula récord y volumen, y se puede borrar (spec 017)', async () => {
+    await page.getByRole('button', { name: 'REGISTRAR ENTRENAMIENTO', exact: true }).click();
+    await page.getByLabel('Nombre del entrenamiento').fill('Brazos');
+    await page.getByLabel('Reps 1.1').fill('5');
+    await page.getByLabel('Kg 1.1').fill('110');
+    await page.getByRole('button', { name: 'GUARDAR ENTRENAMIENTO', exact: true }).click();
+    await expect(page.getByText(/ponle nombre al entrenamiento y a cada ejercicio/)).toBeVisible();
+
+    await page.getByLabel('Ejercicio 1').fill('press de banca');
+    await page.getByRole('button', { name: 'GUARDAR ENTRENAMIENTO', exact: true }).click();
+    await expect(page.getByText('Brazos', { exact: true })).toBeVisible();
+    await expect(page.getByText('1 series · 550 kg vol')).toBeVisible();
+    await expect(page.getByText('🏆 press de banca · 110 kg')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Borrar: Brazos' }).click();
+    await page.getByRole('button', { name: 'SÍ, BORRAR', exact: true }).click();
+    await expect(page.getByText('Brazos', { exact: true })).toHaveCount(0);
+  });
+
+  await test.step('rendimiento: heatmap', async () => {
     await page.getByRole('button', { name: 'HEATMAP', exact: true }).click();
     await expect(page.getByText(/Últimas 52 semanas/)).toBeVisible();
     // Spec 016: los cuadros marcados son las 6 visitas del historial de Diego, no un patrón al azar.

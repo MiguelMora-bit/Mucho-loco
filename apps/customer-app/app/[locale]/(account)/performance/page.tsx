@@ -26,14 +26,14 @@ export default async function PerformancePage(props: Props) {
   const params = await props.params;
   setRequestLocale(params.locale);
 
-  // El heatmap es la asistencia del socio (spec 016): hace falta saber quién es.
+  // Entrenamientos (spec 017) y heatmap (spec 016) son del socio: hace falta saber quién es.
   const email = await getCurrentUserEmail();
   if (!email) return redirect({ href: '/account', locale: params.locale });
 
   const [stats, records, workouts, heatmap] = await Promise.all([
     performanceRepository.getStats(),
     performanceRepository.getPersonalRecords(),
-    performanceRepository.getWorkouts(),
+    performanceRepository.getWorkouts(email),
     performanceRepository.getHeatmap(email),
   ]);
 

@@ -1,8 +1,10 @@
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import type { HeatmapLevel } from '@mucho-loco/types';
-import { formatDate } from '@mucho-loco/customer-core/dates';
-import { Body, Card, Chip, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
+import { formatDate, formatDuration } from '@mucho-loco/customer-core/dates';
+import { formatKg } from '@mucho-loco/customer-core/workouts';
+import { Body, Button, Card, Chip, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
 import { useT } from '@/lib/i18n';
 import { performanceRepository } from '@/lib/repositories';
 import { useSessionStore } from '@/lib/stores/session.store';
@@ -31,12 +33,40 @@ export default function PerformanceScreen() {
     const [stats, records, workouts, heatmap] = await Promise.all([
       performanceRepository.getStats(),
       performanceRepository.getPersonalRecords(),
-      performanceRepository.getWorkouts(),
+      performanceRepository.getWorkouts(email),
       performanceRepository.getHeatmap(email),
     ]);
     return { stats, records, workouts, heatmap };
   }, [email]);
   const { state, reload } = useResource(load);
+  const router = useRouter();
+
+  // Al volver de registrar un entrenamiento, se relee (spec 017). El primer
+  // foco coincide con el montaje, que ya está cargando.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      reload();
+    }, [reload]),
+  );
+
+  // Borrar pide un segundo toque: un dedazo no se lleva un entrenamiento.
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [deleteFailed, setDeleteFailed] = useState(false);
+  async function removeWorkout(id: string) {
+    setDeleteFailed(false);
+    try {
+      await performanceRepository.deleteWorkout(email, id);
+      setConfirming(null);
+      reload();
+    } catch {
+      setDeleteFailed(true);
+    }
+  }
 
   return (
     <Screen safeTop={false}>
@@ -90,20 +120,38 @@ export default function PerformanceScreen() {
           <Heading>
             {p.workouts.historyPrefix} <Heading style={styles.red}>{p.workouts.historyHighlight}</Heading>
           </Heading>
+          <Button title={p.workouts.log} onPress={() => router.push('/workout/new')} />
+          {state.data.workouts.length === 0 && <Body>{p.workouts.empty}</Body>}
+          {deleteFailed && <Body style={styles.error}>{p.workouts.deleteError}</Body>}
           {state.data.workouts.map((w) => (
-            <View key={`${w.date}-${w.name.es}`} style={styles.workout}>
+            <View key={w.id} style={styles.workout}>
               <View style={styles.date}>
                 <Heading style={styles.red}>{formatDate(w.date, lang, { day: '2-digit' })}</Heading>
                 <Mono>{formatDate(w.date, lang, { month: 'short' })}</Mono>
               </View>
               <View style={styles.fill}>
-                <Body style={styles.cream}>{w.name[lang]}</Body>
+                <Body style={styles.cream}>{w.name}</Body>
                 <Mono>
-                  {w.sets} {p.workouts.setsUnit} · {w.vol} {p.workouts.volUnit}
+                  {w.setCount} {p.workouts.setsUnit} · {formatKg(w.volumeKg, lang)} {p.workouts.kgUnit} {p.workouts.volUnit}
                 </Mono>
-                {w.pr && <Mono style={styles.green}>🏆 {w.pr[lang]}</Mono>}
+                {w.prs.map((pr) => (
+                  <Mono key={pr.exercise} style={styles.green}>
+                    🏆 {pr.exercise} · {formatKg(pr.weightKg, lang)} {p.workouts.kgUnit}
+                  </Mono>
+                ))}
+                {confirming === w.id ? (
+                  <Button title={p.workouts.confirmDelete} variant="outline" onPress={() => removeWorkout(w.id)} />
+                ) : (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${p.workouts.delete}: ${w.name}`}
+                    onPress={() => setConfirming(w.id)}
+                  >
+                    <Mono style={styles.muted}>{p.workouts.delete}</Mono>
+                  </Pressable>
+                )}
               </View>
-              <Mono style={styles.orange}>{w.duration}</Mono>
+              <Mono style={styles.orange}>{formatDuration(w.durationMinutes, lang)}</Mono>
             </View>
           ))}
         </>
@@ -152,6 +200,8 @@ const styles = StyleSheet.create({
   red: { color: colors.red },
   orange: { color: colors.orange },
   green: { color: colors.green },
+  muted: { color: colors.muted },
+  error: { color: colors.redBright },
   cream: { color: colors.cream },
   small: { fontSize: 12, lineHeight: 16 },
   fill: { flex: 1, gap: 2 },

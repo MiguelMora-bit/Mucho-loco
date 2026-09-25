@@ -82,6 +82,21 @@ Antes nada creaba una `Visit`: validar en la puerta era un `GET` de solo lectura
 - **Sin salida no hay duración**: `Visit.durationMinutes` es `number | null` y los clientes pintan "—" (`formatDuration` de customer-core).
 - Probado: unit (`visit-stats.spec.ts`, `memberships.service.spec.ts`) y e2e en `branch-ops.e2e-spec.ts` (una por día, negado no registra, 400 sin método, y un socio de la app ve su entrada, `visits: 1`, `streak: 1`).
 
+## Entrenamientos del socio (2026-09-25, spec 017)
+
+Antes `workouts` era una tabla sembrada, igual para todos y con texto armado (`vol: '14,200 kg'`, `duration: '58m'`). Ahora cada socio registra los suyos:
+
+| Ruta | |
+|---|---|
+| `GET /performance/workouts` | Los del socio del token, el más reciente primero. |
+| `POST /performance/workouts` | `CreateWorkoutDto`: día (`YYYY-MM-DD`, no futuro en CDMX), nombre, duración opcional, ejercicios con series (reps 1–100 × kg 0–500). Nada derivado viaja (`forbidNonWhitelisted`). 201 con el entrenamiento y sus derivados. |
+| `DELETE /performance/workouts/:id` | 204; de otro socio o inexistente → 404 `WORKOUT_NOT_FOUND`. |
+
+- **Series, volumen y récords se derivan al leer** (`performance/workout-progress.ts`, gemela de `withProgress` de customer-core): un récord es superar el mejor peso de todos los entrenamientos anteriores de ese ejercicio (la primera vez es la línea base). Los ejercicios son texto libre y se comparan sin mayúsculas, acentos ni espacios de más. Como no se guardan, borrar un entrenamiento recalcula los récords de los demás.
+- Modelos `Workout` (por socio, `date` DATE) + `WorkoutSet` (`exerciseOrder`/`setOrder`, `weightKg` Decimal), migración `20260925214028_member_workouts` (reemplaza la tabla sembrada: sus filas no tenían dueño). El seed ya no crea entrenamientos.
+- `@mucho-loco/api-client` ganó `delete()`.
+- e2e en `app.e2e-spec.ts` ("workouts"). Resumen y récords de la pestaña Resumen siguen sembrados hasta el spec 018.
+
 ## Pagos con Stripe (2026-09-12)
 
 Cobro con pasarela para los pedidos de la tienda. Módulo `payments`, dos endpoints:

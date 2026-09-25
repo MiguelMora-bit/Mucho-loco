@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
 import type {
   HeatmapLevel,
   PerformanceStat,
@@ -6,18 +6,20 @@ import type {
   Workout,
 } from '@mucho-loco/types';
 import { PerformanceService } from './performance.service';
+import { WorkoutsService } from './workouts.service';
+import { CreateWorkoutDto } from './dto/create-workout.dto';
 import { UsersService } from '../users/users.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { IdTokenClaims } from '../auth/cognito';
 
 /** Detrás de CognitoAuthGuard por defecto (no @Public()) — contenido de la
- *  cuenta ("mi rendimiento"). El heatmap es del socio (spec 016); stats,
- *  récords y entrenamientos siguen sembrados hasta que exista captura de
- *  entrenamientos (ver el comentario sobre este dominio en schema.prisma). */
+ *  cuenta ("mi rendimiento"). Entrenamientos (spec 017) y heatmap (spec 016)
+ *  son del socio; stats y récords siguen sembrados hasta el spec 018. */
 @Controller('performance')
 export class PerformanceController {
   constructor(
     private performance: PerformanceService,
+    private workouts: WorkoutsService,
     private users: UsersService,
   ) {}
 
@@ -31,9 +33,27 @@ export class PerformanceController {
     return this.performance.getPersonalRecords();
   }
 
+  /** Los entrenamientos que registró el socio (spec 017), el más reciente primero. */
   @Get('workouts')
-  getWorkouts(): Promise<Workout[]> {
-    return this.performance.getWorkouts();
+  async getWorkouts(@CurrentUser() user: IdTokenClaims): Promise<Workout[]> {
+    const dbUser = await this.users.findOrCreateByCognito(user);
+    return this.workouts.list(dbUser.id);
+  }
+
+  @Post('workouts')
+  async logWorkout(
+    @CurrentUser() user: IdTokenClaims,
+    @Body() dto: CreateWorkoutDto,
+  ): Promise<Workout> {
+    const dbUser = await this.users.findOrCreateByCognito(user);
+    return this.workouts.log(dbUser.id, dto);
+  }
+
+  @Delete('workouts/:id')
+  @HttpCode(204)
+  async deleteWorkout(@CurrentUser() user: IdTokenClaims, @Param('id') id: string): Promise<void> {
+    const dbUser = await this.users.findOrCreateByCognito(user);
+    await this.workouts.remove(dbUser.id, id);
   }
 
   @Get('heatmap')

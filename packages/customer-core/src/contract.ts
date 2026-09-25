@@ -34,6 +34,7 @@ import type {
   SocialLink,
   UserProfile,
   Visit,
+  NewWorkout,
   Workout,
 } from '@mucho-loco/types';
 
@@ -160,7 +161,12 @@ export interface IPaymentRepository {
 export interface IPerformanceRepository {
   getStats(): Promise<PerformanceStat[]>;
   getPersonalRecords(): Promise<PersonalRecord[]>;
-  getWorkouts(): Promise<Workout[]>;
+  /** Los que registró el socio, el más reciente primero, con series, volumen y récords (spec 017). */
+  getWorkouts(email: string): Promise<Workout[]>;
+  /** Guarda lo que registró y lo devuelve con sus derivados. Forma inválida → error ('WORKOUT_INVALID'). */
+  logWorkout(email: string, input: NewWorkout): Promise<Workout>;
+  /** Solo uno propio; otro o inexistente → error ('WORKOUT_NOT_FOUND'). */
+  deleteWorkout(email: string, workoutId: string): Promise<void>;
   /** La asistencia real del socio, 52 semanas × 7 días (spec 016). */
   getHeatmap(email: string): Promise<HeatmapLevel[][]>;
 }

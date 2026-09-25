@@ -260,6 +260,7 @@ model User {
   membership          Membership?
   membershipPurchases MembershipPurchase[]
   visits              Visit[]
+  workouts            Workout[]
   orders              Order[]
   charges             Charge[]
   fiscalProfile       FiscalProfile?
@@ -491,12 +492,10 @@ model CommunityComment {
   @@map("community_comments")
 }
 
-/// Rendimiento (workouts/PRs/stats) — hoy contenido fijo semillado, IGUAL
-/// para cualquier usuario (no existe ningún flujo real que capture un
-/// entrenamiento). Queda detrás de auth porque es contenido de la cuenta, pero
-/// no filtra por userId — el día que exista captura real de entrenamientos,
-/// ESE es el momento de agregarle userId a estos 3 modelos, no antes. El
-/// heatmap ya no vive aquí: sale de las visitas reales del socio (spec 016).
+/// Rendimiento (PRs/stats) — todavía contenido fijo semillado, IGUAL para
+/// cualquier usuario: se derivan de los entrenamientos registrados en el
+/// spec 018. Los entrenamientos ya son del socio (spec 017, abajo) y el
+/// heatmap sale de sus visitas (spec 016).
 model PerformanceStat {
   id    String @id @default(uuid())
   /// LocalizedString
@@ -522,18 +521,40 @@ model PersonalRecord {
   @@map("personal_records")
 }
 
+/// Entrenamiento que registra el socio (spec 017) — antes era contenido
+/// sembrado, igual para todos. Series, volumen y récords NO se guardan: se
+/// derivan al leer (`workout-progress.ts`), así borrar un entrenamiento
+/// recalcula los récords sin tener que tocar nada más.
 model Workout {
-  id       String   @id @default(uuid())
-  date     DateTime
-  /// LocalizedString
-  name     Json
-  sets     Int
-  vol      String
-  /// LocalizedString, null cuando el workout no tuvo PR.
-  pr       Json?
-  duration String
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  /// Día del entrenamiento (fecha sin hora): hoy o ayer, lo elige el socio.
+  date            DateTime     @db.Date
+  /// Lo escribe el socio ("Push Day"): no se traduce.
+  name            String
+  durationMinutes Int?
+  createdAt       DateTime     @default(now())
+  sets            WorkoutSet[]
 
+  @@index([userId, date])
   @@map("workouts")
+}
+
+/// Una serie de un ejercicio. El ejercicio no es un catálogo: es el texto que
+/// escribió el socio, y `exerciseOrder`/`setOrder` reconstruyen la lista.
+model WorkoutSet {
+  id            String  @id @default(uuid())
+  workoutId     String
+  workout       Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseOrder Int
+  exercise      String
+  setOrder      Int
+  reps          Int
+  weightKg      Decimal @db.Decimal(6, 2)
+
+  @@index([workoutId])
+  @@map("workout_sets")
 }
 
 

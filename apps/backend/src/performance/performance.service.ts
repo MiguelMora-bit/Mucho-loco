@@ -5,13 +5,11 @@ import type {
   PerformanceStat,
   PersonalRecord,
   StatColor,
-  Workout,
 } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
 import type {
   PerformanceStat as StatRow,
   PersonalRecord as RecordRow,
-  Workout as WorkoutRow,
 } from '@prisma/client';
 import { HEATMAP_WEEKS, dayDate, heatmapOf, heatmapStart } from '../memberships/visit-stats';
 
@@ -48,17 +46,6 @@ function toRecord(row: RecordRow): PersonalRecord {
   };
 }
 
-function toWorkout(row: WorkoutRow): Workout {
-  return {
-    date: row.date.toISOString().slice(0, 10),
-    name: row.name as LocalizedString,
-    sets: row.sets,
-    vol: row.vol,
-    pr: (row.pr as LocalizedString | null) ?? null,
-    duration: row.duration,
-  };
-}
-
 @Injectable()
 export class PerformanceService {
   constructor(private prisma: PrismaService) {}
@@ -75,13 +62,6 @@ export class PerformanceService {
       orderBy: { sortOrder: 'asc' },
     });
     return rows.map(toRecord);
-  }
-
-  async getWorkouts(): Promise<Workout[]> {
-    const rows = await this.prisma.workout.findMany({
-      orderBy: { date: 'desc' },
-    });
-    return rows.map(toWorkout);
   }
 
   /**

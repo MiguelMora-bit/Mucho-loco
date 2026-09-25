@@ -738,6 +738,33 @@ export interface Translations {
       historyHighlight: string;
       setsUnit: string;
       volUnit: string;
+      /** Registrar entrenamientos (spec 017). */
+      empty: string;
+      emptyWeb: string;
+      log: string;
+      logTitle: string;
+      nameLabel: string;
+      namePlaceholder: string;
+      dayLabel: string;
+      today: string;
+      yesterday: string;
+      durationLabel: string;
+      exerciseLabel: string;
+      exercisePlaceholder: string;
+      repsLabel: string;
+      weightLabel: string;
+      addSet: string;
+      addExercise: string;
+      removeSet: string;
+      removeExercise: string;
+      save: string;
+      saving: string;
+      invalid: string;
+      saveError: string;
+      delete: string;
+      confirmDelete: string;
+      deleteError: string;
+      kgUnit: string;
     };
     heatmap: {
       titlePrefix: string;
@@ -1201,13 +1228,40 @@ export interface FeedPost {
   url: string;
 }
 
-export interface Workout {
+/** Una serie: repeticiones × kg (0 kg = peso corporal). Spec 017. */
+export interface WorkoutSet {
+  reps: number;
+  weightKg: number;
+}
+
+export interface WorkoutExercise {
+  /** Texto libre ("Press de banca"); para los récords se compara sin mayúsculas, acentos ni espacios de más. */
+  name: string;
+  sets: WorkoutSet[];
+}
+
+/** Lo que el socio registra (spec 017). Los derivados los calcula el servidor. */
+export interface NewWorkout {
+  /** Día del entrenamiento, fecha sin hora (`YYYY-MM-DD`). */
   date: string;
-  name: LocalizedString;
-  sets: number;
-  vol: string;
-  pr: LocalizedString | null;
-  duration: string;
+  /** Lo escribe el socio ("Push Day"): no se traduce. */
+  name: string;
+  durationMinutes: number | null;
+  exercises: WorkoutExercise[];
+}
+
+/** Un ejercicio en el que el entrenamiento superó el mejor peso anterior. */
+export interface WorkoutRecord {
+  exercise: string;
+  weightKg: number;
+}
+
+export interface Workout extends NewWorkout {
+  id: string;
+  setCount: number;
+  /** Σ repeticiones × kg. El número; el formato lo pone quien lo pinta. */
+  volumeKg: number;
+  prs: WorkoutRecord[];
 }
 
 /**

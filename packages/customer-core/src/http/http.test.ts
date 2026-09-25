@@ -267,7 +267,7 @@ describe('PerformanceHttpDatasource', () => {
 
     await ds.getStats();
     await ds.getPersonalRecords();
-    await ds.getWorkouts();
+    await ds.getWorkouts('ignorado@test.mx');
     await ds.getHeatmap('ignorado@test.mx');
 
     expect(call(spy, 0).url).toBe('http://api.test/performance/stats');
@@ -275,6 +275,23 @@ describe('PerformanceHttpDatasource', () => {
     expect(call(spy, 2).url).toBe('http://api.test/performance/workouts');
     expect(call(spy, 3).url).toBe('http://api.test/performance/heatmap');
     expect(call(spy, 3).auth).toBe('Bearer id-token');
+  });
+
+  // Spec 017: solo lo registrado viaja; series, volumen y récords los calcula el servidor.
+  it('posts only what the member logged and deletes by escaped id', async () => {
+    const spy = stubFetch({});
+    const ds = new PerformanceHttpDatasource(client().api);
+    const input = { date: '2026-09-25', name: 'Push Day', durationMinutes: 45, exercises: [{ name: 'Press', sets: [{ reps: 8, weightKg: 60 }] }] };
+
+    await ds.logWorkout('otro@mucholoco.mx', { ...input, volumeKg: 1 } as typeof input);
+    await ds.deleteWorkout('otro@mucholoco.mx', 'w/1');
+
+    expect(call(spy, 0).url).toBe('http://api.test/performance/workouts');
+    expect(call(spy, 0).init.method).toBe('POST');
+    expect(JSON.parse(call(spy, 0).init.body as string)).toEqual(input);
+    expect(call(spy, 1).url).toBe('http://api.test/performance/workouts/w%2F1');
+    expect(call(spy, 1).init.method).toBe('DELETE');
+    expect(call(spy, 1).auth).toBe('Bearer id-token');
   });
 });
 

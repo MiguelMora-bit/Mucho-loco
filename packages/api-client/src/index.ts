@@ -91,6 +91,8 @@ export interface ApiClient {
   getOrNull<T>(path: string, opts?: RequestOptions): Promise<T | null>;
   post<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>;
   put<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>;
+  /** Sin cuerpo; un 204 resuelve `undefined` (spec 017: borrar un entrenamiento). */
+  delete<T = void>(path: string, opts?: RequestOptions): Promise<T>;
   /**
    * Descarga binaria. Existe aparte porque `get` lee la respuesta como texto,
    * y un PDF leído como texto llega corrupto. Nunca se cachea.
@@ -233,6 +235,9 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     },
     async put<T>(path: string, body?: unknown, opts: RequestOptions = {}): Promise<T> {
       return parse<T>(await send('PUT', path, opts, body ?? {}), 'PUT', path);
+    },
+    async delete<T = void>(path: string, opts: RequestOptions = {}): Promise<T> {
+      return parse<T>(await send('DELETE', path, opts, undefined), 'DELETE', path);
     },
     async getFile(path: string, opts: RequestOptions = {}): Promise<ApiFile> {
       const res = await send('GET', path, opts, undefined, true);

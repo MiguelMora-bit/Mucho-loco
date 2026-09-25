@@ -101,6 +101,10 @@ EXPO_PUBLIC_COGNITO_DOMAIN=<terraform output cognito_domain>    # solo login soc
 
   Además `cognito.test.ts` fija la forma exacta de cada request. **Sin probar**: confirmar con un código real (el registro de prueba usó `@example.com` para no mandarle correo a nadie), Google/Facebook (sin apps OAuth ni build de desarrollo) y el app nativo en un teléfono.
 
+## Registrar entrenamientos (2026-09-25)
+
+Spec 017. Rendimiento → Entrenamientos tiene "REGISTRAR ENTRENAMIENTO" → pantalla `workout/new` (nombre, Hoy/Ayer, duración opcional, ejercicios con series reps × kg; "+ SERIE" copia la anterior; kg vacío = peso corporal; valida con `workoutProblem` de customer-core antes de mandar). La lista muestra series, volumen (`formatKg`) y los récords que calculó la regla, y "Borrar" pide un segundo toque. La pantalla relee al volver (`useFocusEffect`). La captura vive solo aquí: es lo que el socio trae en el gimnasio. Walkthrough: rechazo sin nombre de ejercicio → guardar → récord de 110 kg y "1 series · 550 kg vol" → borrar.
+
 ## Heatmap de asistencia (2026-09-25)
 
 Spec 016. `performanceRepository.getHeatmap(email)` devuelve la asistencia real (en mock, del historial de visitas con `heatmapFromVisits` de customer-core — antes `Math.random()` en cada llamada). Una columna por semana; el scroll horizontal abre en la semana actual (`scrollToEnd` al medir el contenido). El walkthrough cuenta las 6 visitas de Diego.

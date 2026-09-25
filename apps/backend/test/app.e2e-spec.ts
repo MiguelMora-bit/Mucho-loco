@@ -13,6 +13,7 @@ import type {
   Product,
   SocialLink,
   UserProfile,
+  Workout,
 } from '@mucho-loco/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -380,6 +381,72 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
   // compiten por crearlo: ninguna debe fallar por la carrera, y debe quedar
   // UN socio — sin membresía, que nace con su primer cobro (ver
   // findOrCreateByCognito).
+  // Spec 017: el socio registra sus entrenamientos; series, volumen y récords
+  // los calcula el servidor.
+  describe('workouts', () => {
+    const me = 'workout-e2e@mucholoco.mx';
+    const other = 'workout-other-e2e@mucholoco.mx';
+    const day = (offset: number) => {
+      const d = new Date(`${new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date())}T00:00:00.000Z`);
+      d.setUTCDate(d.getUTCDate() + offset);
+      return d.toISOString().slice(0, 10);
+    };
+    const bench = (date: string, weightKg: number) => ({
+      date,
+      name: 'Push Day',
+      durationMinutes: 45,
+      exercises: [{ name: 'Press de banca', sets: [{ reps: 8, weightKg: 60 }, { reps: 6, weightKg }] }],
+    });
+    const log = (email: string, input: object) =>
+      request(app.getHttpServer()).post('/performance/workouts').set(...fakeAuthHeader(email)).send(input);
+    const list = async (email: string) =>
+      body<Workout[]>(
+        await request(app.getHttpServer()).get('/performance/workouts').set(...fakeAuthHeader(email)).expect(200),
+      );
+    let firstId: string;
+
+    afterAll(async () => {
+      await prisma.workout.deleteMany({ where: { user: { email: { in: [me, other] } } } });
+      await prisma.user.deleteMany({ where: { email: { in: [me, other] } } });
+    });
+
+    it('logs a workout and derives its sets and volume', async () => {
+      const saved = body<Workout>(await log(me, bench(day(-1), 70)).expect(201));
+      firstId = saved.id;
+      expect(saved).toMatchObject({ name: 'Push Day', date: day(-1), durationMinutes: 45, setCount: 2, volumeKg: 900, prs: [] });
+      expect(saved.exercises).toEqual(bench(day(-1), 70).exercises);
+    });
+
+    it('marks a record when the best previous weight is beaten, newest first', async () => {
+      const saved = body<Workout>(await log(me, bench(day(0), 75)).expect(201));
+      expect(saved.prs).toEqual([{ exercise: 'Press de banca', weightKg: 75 }]);
+      expect((await list(me)).map((w) => w.date)).toEqual([day(0), day(-1)]);
+    });
+
+    it('never shows or deletes another member\'s workouts', async () => {
+      expect(await list(other)).toEqual([]);
+      const res = await request(app.getHttpServer())
+        .delete(`/performance/workouts/${firstId}`)
+        .set(...fakeAuthHeader(other))
+        .expect(404);
+      expect(body<{ code: string }>(res).code).toBe('WORKOUT_NOT_FOUND');
+    });
+
+    it('deletes your own workout and recomputes the records', async () => {
+      await request(app.getHttpServer()).delete(`/performance/workouts/${firstId}`).set(...fakeAuthHeader(me)).expect(204);
+      const [remaining] = await list(me);
+      // Sin el de 70 kg, el de 75 es la línea base: ya no es récord.
+      expect(remaining.prs).toEqual([]);
+      expect(await list(me)).toHaveLength(1);
+    });
+
+    it('rejects a future day, a set without reps and fields the server derives', async () => {
+      await log(me, bench(day(1), 80)).expect(400);
+      await log(me, { ...bench(day(0), 80), exercises: [{ name: 'Press', sets: [{ reps: 0, weightKg: 60 }] }] }).expect(400);
+      await log(me, { ...bench(day(0), 80), volumeKg: 1 }).expect(400);
+    });
+  });
+
   // Spec 015: quien entra con Google/Facebook no trae teléfono y sin él no
   // hay avisos de WhatsApp. El socio lo completa (o lo cambia) en su perfil.
   describe('member phone', () => {
