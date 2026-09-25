@@ -3,6 +3,8 @@ import { MembershipMockDatasource } from '../datasources/mock/membership.mock';
 import { MembershipHttpDatasource } from '../datasources/http/membership.http';
 import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
+export { MemberRenewsOnlineError } from './membership.errors';
+
 export interface SignUpInput {
   memberName: string;
   phone: string;

@@ -12,6 +12,7 @@ function record(overrides: Partial<MemberAccessRecord> = {}): MemberAccessRecord
     tierKey: 'all',
     homeBranchId: 1,
     homeBranchName: 'Roma Sur',
+    renewsOnline: false,
     ...overrides,
   };
 }

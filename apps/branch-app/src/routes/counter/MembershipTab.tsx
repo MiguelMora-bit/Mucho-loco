@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { membershipRepository } from '../../lib/repositories/membership.repository';
+import { MemberRenewsOnlineError, membershipRepository } from '../../lib/repositories/membership.repository';
 import { getCurrentBranchId, getCurrentBranchName } from '../../lib/currentBranch';
 import { CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '../../lib/membershipPlans';
 import { captureFingerprint } from '../../lib/fingerprintScanner';
@@ -242,7 +242,11 @@ export function MembershipTab() {
     try {
       const payment = await membershipRepository.renewMembership(getCurrentBranchId(), getCurrentBranchName(), foundMember.qrCode, tierKey, periodKey, paymentMethod);
       setSuccessPayment(payment); resetForm();
-    } catch (e) { console.error(e); setSubmitError(t('counter.membership.errorRenew')); }
+    } catch (e) {
+      console.error(e);
+      // Spec 006: se cobra solo en línea (otra pestaña, lista vieja): el backend lo rechazó sin cobrar.
+      setSubmitError(t(e instanceof MemberRenewsOnlineError ? 'counter.membership.renewsOnline' : 'counter.membership.errorRenew'));
+    }
     finally { setSubmitting(false); }
   }
 
@@ -339,6 +343,11 @@ export function MembershipTab() {
                   </span>
                   · {t('counter.membership.expiresLabel')} {formatDate(foundMember.expiresAt, langOf(i18n.language))}
                 </div>
+                {foundMember.renewsOnline && (
+                  <p role="alert" data-renews-online className="mt-2 text-ml-orange text-sm">
+                    {t('counter.membership.renewsOnline')}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -362,7 +371,7 @@ export function MembershipTab() {
                 submitting ||
                 (mode === 'new'
                   ? !memberName.trim() || (enrollMethod === 'fingerprint' && !fingerprintId)
-                  : !foundMember)
+                  : !foundMember || foundMember.renewsOnline)
               }
               className="w-full py-2.5 rounded bg-ml-red text-ml-cream font-medium hover:bg-ml-red-bright disabled:opacity-40 transition-colors">
               {submitting ? t('counter.membership.processing') : mode === 'new' ? t('counter.membership.signUpAndCharge') : t('counter.membership.confirmRenewal')}

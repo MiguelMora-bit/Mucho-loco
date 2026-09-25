@@ -1,6 +1,7 @@
 import type { MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import type { IMembershipRepository, SignUpInput } from '../../repositories/membership.repository';
-import { api } from './client';
+import { ApiRequestError, api } from './client';
+import { MemberRenewsOnlineError } from '../../repositories/membership.errors';
 
 /**
  * Membresías de mostrador.
@@ -23,7 +24,7 @@ export class MembershipHttpDatasource implements IMembershipRepository {
     return record ?? null;
   }
 
-  renewMembership(
+  async renewMembership(
     branchId: number,
     _branchName: string,
     qrCode: string,
@@ -31,12 +32,20 @@ export class MembershipHttpDatasource implements IMembershipRepository {
     periodKey: PlanKey,
     paymentMethod: PaymentMethod,
   ): Promise<MembershipPayment> {
-    return api.post<MembershipPayment>(`/branches/${branchId}/memberships/renew`, {
-      qrCode: qrCode.trim(),
-      tierKey,
-      periodKey,
-      paymentMethod,
-    });
+    try {
+      return await api.post<MembershipPayment>(`/branches/${branchId}/memberships/renew`, {
+        qrCode: qrCode.trim(),
+        tierKey,
+        periodKey,
+        paymentMethod,
+      });
+    } catch (e) {
+      // Spec 006: el socio se cobra solo en línea — mismo error tipado que el mock.
+      if (e instanceof ApiRequestError && e.code === 'MEMBER_RENEWS_ONLINE') {
+        throw new MemberRenewsOnlineError(qrCode.trim());
+      }
+      throw e;
+    }
   }
 
   signUpNewMember(

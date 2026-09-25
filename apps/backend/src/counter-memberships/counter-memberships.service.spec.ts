@@ -17,6 +17,7 @@ function record(overrides: Partial<MemberAccessRecord> = {}): MemberAccessRecord
     status: 'active',
     expiresAt: '2030-01-01T00:00:00.000Z',
     tierKey: 'all',
+    renewsOnline: false,
     homeBranchId: ROMA_SUR,
     homeBranchName: 'ROMA SUR',
     ...overrides,
@@ -76,6 +77,8 @@ describe('CounterMembershipsService', () => {
     tierKey: 'all',
     branchId: ROMA_SUR,
     fingerprintId: null,
+    stripeSubscriptionId: null,
+    renewalCanceled: false,
     user: { name: 'Diego Ramírez', phone: '55 1234 5678' },
     branch: { name: 'ROMA SUR' },
   };
@@ -294,6 +297,75 @@ describe('CounterMembershipsService', () => {
 
       await expect(service.renew(ROMA_SUR, dto)).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    // Spec 006: con una suscripción viva que se renueva, Stripe ya le cobra
+    // solo — cobrarle también en mostrador sería cobrarle dos veces.
+    it('refuses to renew a member whose membership renews online, without charging', async () => {
+      prisma.membership.findUnique.mockResolvedValue({ ...romaSurRow, stripeSubscriptionId: 'sub_1', renewalCanceled: false });
+      prisma.branch.findUnique.mockResolvedValue({ id: ROMA_SUR, price: 1090 });
+
+      await expect(service.renew(ROMA_SUR, dto)).rejects.toMatchObject({
+        response: { code: 'MEMBER_RENEWS_ONLINE' },
+      });
+      expect(prisma.membershipPayment.create).not.toHaveBeenCalled();
+      expect(charges.recordMembership).not.toHaveBeenCalled();
+    });
+
+    // Canceló la renovación en la app: la suscripción muere al fin del
+    // periodo, así que mostrador sí puede cobrar el siguiente.
+    it('renews at the counter once the online renewal was canceled', async () => {
+      prisma.membership.findUnique.mockResolvedValue({ ...romaSurRow, stripeSubscriptionId: 'sub_1', renewalCanceled: true });
+      prisma.branch.findUnique.mockResolvedValue({ id: ROMA_SUR, price: 1090 });
+      prisma.membershipPayment.create.mockImplementation(({ data }: never) => ({
+        ...(data as object), id: 'mp1', createdAt: new Date(),
+      }));
+
+      await expect(service.renew(ROMA_SUR, dto)).resolves.toMatchObject({ isNewMember: false });
+    });
+
+    // Antes: expiresAt = hoy + periodo, y el socio perdía los días que ya
+    // había pagado si renovaba antes de tiempo.
+    it('adds the period after the current expiry while the membership is still valid', async () => {
+      const expiresAt = new Date(Date.now() + 10 * 86_400_000);
+      prisma.membership.findUnique.mockResolvedValue({ ...romaSurRow, expiresAt, stripeSubscriptionId: null });
+      prisma.branch.findUnique.mockResolvedValue({ id: ROMA_SUR, price: 1090 });
+      prisma.membershipPayment.create.mockImplementation(({ data }: never) => ({
+        ...(data as object), id: 'mp1', createdAt: new Date(),
+      }));
+
+      await service.renew(ROMA_SUR, dto);
+
+      const { data } = prisma.membership.update.mock.calls[0][0] as { data: { expiresAt: Date } };
+      expect(data.expiresAt.getTime()).toBe(expiresAt.getTime() + 30 * 86_400_000);
+    });
+
+    it('counts from today once the membership expired', async () => {
+      prisma.membership.findUnique.mockResolvedValue({
+        ...romaSurRow, status: 'expired', expiresAt: new Date(Date.now() - 5 * 86_400_000), stripeSubscriptionId: null,
+      });
+      prisma.branch.findUnique.mockResolvedValue({ id: ROMA_SUR, price: 1090 });
+      prisma.membershipPayment.create.mockImplementation(({ data }: never) => ({
+        ...(data as object), id: 'mp1', createdAt: new Date(),
+      }));
+
+      const before = Date.now();
+      await service.renew(ROMA_SUR, dto);
+
+      const { data } = prisma.membership.update.mock.calls[0][0] as { data: { expiresAt: Date } };
+      expect(data.expiresAt.getTime()).toBeGreaterThanOrEqual(before + 30 * 86_400_000);
+      expect(data.expiresAt.getTime()).toBeLessThan(before + 31 * 86_400_000);
+    });
+
+    it('tells the counter up front who renews online', async () => {
+      prisma.membership.findUnique.mockResolvedValue({ ...romaSurRow, stripeSubscriptionId: 'sub_1', renewalCanceled: false });
+      expect((await service.findByQrCode('ML-DIEGO-2026-ALLGYMS'))?.renewsOnline).toBe(true);
+
+      prisma.membership.findUnique.mockResolvedValue({ ...romaSurRow, stripeSubscriptionId: 'sub_1', renewalCanceled: true });
+      expect((await service.findByQrCode('ML-DIEGO-2026-ALLGYMS'))?.renewsOnline).toBe(false);
+
+      prisma.membership.findUnique.mockResolvedValue({ ...romaSurRow, stripeSubscriptionId: null });
+      expect((await service.findByQrCode('ML-DIEGO-2026-ALLGYMS'))?.renewsOnline).toBe(false);
     });
 
     it('records the payment as a renewal, not a new signup', async () => {

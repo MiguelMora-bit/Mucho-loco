@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import type { IPaymentRepository } from '../contract';
 import { membershipErrorCode } from '../membership-errors';
 import { PaymentMockDatasource } from './payment.mock';
 import { UserMockDatasource } from './user.mock';
 
 /** Sin Stripe, "hacer algo en el portal" alterna la renovación (spec 005). */
 describe('PaymentMockDatasource.openBillingPortal', () => {
-  const payments = new PaymentMockDatasource();
+  // Por la interfaz: el contrato recibe `cancelUrl`, aunque el mock no lo use.
+  const payments: IPaymentRepository = new PaymentMockDatasource();
   const users = new UserMockDatasource();
 
   it('returns to the app and toggles the renewal of a subscribed member', async () => {

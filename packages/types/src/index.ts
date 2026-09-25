@@ -872,6 +872,12 @@ export interface MemberAccessRecord {
    *  usado por mostrador para buscar/renovar), pero validar acceso en el
    *  gimnasio puede hacerse por CUALQUIERA de los dos: qrCode O fingerprintId. */
   fingerprintId?: string;
+  /**
+   * Su membresía se cobra sola en línea (suscripción de Stripe viva con la
+   * renovación activa). Mostrador NO la renueva: le cobraría dos veces
+   * (spec 006). Con la renovación cancelada en la app vuelve a `false`.
+   */
+  renewsOnline: boolean;
 }
 
 /** Cómo llegó mostrador al socio: escaneó su QR, leyó su huella, o lo buscó

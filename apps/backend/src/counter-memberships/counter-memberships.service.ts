@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   AccessCheckResult,
   MemberAccessRecord,
@@ -19,7 +19,7 @@ import type {
 import { RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dto';
 import { PERIOD_DAYS, addDays, calculateMembershipPrice } from '../memberships/membership-plans';
 import { effectiveStatus } from '../memberships/membership-status';
-import { memberNotFound } from '../common/error-codes';
+import { memberNotFound, memberRenewsOnline } from '../common/error-codes';
 import { ChargesService, toCents } from '../charges/charges.service';
 
 type MembershipWithOwner = Membership & { user: User; branch: Branch };
@@ -29,6 +29,11 @@ type MembershipWithOwner = Membership & { user: User; branch: Branch };
  * MembershipInfo en este backend (ver memberships.service.ts) — la fecha es un
  * dato, el formato es decisión de quien la pinta.
  */
+/** Stripe se la cobra sola: suscripción viva, renovación sin cancelar, no vencida. */
+function renewsOnline(m: Membership): boolean {
+  return Boolean(m.stripeSubscriptionId) && !m.renewalCanceled && effectiveStatus(m) !== 'expired';
+}
+
 function toAccessRecord(m: MembershipWithOwner): MemberAccessRecord {
   return {
     qrCode: m.accessCode,
@@ -41,6 +46,7 @@ function toAccessRecord(m: MembershipWithOwner): MemberAccessRecord {
     homeBranchId: m.branchId,
     homeBranchName: m.branch.name,
     fingerprintId: m.fingerprintId ?? undefined,
+    renewsOnline: renewsOnline(m),
   };
 }
 
@@ -148,8 +154,17 @@ export class CounterMembershipsService {
       include: this.include,
     });
     if (!membership) throw new NotFoundException(memberNotFound(dto.qrCode));
+    // Spec 006: Stripe ya se la cobra; cobrarla aquí también sería cobrar dos veces.
+    if (renewsOnline(membership)) throw new ConflictException(memberRenewsOnline(dto.qrCode));
 
     const amount = await this.priceFor(branchId, dto.tierKey, dto.periodKey);
+    // Lo ya pagado no se pierde: una membresía vigente suma desde su
+    // vencimiento (igual que renovar en línea); una vencida, desde hoy.
+    const now = new Date();
+    const from =
+      effectiveStatus(membership, now) !== 'expired' && membership.expiresAt > now
+        ? membership.expiresAt
+        : now;
 
     return this.prisma.$transaction(async (tx) => {
       await tx.membership.update({
@@ -157,7 +172,7 @@ export class CounterMembershipsService {
         data: {
           status: 'active',
           graceEndsAt: null,
-          expiresAt: addDays(new Date(), PERIOD_DAYS[dto.periodKey]),
+          expiresAt: addDays(from, PERIOD_DAYS[dto.periodKey]),
           tierKey: dto.tierKey,
           periodKey: dto.periodKey,
           branchId,

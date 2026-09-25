@@ -32,6 +32,7 @@ export type ApiErrorCode =
   | 'MEMBERSHIP_STILL_ACTIVE'
   | 'NOTHING_TO_PAY'
   | 'NO_BILLING_ACCOUNT'
+  | 'MEMBER_RENEWS_ONLINE'
   | 'PICKUP_REQUIRES_MEMBERSHIP'
   | 'ADDRESS_REQUIRED'
   | 'NOT_A_HOME_ORDER'
@@ -180,6 +181,16 @@ export const membershipStillActive = (): ApiErrorBody => ({
 export const nothingToPay = (): ApiErrorBody => ({
   code: 'NOTHING_TO_PAY',
   message: 'No hay ningún cobro pendiente de tu membresía',
+});
+
+/**
+ * Mostrador intentó renovar a un socio cuya membresía se cobra sola en línea:
+ * sería cobrarle dos veces (spec 006). Que cancele la renovación en la app.
+ */
+export const memberRenewsOnline = (qrCode: string): ApiErrorBody => ({
+  code: 'MEMBER_RENEWS_ONLINE',
+  message: 'Este socio paga su membresía en la app y se cobra sola; no se puede renovar en mostrador',
+  qrCode,
 });
 
 /** Sin suscripción viva no hay nada que administrar en el portal de Stripe. */

@@ -3,6 +3,7 @@ import { MEMBER_ACCESS_RECORDS, MEMBERSHIP_PAYMENTS } from '../../data';
 import { CURRENT_BRANCH_PRICE, PERIOD_DAYS, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '../../membershipPlans';
 import { delay } from './delay';
 import type { SignUpInput } from '../../repositories/membership.repository';
+import { MemberRenewsOnlineError } from '../../repositories/membership.errors';
 import type { IMembershipRepository } from '../../repositories/membership.repository';
 
 /**
@@ -54,9 +55,15 @@ export class MembershipMockDatasource implements IMembershipRepository {
     await delay(250);
     const member = MEMBER_ACCESS_RECORDS.find((r) => r.qrCode === qrCode.trim());
     if (!member) throw new Error(`Member QR code not found: ${qrCode}`);
+    // Mismas reglas que CounterMembershipsService.renew (spec 006): quien se
+    // cobra solo en línea no se renueva aquí, y lo ya pagado no se pierde.
+    if (member.renewsOnline) throw new MemberRenewsOnlineError(member.qrCode);
 
+    const today = new Date();
+    const current = new Date(member.expiresAt);
+    const from = member.status !== 'expired' && current > today ? current : today;
     member.status = 'active';
-    member.expiresAt = isoDate(addDays(new Date(), PERIOD_DAYS[periodKey]));
+    member.expiresAt = isoDate(addDays(from, PERIOD_DAYS[periodKey]));
     // Una renovación puede cambiar de tier/sucursal de inscripción — el
     // alcance de acceso (ver lib/access/evaluateAccess.ts) debe reflejar el plan nuevo.
     member.tierKey = tierKey;
@@ -95,6 +102,8 @@ export class MembershipMockDatasource implements IMembershipRepository {
       tierKey: input.tierKey,
       homeBranchId: branchId,
       homeBranchName: branchName,
+      // Alta en mostrador: paga aquí, nada se cobra solo en línea.
+      renewsOnline: false,
     };
     MEMBER_ACCESS_RECORDS.push(record);
 

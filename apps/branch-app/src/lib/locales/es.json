@@ -105,6 +105,7 @@
       "processing": "Procesando…",
       "errorSignUp": "No pudimos dar de alta al socio",
       "errorRenew": "No pudimos renovar la membresía",
+      "renewsOnline": "Este socio paga su membresía en la app y se cobra sola; no se puede renovar aquí. Si quiere pagar en mostrador, primero cancela la renovación en la app (Administrar suscripción).",
       "successSignedUp": "Socio dado de alta",
       "successRenewed": "Membresía renovada",
       "qrCodeLabel": "QR",

@@ -11,6 +11,7 @@ import type {
   BranchStatsSummary,
   InventoryTransfer,
   MembershipPayment,
+  MemberAccessRecord,
   AttendanceEntry,
   AttendanceSummary,
   Employee,
@@ -575,6 +576,56 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
       expect(result.outcome).toBe('valid');
       expect(result.outcome === 'valid' && result.record.homeBranchId).toBe(3);
       expect(result.outcome === 'valid' && result.record.tierKey).toBe('single');
+    });
+
+    // Spec 006: renovar antes de tiempo ya no le quita días pagados al socio.
+    it('renewing a valid membership adds the period after its current expiry', async () => {
+      const before = await prisma.membership.findUniqueOrThrow({ where: { accessCode: signedUp.qrCode } });
+      await request(app.getHttpServer())
+        .post('/branches/3/memberships/renew')
+        .set(...auth('staff'))
+        .send({ qrCode: signedUp.qrCode, tierKey: 'single', periodKey: 'monthly', paymentMethod: 'cash' })
+        .expect(201);
+      const after = await prisma.membership.findUniqueOrThrow({ where: { accessCode: signedUp.qrCode } });
+
+      expect(after.expiresAt.getTime()).toBe(before.expiresAt.getTime() + 30 * 86_400_000);
+    });
+
+    // Spec 006: con una suscripción viva que se renueva, Stripe ya le cobra.
+    it('refuses to renew at the counter a membership that renews online, and says so up front', async () => {
+      await prisma.membership.update({
+        where: { accessCode: signedUp.qrCode },
+        data: { stripeSubscriptionId: 'sub_e2e_counter', renewalCanceled: false },
+      });
+      try {
+        const found = await request(app.getHttpServer())
+          .get(`/members?qrCode=${signedUp.qrCode}`)
+          .set(...auth('staff'))
+          .expect(200);
+        expect(body<MemberAccessRecord>(found).renewsOnline).toBe(true);
+
+        const paymentsBefore = await prisma.membershipPayment.count();
+        const res = await request(app.getHttpServer())
+          .post('/branches/3/memberships/renew')
+          .set(...auth('staff'))
+          .send({ qrCode: signedUp.qrCode, tierKey: 'single', periodKey: 'monthly', paymentMethod: 'cash' })
+          .expect(409);
+        expect(body<{ code: string }>(res).code).toBe('MEMBER_RENEWS_ONLINE');
+        expect(await prisma.membershipPayment.count()).toBe(paymentsBefore);
+
+        // Canceló la renovación en la app: ahora sí se puede cobrar en mostrador.
+        await prisma.membership.update({ where: { accessCode: signedUp.qrCode }, data: { renewalCanceled: true } });
+        await request(app.getHttpServer())
+          .post('/branches/3/memberships/renew')
+          .set(...auth('staff'))
+          .send({ qrCode: signedUp.qrCode, tierKey: 'single', periodKey: 'monthly', paymentMethod: 'cash' })
+          .expect(201);
+      } finally {
+        await prisma.membership.update({
+          where: { accessCode: signedUp.qrCode },
+          data: { stripeSubscriptionId: null, renewalCanceled: false },
+        });
+      }
     });
   });
 

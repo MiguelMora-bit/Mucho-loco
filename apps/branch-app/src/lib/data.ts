@@ -56,21 +56,23 @@ export const BRANCH_INVENTORY: BranchInventoryLevel[] = [
 // Diego (tier 'all') entra en cualquier sucursal; Valeria (tier 'single',
 // Condesa) debe ser RECHAZADA si se escanea en otra sucursal (Roma Sur, donde
 // están dados de alta el staff de prueba) — ver CLAUDE.md raíz.
+// `renewsOnline`: Diego paga su membresía en la app y se cobra sola (igual que
+// en el mock de customer-app) — mostrador no debe renovarlo (spec 006).
 export const MEMBER_ACCESS_RECORDS: MemberAccessRecord[] = [
-  { qrCode: 'ML-DIEGO-2026-ALLGYMS', memberName: 'Diego Ramírez', status: 'active', expiresAt: '2026-07-20', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
-  { qrCode: 'ML-VALERIA-2026-CONDESA', memberName: 'Valeria Torres', status: 'active', expiresAt: '2026-08-05', tierKey: 'single', homeBranchId: 3, homeBranchName: 'Condesa' },
-  { qrCode: 'ML-QR-ANA02', memberName: 'Ana López', status: 'grace', expiresAt: '2026-06-05', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
-  { qrCode: 'ML-QR-CARLOS03', memberName: 'Carlos Mendoza', status: 'expired', expiresAt: '2026-05-10', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
+  { qrCode: 'ML-DIEGO-2026-ALLGYMS', memberName: 'Diego Ramírez', status: 'active', expiresAt: '2026-07-20', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur', renewsOnline: true },
+  { qrCode: 'ML-VALERIA-2026-CONDESA', memberName: 'Valeria Torres', status: 'active', expiresAt: '2026-08-05', tierKey: 'single', homeBranchId: 3, homeBranchName: 'Condesa', renewsOnline: false },
+  { qrCode: 'ML-QR-ANA02', memberName: 'Ana López', status: 'grace', expiresAt: '2026-06-05', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur', renewsOnline: false },
+  { qrCode: 'ML-QR-CARLOS03', memberName: 'Carlos Mendoza', status: 'expired', expiresAt: '2026-05-10', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur', renewsOnline: false },
   // Dados de alta con huella en vez de QR (sin la app) — mismo qrCode interno
   // que todos (usado por mostrador para buscar/renovar), pero el acceso real
   // se valida por fingerprintId. Rosa entra en cualquier sucursal; Luis (tier
   // 'single', Interlomas) debe ser RECHAZADO si se escanea en Roma Sur.
-  { qrCode: 'ML-QR-ROSA04', fingerprintId: 'FP-DEMO-ROSA', memberName: 'Rosa Jiménez', status: 'active', expiresAt: '2026-08-18', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
-  { qrCode: 'ML-QR-LUIS05', fingerprintId: 'FP-DEMO-LUIS', memberName: 'Luis Herrera', status: 'active', expiresAt: '2026-08-22', tierKey: 'single', homeBranchId: 4, homeBranchName: 'Interlomas' },
+  { qrCode: 'ML-QR-ROSA04', fingerprintId: 'FP-DEMO-ROSA', memberName: 'Rosa Jiménez', status: 'active', expiresAt: '2026-08-18', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur', renewsOnline: false },
+  { qrCode: 'ML-QR-LUIS05', fingerprintId: 'FP-DEMO-LUIS', memberName: 'Luis Herrera', status: 'active', expiresAt: '2026-08-22', tierKey: 'single', homeBranchId: 4, homeBranchName: 'Interlomas', renewsOnline: false },
   // Comparte nombre de pila con Carlos Mendoza a propósito — buscar "Carlos"
   // en el método de acceso por nombre debe dar 'ambiguous' con los dos, para
   // demostrar que el staff necesita desambiguar antes de decidir el acceso.
-  { qrCode: 'ML-QR-CARLOS06', memberName: 'Carlos Vega', status: 'active', expiresAt: '2026-09-30', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur' },
+  { qrCode: 'ML-QR-CARLOS06', memberName: 'Carlos Vega', status: 'active', expiresAt: '2026-09-30', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur', renewsOnline: false },
 ];
 
 function daysAgo(days: number, hour: number): string {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { membershipRepository } from './membership.repository';
+import { MemberRenewsOnlineError, membershipRepository } from './membership.repository';
 
 describe('membershipRepository', () => {
   it('signUpNewMember mints a QR code that immediately validates as active', async () => {
@@ -64,6 +64,31 @@ describe('membershipRepository', () => {
     const after = await membershipRepository.findMember('ML-QR-ANA02');
     expect(after?.status).toBe('active');
     expect(after?.expiresAt).not.toBe(expiresAtBefore);
+  });
+
+  // Spec 006: Diego paga en la app y se cobra solo — renovarlo aquí sería doble cobro.
+  it('renewMembership refuses a member whose membership renews online', async () => {
+    const diego = await membershipRepository.findMember('ML-DIEGO-2026-ALLGYMS');
+    expect(diego?.renewsOnline).toBe(true);
+    const expiresAt = diego?.expiresAt;
+
+    await expect(
+      membershipRepository.renewMembership(1, 'Roma Sur', 'ML-DIEGO-2026-ALLGYMS', 'all', 'monthly', 'cash'),
+    ).rejects.toBeInstanceOf(MemberRenewsOnlineError);
+    expect((await membershipRepository.findMember('ML-DIEGO-2026-ALLGYMS'))?.expiresAt).toBe(expiresAt);
+  });
+
+  // Spec 006: lo ya pagado no se pierde al renovar antes de tiempo.
+  it('renewMembership adds the period after the current expiry of a valid membership', async () => {
+    const payment = await membershipRepository.signUpNewMember(1, 'Roma Sur', {
+      memberName: 'Renueva Antes', phone: '55', tierKey: 'single', periodKey: 'monthly', paymentMethod: 'cash',
+    });
+    const before = (await membershipRepository.findMember(payment.qrCode))!.expiresAt;
+
+    await membershipRepository.renewMembership(1, 'Roma Sur', payment.qrCode, 'single', 'monthly', 'cash');
+
+    const after = (await membershipRepository.findMember(payment.qrCode))!.expiresAt;
+    expect(Date.parse(after) - Date.parse(before)).toBe(30 * 86_400_000);
   });
 
   it('renewMembership rejects an unknown QR code', async () => {

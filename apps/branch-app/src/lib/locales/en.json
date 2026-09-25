@@ -105,6 +105,7 @@
       "processing": "Processing…",
       "errorSignUp": "We couldn't sign up the member",
       "errorRenew": "We couldn't renew the membership",
+      "renewsOnline": "This member pays in the app and it renews automatically; it can't be renewed here. To pay at the counter, they first cancel the renewal in the app (Manage subscription).",
       "successSignedUp": "Member signed up",
       "successRenewed": "Membership renewed",
       "qrCodeLabel": "QR",

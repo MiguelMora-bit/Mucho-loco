@@ -11,6 +11,7 @@ import {
 } from '../../repositories/cashRegisterShift.errors';
 import { AlreadyClockedInError, NoOpenEntryError } from '../../repositories/attendance.errors';
 import { useAuthStore } from '../../stores/auth.store';
+import { MemberRenewsOnlineError } from '../../repositories/membership.errors';
 
 /** `body` como texto crudo para poder simular una respuesta 200 SIN cuerpo. */
 function stubFetch(status = 200, body: string | unknown = '[]') {
@@ -206,6 +207,13 @@ describe('MembershipHttpDatasource', () => {
       paymentMethod: 'card',
     });
     expect(String(call(spy).init.body)).not.toContain('Santa Fe');
+  });
+
+  it('reads MEMBER_RENEWS_ONLINE as the typed error the mock throws (spec 006)', async () => {
+    stubFetch(409, { code: 'MEMBER_RENEWS_ONLINE' });
+    await expect(
+      ds.renewMembership(1, 'Roma Sur', 'ML-DIEGO-2026-ALLGYMS', 'all', 'monthly', 'cash'),
+    ).rejects.toBeInstanceOf(MemberRenewsOnlineError);
   });
 
   it('posts a signup without a fingerprint when there is none', async () => {
