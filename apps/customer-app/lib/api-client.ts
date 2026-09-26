@@ -36,3 +36,12 @@ export function postJson<T>(url: string, body: unknown): Promise<T> {
 export function putJson<T>(url: string, body: unknown): Promise<T> {
   return sendJson<T>('PUT', url, body);
 }
+
+/** DELETE sin cuerpo (spec 021: borrar un entrenamiento). Throws ApiError on a non-2xx status. */
+export async function deleteRequest(url: string): Promise<void> {
+  const res = await fetch(url, { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null) as ({ error?: string } & Record<string, unknown>) | null;
+    throw new ApiError(`DELETE ${url} failed with ${res.status}`, data?.error, res.status, data ?? undefined);
+  }
+}

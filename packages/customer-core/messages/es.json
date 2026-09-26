@@ -489,7 +489,6 @@
       "setsUnit": "series",
       "volUnit": "vol",
       "empty": "Todavía no registras entrenamientos.",
-      "emptyWeb": "Regístralos desde la app de Mucho Loco en tu teléfono.",
       "log": "REGISTRAR ENTRENAMIENTO",
       "logTitle": "NUEVO ENTRENAMIENTO",
       "nameLabel": "Nombre del entrenamiento",

@@ -103,7 +103,7 @@ EXPO_PUBLIC_COGNITO_DOMAIN=<terraform output cognito_domain>    # solo login soc
 
 ## Registrar entrenamientos (2026-09-25)
 
-Spec 017. Rendimiento → Entrenamientos tiene "REGISTRAR ENTRENAMIENTO" → pantalla `workout/new` (nombre, Hoy/Ayer, duración opcional, ejercicios con series reps × kg; "+ SERIE" copia la anterior; kg vacío = peso corporal; valida con `workoutProblem` de customer-core antes de mandar). La lista muestra series, volumen (`formatKg`) y los récords que calculó la regla, y "Borrar" pide un segundo toque. La pantalla relee al volver (`useFocusEffect`). La captura vive solo aquí: es lo que el socio trae en el gimnasio. Walkthrough: rechazo sin nombre de ejercicio → guardar → récord de 110 kg y "1 series · 550 kg vol" → borrar.
+Spec 017. Rendimiento → Entrenamientos tiene "REGISTRAR ENTRENAMIENTO" → pantalla `workout/new` (nombre, Hoy/Ayer, duración opcional, ejercicios con series reps × kg; "+ SERIE" copia la anterior; kg vacío = peso corporal; valida con `workoutProblem` de customer-core antes de mandar). La lista muestra series, volumen (`formatKg`) y los récords que calculó la regla, y "Borrar" pide un segundo toque. La pantalla relee al volver (`useFocusEffect`). Desde el spec 021 la web también registra (mismo formulario, misma validación de customer-core). Walkthrough: rechazo sin nombre de ejercicio → guardar → récord de 110 kg y "1 series · 550 kg vol" → borrar.
 
 ## Resumen de Rendimiento (2026-09-25)
 

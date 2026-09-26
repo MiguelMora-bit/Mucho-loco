@@ -749,7 +749,6 @@ export interface Translations {
       volUnit: string;
       /** Registrar entrenamientos (spec 017). */
       empty: string;
-      emptyWeb: string;
       log: string;
       logTitle: string;
       nameLabel: string;

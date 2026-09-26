@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NewWorkout } from '@mucho-loco/types';
-import { exerciseKey, formatKg, latestRecords, summarize, withProgress, workoutDay, workoutProblem } from './workouts';
+import { ApiRequestError } from '@mucho-loco/api-client';
+import { WorkoutError, exerciseKey, formatKg, latestRecords, summarize, withProgress, workoutDay, workoutErrorCode, workoutProblem } from './workouts';
 
 // Viernes 25 de septiembre de 2026, 12:00 en CDMX.
 const NOW = new Date('2026-09-25T18:00:00.000Z');
@@ -124,5 +125,15 @@ describe('summarize and latestRecords (spec 018)', () => {
   it('lists the latest records first, with the weight they beat', () => {
     expect(latestRecords(workouts)).toEqual([{ exercise: 'Press de banca', weightKg: 510, date: '2026-09-20', previousKg: 500 }]);
     expect(latestRecords(withProgress([]))).toEqual([]);
+  });
+});
+
+describe('workoutErrorCode (spec 021)', () => {
+  it('reads the same code from the mock and from the backend', () => {
+    expect(workoutErrorCode(new WorkoutError('WORKOUT_NOT_FOUND'))).toBe('WORKOUT_NOT_FOUND');
+    expect(workoutErrorCode(new ApiRequestError(404, '/x', 'x', { code: 'WORKOUT_NOT_FOUND' }))).toBe('WORKOUT_NOT_FOUND');
+    expect(workoutErrorCode(new ApiRequestError(400, '/x', 'x', { code: 'VALIDATION' }))).toBe('WORKOUT_INVALID');
+    expect(workoutErrorCode(new ApiRequestError(500, '/x', 'x', {}))).toBeNull();
+    expect(workoutErrorCode(new Error('red'))).toBeNull();
   });
 });

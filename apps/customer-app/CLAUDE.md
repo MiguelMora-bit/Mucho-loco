@@ -133,7 +133,7 @@ Spec 007. `SignupForm` pide teléfono (obligatorio, con la nota de que ahí lleg
 
 **Resumen de Rendimiento (spec 018)**: `Overview` pinta las tarjetas con `performanceCards` (customer-core) desde `PerformanceSummary`, y los récords con `formatKg` y la diferencia contra `previousKg`.
 
-**Entrenamientos (spec 017)**: `WorkoutsList` muestra lo que registró el socio (series, volumen con `formatKg`, récords, `formatDuration`) y, vacío, que se registran desde la app del teléfono — la web no captura.
+**Entrenamientos (spec 017, captura web en el 021)**: `WorkoutsList` muestra lo que registró el socio (series, volumen con `formatKg`, récords, `formatDuration`). Desde el spec 021 también se registra y se borra aquí: `WorkoutForm` (mismo formulario y misma validación que el móvil) → `POST /api/performance/workouts`; borrar con segundo clic → `DELETE /api/performance/workouts/[id]` (404 si es ajeno). Las rutas toman el correo de la sesión y solo los campos de `NewWorkout`; tras cada cambio, `router.refresh()` relee récords y Resumen. Tests de ruta en `app/api/performance/workouts/route.test.ts`. **La UI no se probó en navegador** (sin User Pool); la misma lógica sí, en el walkthrough del móvil.
 
 **Heatmap de asistencia (spec 016)**: `/performance` pasa el email de la sesión a `getHeatmap` (redirige a `/account` sin sesión) y la cuadrícula ahora fluye por columnas (`grid-auto-flow: column`, 7 filas en `globals.css`): antes llenaba por filas, así que una columna NO era una semana aunque el texto lo dijera — con datos aleatorios no se notaba.
 

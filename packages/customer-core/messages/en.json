@@ -489,7 +489,6 @@
       "setsUnit": "sets",
       "volUnit": "vol",
       "empty": "You haven't logged any workouts yet.",
-      "emptyWeb": "Log them from the Mucho Loco app on your phone.",
       "log": "LOG WORKOUT",
       "logTitle": "NEW WORKOUT",
       "nameLabel": "Workout name",

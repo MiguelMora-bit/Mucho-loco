@@ -1,3 +1,4 @@
+import { ApiRequestError } from '@mucho-loco/api-client';
 import type { Lang, NewWorkout, PerformanceSummary, PersonalRecord, Workout, WorkoutRecord } from '@mucho-loco/types';
 
 /**
@@ -145,4 +146,29 @@ export function latestRecords(workouts: readonly Workout[], limit = 3): Personal
 /** Kilos con separador de miles del idioma en que se pinta ("14,200"); la unidad la pone la UI. */
 export function formatKg(kg: number, lang: Lang): string {
   return new Intl.NumberFormat(lang === 'es' ? 'es-MX' : 'en-US', { maximumFractionDigits: 1 }).format(kg);
+}
+
+export type WorkoutErrorCode = 'WORKOUT_NOT_FOUND' | 'WORKOUT_INVALID';
+
+/** Lo que rechaza el mock, con el código que el backend manda en un 4xx. */
+export class WorkoutError extends Error {
+  readonly code: WorkoutErrorCode;
+  constructor(code: WorkoutErrorCode) {
+    super(code);
+    this.code = code;
+  }
+}
+
+/**
+ * El rechazo de entrenamientos, igual venga del mock o del backend (spec 021):
+ * `WORKOUT_NOT_FOUND` (404: no existe o es de otro socio) o `WORKOUT_INVALID`
+ * (400 de forma). `null` = otro error (red, 500): que suba.
+ */
+export function workoutErrorCode(e: unknown): WorkoutErrorCode | null {
+  if (e instanceof WorkoutError) return e.code;
+  if (e instanceof ApiRequestError) {
+    if (e.code === 'WORKOUT_NOT_FOUND') return 'WORKOUT_NOT_FOUND';
+    if (e.status === 400) return 'WORKOUT_INVALID';
+  }
+  return null;
 }

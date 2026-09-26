@@ -1,5 +1,5 @@
 import type { HeatmapLevel, NewWorkout, PerformanceSummary, PersonalRecord, Workout } from '@mucho-loco/types';
-import { latestRecords, summarize, withProgress, workoutProblem } from '../workouts';
+import { WorkoutError, latestRecords, summarize, withProgress, workoutProblem } from '../workouts';
 import { heatmapFromVisits } from '../heatmap';
 import { UserMockDatasource } from './user.mock';
 import { delay } from './delay';
@@ -82,7 +82,7 @@ export class PerformanceMockDatasource implements IPerformanceRepository {
   /** Misma validación y misma regla de récords que el backend (spec 017). */
   async logWorkout(email: string, input: NewWorkout): Promise<Workout> {
     await delay(200);
-    if (workoutProblem(input)) throw new Error('WORKOUT_INVALID');
+    if (workoutProblem(input)) throw new WorkoutError('WORKOUT_INVALID');
     const logged: Logged = {
       id: `w-${Date.now()}-${++sequence}`,
       date: input.date,
@@ -101,7 +101,7 @@ export class PerformanceMockDatasource implements IPerformanceRepository {
     await delay(150);
     const list = WORKOUTS[email] ?? [];
     const at = list.findIndex((w) => w.id === workoutId);
-    if (at === -1) throw new Error('WORKOUT_NOT_FOUND');
+    if (at === -1) throw new WorkoutError('WORKOUT_NOT_FOUND');
     list.splice(at, 1);
   }
 
