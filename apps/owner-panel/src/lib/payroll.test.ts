@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateISR, calculateIMSS, calculatePayroll } from './payroll';
+import { calculateISR, calculateIMSS, calculatePayroll, nextPeriodRange, periodContaining } from './payroll';
 
 describe('payroll deduction calculations', () => {
   it('zero days worked produces zero gross and zero deductions', () => {
@@ -20,5 +20,26 @@ describe('payroll deduction calculations', () => {
     const combined = calculatePayroll(9200, 1);
     expect(combined.isrDeduction).toBe(calculateISR(9200));
     expect(combined.imssDeduction).toBe(calculateIMSS(9200));
+  });
+});
+
+// Same cases as the backend twin (apps/backend/src/payroll/payroll-periods.spec.ts).
+describe('pay periods (spec 050)', () => {
+  it('alternates 1st–15th and 16th–end of month', () => {
+    expect(nextPeriodRange('2026-08-15')).toEqual({ startDate: '2026-08-16', endDate: '2026-08-31', totalDays: 16 });
+    expect(nextPeriodRange('2026-08-31')).toEqual({ startDate: '2026-09-01', endDate: '2026-09-15', totalDays: 15 });
+  });
+
+  it('handles February and the turn of the year', () => {
+    expect(nextPeriodRange('2028-02-15')).toEqual({ startDate: '2028-02-16', endDate: '2028-02-29', totalDays: 14 });
+    expect(nextPeriodRange('2026-12-31')).toEqual({ startDate: '2027-01-01', endDate: '2027-01-15', totalDays: 15 });
+  });
+
+  it('snaps back to the calendar after an irregular period', () => {
+    expect(nextPeriodRange('2026-09-10')).toEqual({ startDate: '2026-09-11', endDate: '2026-09-15', totalDays: 5 });
+  });
+
+  it('finds the period that contains a day', () => {
+    expect(periodContaining('2026-09-26')).toEqual({ startDate: '2026-09-16', endDate: '2026-09-30', totalDays: 15 });
   });
 });

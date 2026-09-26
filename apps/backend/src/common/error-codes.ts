@@ -23,6 +23,7 @@ export type ApiErrorCode =
   | 'NO_OPEN_ENTRY'
   | 'PERIOD_NOT_FOUND'
   | 'PERIOD_ALREADY_CLOSED'
+  | 'PERIOD_ALREADY_OPEN'
   | 'ORDER_ALREADY_DELIVERED'
   | 'NOT_A_PICKUP_ORDER'
   | 'CASH_REQUIRES_PICKUP'
@@ -136,6 +137,13 @@ export const periodNotFound = (periodId: string): ApiErrorBody => ({
 export const periodAlreadyClosed = (periodId: string): ApiErrorBody => ({
   code: 'PERIOD_ALREADY_CLOSED',
   message: `Payroll period already closed: ${periodId}`,
+  periodId,
+});
+
+/** Spec 050: se abre una quincena a la vez; la siguiente, al cerrar la abierta. */
+export const periodAlreadyOpen = (periodId: string): ApiErrorBody => ({
+  code: 'PERIOD_ALREADY_OPEN',
+  message: `A payroll period is already open: ${periodId}`,
   periodId,
 });
 

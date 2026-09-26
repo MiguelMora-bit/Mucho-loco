@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { payrollRepository, PeriodAlreadyClosedError } from './payroll.repository';
+import { payrollRepository, PeriodAlreadyClosedError, PeriodAlreadyOpenError } from './payroll.repository';
 import { calculatePayroll } from '../payroll';
 import { EMPLOYEES, PAYROLL_PERIODS, ATTENDANCE_SUMMARIES, PAYSLIPS } from '../data';
 
@@ -51,5 +51,25 @@ describe('payrollRepository', () => {
     // seeded-closed path above.
     const nowClosed = PAYROLL_PERIODS.find((p) => p.id === 'period-2')!;
     await expect(payrollRepository.runPayroll(nowClosed.id)).rejects.toThrow(PeriodAlreadyClosedError);
+  });
+
+  // Spec 050: running period-2 (Aug 16–31) left the next one open.
+  it('running payroll opened the next period', async () => {
+    const next = (await payrollRepository.getPeriods()).find((p) => p.startDate === '2026-09-01');
+    expect(next).toMatchObject({ endDate: '2026-09-15', totalDays: 15, status: 'open' });
+  });
+
+  it('openNextPeriod refuses while a period is open', async () => {
+    await expect(payrollRepository.openNextPeriod()).rejects.toThrow(PeriodAlreadyOpenError);
+  });
+
+  it('openNextPeriod opens the one after the latest when none is open', async () => {
+    for (const period of PAYROLL_PERIODS) period.status = 'closed';
+
+    expect(await payrollRepository.openNextPeriod()).toMatchObject({
+      startDate: '2026-09-16',
+      endDate: '2026-09-30',
+      status: 'open',
+    });
   });
 });

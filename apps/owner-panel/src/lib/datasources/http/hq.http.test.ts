@@ -12,6 +12,7 @@ import {
 } from '../../repositories/inventoryTransfer.errors';
 import {
   PeriodAlreadyClosedError,
+  PeriodAlreadyOpenError,
   PeriodNotFoundError,
 } from '../../repositories/payroll.errors';
 import { useAuthStore } from '../../stores/auth.store';
@@ -201,6 +202,18 @@ describe('PayrollHttpDatasource', () => {
     stubFetch(400, { code: 'PERIOD_ALREADY_CLOSED', periodId: 'period-1' });
     const closed = await ds.runPayroll('period-1').catch((e: unknown) => e);
     expect(closed).toBeInstanceOf(PeriodAlreadyClosedError);
+  });
+
+  it('opens the next period with a bodiless POST and reads PERIOD_ALREADY_OPEN (spec 050)', async () => {
+    const spy = stubFetch(201, { id: 'p3', startDate: '2026-09-01', endDate: '2026-09-15', totalDays: 15, status: 'open' });
+    expect((await ds.openNextPeriod()).startDate).toBe('2026-09-01');
+    expect(call(spy).url).toMatch(/^http:\/\/api\.test\/payroll\/periods\/next(\?|$)/);
+    expect(call(spy).init.method).toBe('POST');
+
+    stubFetch(409, { code: 'PERIOD_ALREADY_OPEN', periodId: 'period-2' });
+    const open = await ds.openNextPeriod().catch((e: unknown) => e);
+    expect(open).toBeInstanceOf(PeriodAlreadyOpenError);
+    expect((open as PeriodAlreadyOpenError).periodId).toBe('period-2');
   });
 });
 

@@ -79,6 +79,7 @@ describe('HQ endpoints are there and guarded', () => {
     ['payroll.getAttendance', () => payroll.getAttendance()],
     ['payroll.getPayslips', () => payroll.getPayslips()],
     ['payroll.runPayroll', () => payroll.runPayroll('period-2')],
+    ['payroll.openNextPeriod (spec 050)', () => payroll.openNextPeriod()],
     ['invoicing.listCfdis', () => invoicing.listCfdis('2026-09')],
     ['invoicing.getSummary', () => invoicing.getSummary()],
     ['invoicing.cancel', () => invoicing.cancel('cfdi-1', '02')],

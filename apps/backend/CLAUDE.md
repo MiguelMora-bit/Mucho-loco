@@ -36,7 +36,7 @@ Segunda gran tanda: los dominios que `branch-app` y `owner-panel` tenían como m
 | `pickup-orders` | `branches/:id/pickup-orders`, `pickup-orders/:id/deliver` | staff | `pickupOrder.*` |
 | `reports` | `branches/:id/reports/sales`, `stats/branches` | manager / owner | `reports.getSalesReport`, `stats.getBranchStats` |
 | `attendance` | `attendance/open`, `branches/:id/attendance/{clock-in,today}`, `attendance/clock-out` | staff / manager | `attendance.*` |
-| `payroll` | `payroll/{employees,periods,attendance,payslips}`, `payroll/periods/:id/run` | owner | `payroll.*` |
+| `payroll` | `payroll/{employees,periods,attendance,payslips}`, `payroll/periods/:id/run`, `payroll/periods/next` | owner | `payroll.*` |
 | `expenses` | `expenses` | owner | `expenses.*` |
 
 ### Roles (`auth/roles.decorator.ts` + `roles.guard.ts`)
@@ -69,6 +69,8 @@ Hay lógica que depende de qué día es "hoy" en la sucursal (asistencia del equ
 ### Cálculo de nómina
 
 `payroll/payroll.math.ts` es gemelo de `owner-panel/src/lib/payroll.ts` (tablas de ISR/IMSS **ilustrativas, no las reales del SAT/IMSS**). La diferencia importa: aquí el recibo se emite y se **guarda**, con nombre, sucursal, puesto y sueldo congelados — un recibo es un documento histórico, no algo que se recalcule cada vez que alguien abre la pantalla. Cuando `owner-panel` conecte a este backend, su copia se borra. `daysWorked` cuenta **días distintos con turno cerrado**, no turnos: entrar y salir dos veces el mismo día es un día trabajado.
+
+**Quincenas (2026-09-26, spec 050)**: antes nada creaba la siguiente y, al cerrar la sembrada, la nómina se detenía. Ahora `runPayroll` abre la siguiente en su misma transacción (salvo que ya exista una posterior), y `POST /payroll/periods/next` destraba una base sin quincena abierta: abre la que sigue a la última (sin ninguna, la de hoy en CDMX); con una abierta, 409 `PERIOD_ALREADY_OPEN`. El calendario vive en `payroll/payroll-periods.ts` (1–15 y 16–fin de mes; una quincena irregular vuelve al calendario en la siguiente), gemela de `owner-panel/src/lib/payroll.ts`. `startDate`/`endDate` son `DATE` con índice único en `startDate` (migración `20260926172406_payroll_period_dates`): dos "abrir siguiente" simultáneos crean una sola, y el perdedor recibe el 409 con la que ganó. **Hallazgo pendiente**: `getAttendanceSummaries` cuenta el día por la fecha UTC de la entrada, así que un turno después de las 18:00 de CDMX cae en el día siguiente (y el 15 o el fin de mes, en la otra quincena).
 
 ## Registro de entradas (2026-09-25, spec 012)
 

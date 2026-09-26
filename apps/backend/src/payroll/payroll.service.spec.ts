@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- jest.fn() sin generics: los mocks de Prisma son deliberadamente `any`. */
 import { Test } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PayrollService } from './payroll.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { calculateISR, calculateIMSS, calculatePayroll } from './payroll.math';
@@ -52,7 +53,14 @@ describe('PayrollService', () => {
   let service: PayrollService;
   let prisma: {
     employee: { findMany: jest.Mock };
-    payrollPeriod: { findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
+    payrollPeriod: {
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      findFirst: jest.Mock;
+      update: jest.Mock;
+      create: jest.Mock;
+      createMany: jest.Mock;
+    };
     payslip: { findMany: jest.Mock; createMany: jest.Mock };
     attendanceEntry: { findMany: jest.Mock };
     $transaction: jest.Mock;
@@ -64,7 +72,10 @@ describe('PayrollService', () => {
       payrollPeriod: {
         findMany: jest.fn().mockResolvedValue([period]),
         findUnique: jest.fn().mockResolvedValue(period),
+        findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn(),
+        create: jest.fn((args: { data: Record<string, unknown> }) => ({ id: 'new', status: 'open', ...args.data })),
+        createMany: jest.fn(),
       },
       payslip: { findMany: jest.fn().mockResolvedValue([]), createMany: jest.fn() },
       attendanceEntry: { findMany: jest.fn().mockResolvedValue([]) },
@@ -208,6 +219,72 @@ describe('PayrollService', () => {
       await service.runPayroll('period-2');
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    });
+
+    // Spec 050: siempre queda una quincena abierta.
+    it('opens the next period in the same transaction', async () => {
+      await service.runPayroll('period-2');
+
+      expect(prisma.payrollPeriod.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            startDate: new Date('2026-09-01T00:00:00.000Z'),
+            endDate: new Date('2026-09-15T00:00:00.000Z'),
+            totalDays: 15,
+          },
+        ],
+        skipDuplicates: true,
+      });
+    });
+
+    it('does not open another one when a later period already exists', async () => {
+      prisma.payrollPeriod.findFirst.mockResolvedValue({ id: 'period-3' });
+
+      await service.runPayroll('period-2');
+
+      expect(prisma.payrollPeriod.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('openNextPeriod', () => {
+    const closed = { ...period, status: 'closed' };
+
+    it('refuses while a period is still open', async () => {
+      prisma.payrollPeriod.findFirst.mockResolvedValueOnce(period);
+
+      await expect(service.openNextPeriod()).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.payrollPeriod.create).not.toHaveBeenCalled();
+    });
+
+    it('opens the one after the latest period', async () => {
+      prisma.payrollPeriod.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(closed);
+
+      expect(await service.openNextPeriod()).toEqual({
+        id: 'new',
+        startDate: '2026-09-01',
+        endDate: '2026-09-15',
+        totalDays: 15,
+        status: 'open',
+      });
+    });
+
+    it('without any period, opens the one that contains today in CDMX', async () => {
+      // 1 de octubre, 02:00 UTC = 30 de septiembre, 20:00 en CDMX.
+      const opened = await service.openNextPeriod(new Date('2026-10-01T02:00:00.000Z'));
+
+      expect(opened).toMatchObject({ startDate: '2026-09-16', endDate: '2026-09-30' });
+    });
+
+    it('answers a simultaneous open with the period that won', async () => {
+      prisma.payrollPeriod.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(closed);
+      prisma.payrollPeriod.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('unique', { code: 'P2002', clientVersion: 'test' }),
+      );
+      prisma.payrollPeriod.findUnique.mockResolvedValue({ id: 'period-3' });
+
+      await expect(service.openNextPeriod()).rejects.toMatchObject({
+        response: { code: 'PERIOD_ALREADY_OPEN', periodId: 'period-3' },
+      });
     });
   });
 });

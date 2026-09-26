@@ -1,9 +1,21 @@
 import type { AttendanceSummary, Employee, PayrollPeriod, Payslip } from '@mucho-loco/types';
 import { EMPLOYEES, PAYROLL_PERIODS, ATTENDANCE_SUMMARIES, PAYSLIPS } from '../../data';
 import { delay } from './delay';
-import { calculatePayroll } from '../../payroll';
-import { PeriodNotFoundError, PeriodAlreadyClosedError } from '../../repositories/payroll.errors';
+import { calculatePayroll, nextPeriodRange, periodContaining, type PeriodRange } from '../../payroll';
+import {
+  PeriodNotFoundError,
+  PeriodAlreadyClosedError,
+  PeriodAlreadyOpenError,
+} from '../../repositories/payroll.errors';
 import type { IPayrollRepository } from '../../repositories/payroll.repository';
+
+const MEXICO_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' });
+
+function openPeriod(range: PeriodRange): PayrollPeriod {
+  const period: PayrollPeriod = { id: `period-${range.startDate}`, ...range, status: 'open' };
+  PAYROLL_PERIODS.push(period);
+  return period;
+}
 
 export class PayrollMockDatasource implements IPayrollRepository {
   async getEmployees(): Promise<Employee[]> {
@@ -56,6 +68,22 @@ export class PayrollMockDatasource implements IPayrollRepository {
 
     PAYSLIPS.push(...newPayslips);
     period.status = 'closed';
+    // Like the backend (spec 050): the next period opens in the same step,
+    // unless a later one already exists.
+    if (!PAYROLL_PERIODS.some((p) => p.startDate > period.endDate)) {
+      openPeriod(nextPeriodRange(period.endDate));
+    }
     return newPayslips;
+  }
+
+  async openNextPeriod(): Promise<PayrollPeriod> {
+    await delay(200);
+    const open = PAYROLL_PERIODS.find((p) => p.status === 'open');
+    if (open) throw new PeriodAlreadyOpenError(open.id);
+    const latest = PAYROLL_PERIODS.reduce<PayrollPeriod | null>(
+      (last, p) => (!last || p.endDate > last.endDate ? p : last),
+      null,
+    );
+    return openPeriod(latest ? nextPeriodRange(latest.endDate) : periodContaining(MEXICO_DAY.format(new Date())));
   }
 }

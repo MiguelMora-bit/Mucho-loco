@@ -30,6 +30,7 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { CognitoVerifierService } from '../src/auth/cognito-verifier.service';
 import type { IdTokenClaims } from '../src/auth/cognito';
+import { nextPeriodRange } from '../src/payroll/payroll-periods';
 
 /**
  * E2E de la operación de sucursal y HQ contra Postgres real.
@@ -1344,14 +1345,16 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
     let currentPeriodId: string;
 
     // Las quincenas del seed son de agosto 2026; los turnos que fichan estos
-    // tests son de hoy. Se crea la quincena que SÍ los contiene — si no, la
-    // nómina no tendría dónde contarlos y el test mediría otra cosa.
+    // tests son de hoy. Se crea un periodo que SÍ los contiene — si no, la
+    // nómina no tendría dónde contarlos y el test mediría otra cosa. Es el mes
+    // completo (irregular a propósito): la siguiente tiene que volver a ser
+    // del 1 al 15. En UTC, como cuenta los días `getAttendanceSummaries`.
     beforeAll(async () => {
       const today = new Date();
       const period = await prisma.payrollPeriod.create({
         data: {
-          startDate: new Date(today.getFullYear(), today.getMonth(), 1),
-          endDate: new Date(today.getFullYear(), today.getMonth() + 1, 0),
+          startDate: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)),
+          endDate: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0)),
           totalDays: 15,
           status: 'open',
         },
@@ -1470,6 +1473,54 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         .post(`/payroll/periods/${currentPeriodId}/run`)
         .set(...auth('owner'))
         .expect(400);
+    });
+
+    // Spec 050: correr la nómina deja abierta la quincena siguiente, así la
+    // operación nunca se detiene esperando a que alguien la capture.
+    it('running payroll opens the next period', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/payroll/periods')
+        .set(...auth('owner'))
+        .expect(200);
+      const periods = body<PayrollPeriod[]>(res);
+      const ran = periods.find((p) => p.id === currentPeriodId)!;
+
+      const next = periods.find((p) => p.startDate > ran.endDate);
+      expect(next).toMatchObject({ ...nextPeriodRange(ran.endDate), status: 'open' });
+      expect(next?.startDate.endsWith('-01')).toBe(true);
+    });
+
+    it('opening another period while one is open is refused', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/payroll/periods/next')
+        .set(...auth('owner'))
+        .expect(409);
+
+      expect(body<{ code: string }>(res).code).toBe('PERIOD_ALREADY_OPEN');
+    });
+
+    it('a branch manager cannot open a period', async () => {
+      await request(app.getHttpServer())
+        .post('/payroll/periods/next')
+        .set(...auth('manager'))
+        .expect(403);
+    });
+
+    // El estado en que se queda hoy una base con la nómina detenida: todas
+    // cerradas. "Abrir siguiente quincena" la destraba.
+    it('with no open period, the owner opens the one after the latest', async () => {
+      await prisma.payrollPeriod.updateMany({ where: { status: 'open' }, data: { status: 'closed' } });
+      const latest = await prisma.payrollPeriod.findFirstOrThrow({ orderBy: { endDate: 'desc' } });
+
+      const res = await request(app.getHttpServer())
+        .post('/payroll/periods/next')
+        .set(...auth('owner'))
+        .expect(201);
+
+      expect(body<PayrollPeriod>(res)).toMatchObject({
+        ...nextPeriodRange(latest.endDate.toISOString().slice(0, 10)),
+        status: 'open',
+      });
     });
 
     it('payslips persist and are listed after the run', async () => {

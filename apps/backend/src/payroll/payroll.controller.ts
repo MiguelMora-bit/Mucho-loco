@@ -29,6 +29,11 @@ export class PayrollController {
     return this.payroll.getPayslips();
   }
 
+  @Post('periods/next')
+  openNextPeriod(): Promise<PayrollPeriod> {
+    return this.payroll.openNextPeriod();
+  }
+
   @Post('periods/:periodId/run')
   runPayroll(@Param('periodId') periodId: string): Promise<Payslip[]> {
     return this.payroll.runPayroll(periodId);

@@ -1,6 +1,10 @@
 import type { AttendanceSummary, Employee, PayrollPeriod, Payslip } from '@mucho-loco/types';
 import type { IPayrollRepository } from '../../repositories/payroll.repository';
-import { PeriodAlreadyClosedError, PeriodNotFoundError } from '../../repositories/payroll.errors';
+import {
+  PeriodAlreadyClosedError,
+  PeriodAlreadyOpenError,
+  PeriodNotFoundError,
+} from '../../repositories/payroll.errors';
 import { ApiRequestError, api } from './client';
 
 function toDomainError(e: unknown): unknown {
@@ -11,6 +15,8 @@ function toDomainError(e: unknown): unknown {
       return new PeriodNotFoundError(periodId);
     case 'PERIOD_ALREADY_CLOSED':
       return new PeriodAlreadyClosedError(periodId);
+    case 'PERIOD_ALREADY_OPEN':
+      return new PeriodAlreadyOpenError(periodId);
     default:
       return e;
   }
@@ -48,6 +54,14 @@ export class PayrollHttpDatasource implements IPayrollRepository {
   async runPayroll(periodId: string): Promise<Payslip[]> {
     try {
       return await api.post<Payslip[]>(`/payroll/periods/${periodId}/run`);
+    } catch (e) {
+      throw toDomainError(e);
+    }
+  }
+
+  async openNextPeriod(): Promise<PayrollPeriod> {
+    try {
+      return await api.post<PayrollPeriod>('/payroll/periods/next');
     } catch (e) {
       throw toDomainError(e);
     }

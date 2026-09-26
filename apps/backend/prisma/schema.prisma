@@ -740,10 +740,13 @@ model Expense {
 
 /// Quincena. 'closed' es final: correr la nómina de un periodo lo cierra y sus
 /// recibos ya no se recalculan.
+// Una quincena (1–15 o 16–fin de mes, spec 050). Fechas solas: la hora no
+// significa nada aquí. Dos quincenas no pueden empezar el mismo día — eso
+// frena dos "abrir siguiente" simultáneos.
 model PayrollPeriod {
   id        String              @id @default(uuid())
-  startDate DateTime
-  endDate   DateTime
+  startDate DateTime            @unique @db.Date
+  endDate   DateTime            @db.Date
   totalDays Int
   status    PayrollPeriodStatus @default(open)
 

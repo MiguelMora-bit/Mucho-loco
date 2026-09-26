@@ -5,7 +5,7 @@ import { usePayrollPeriodsStore } from '../lib/stores/payrollPeriods.store';
 import { useAttendanceStore } from '../lib/stores/attendance.store';
 import { usePayslipsStore } from '../lib/stores/payslips.store';
 import { useBranchStatsStore } from '../lib/stores/branchStats.store';
-import { payrollRepository } from '../lib/repositories/payroll.repository';
+import { payrollRepository, PeriodAlreadyOpenError } from '../lib/repositories/payroll.repository';
 import { formatDate, formatPeriodRange } from '../lib/dates';
 import type { Lang } from '@mucho-loco/types';
 
@@ -40,6 +40,9 @@ export function PayrollPage() {
   const [periodOverride, setPeriodOverride] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
+  const [ranPeriodId, setRanPeriodId] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const periods = periodsStore.data ?? [];
@@ -59,6 +62,7 @@ export function PayrollPage() {
   const selectedPeriodId = periodOverride ?? defaultPeriodId;
 
   const selectedPeriod = periods.find((p) => p.id === selectedPeriodId) ?? null;
+  const openPeriod = periods.find((p) => p.status === 'open') ?? null;
   const attendanceForPeriod = (attendanceStore.data ?? []).filter((a) => a.periodId === selectedPeriodId);
   const payslipsForPeriod = (payslipsStore.data ?? []).filter((p) => p.periodId === selectedPeriodId);
 
@@ -74,12 +78,37 @@ export function PayrollPage() {
     setRunError(null);
     try {
       await payrollRepository.runPayroll(selectedPeriod.id);
+      // Running opens the next period (spec 050), which would become the
+      // default selection — keep the one just paid on screen, with its payslips.
+      setPeriodOverride(selectedPeriod.id);
+      setRanPeriodId(selectedPeriod.id);
       await Promise.all([fetchPayslips(), fetchPeriods()]);
     } catch (err) {
       console.error(err);
       setRunError(t('payroll.runError'));
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function handleOpenNextPeriod() {
+    setOpening(true);
+    setOpenError(null);
+    try {
+      const opened = await payrollRepository.openNextPeriod();
+      setPeriodOverride(opened.id);
+      await fetchPeriods();
+    } catch (err) {
+      console.error(err);
+      if (err instanceof PeriodAlreadyOpenError) {
+        setOpenError(t('payroll.openErrorAlreadyOpen'));
+        setPeriodOverride(null);
+        await fetchPeriods();
+      } else {
+        setOpenError(t('payroll.openError'));
+      }
+    } finally {
+      setOpening(false);
     }
   }
 
@@ -108,6 +137,20 @@ export function PayrollPage() {
           {t('payroll.loadError')}: {error}
         </div>
       )}
+
+      {periodsStore.data && !openPeriod && (
+        <div className="bg-ml-orange/10 border border-ml-orange rounded p-4 space-y-3">
+          <p className="text-sm text-ml-orange">{t('payroll.noOpenPeriod')}</p>
+          <button
+            onClick={handleOpenNextPeriod}
+            disabled={opening}
+            className="px-4 py-2 rounded bg-ml-red text-ml-cream text-sm font-medium hover:bg-ml-red-bright disabled:opacity-40 transition-colors"
+          >
+            {opening ? t('payroll.opening') : t('payroll.openNextPeriod')}
+          </button>
+        </div>
+      )}
+      {openError && <p className="text-ml-red text-xs">{openError}</p>}
 
       {loading && !periodsStore.data ? (
         <div className="space-y-2">
@@ -174,7 +217,16 @@ export function PayrollPage() {
             </div>
           )}
           {selectedPeriod?.status === 'closed' && (
-            <p className="text-ml-cream-dim text-sm">{t('payroll.closedNote')}</p>
+            <div className="space-y-2">
+              <p className="text-ml-cream-dim text-sm">{t('payroll.closedNote')}</p>
+              {ranPeriodId === selectedPeriodId && openPeriod && (
+                <p className="text-ml-green text-sm">
+                  {t('payroll.nextPeriodOpened', {
+                    range: formatPeriodRange(openPeriod.startDate, openPeriod.endDate, lang),
+                  })}
+                </p>
+              )}
+            </div>
           )}
 
           <table className="w-full text-sm border-collapse">

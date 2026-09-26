@@ -17,3 +17,12 @@ export class PeriodAlreadyClosedError extends Error {
     this.periodId = periodId;
   }
 }
+
+/** Spec 050: only one period is open at a time. `periodId` is the open one. */
+export class PeriodAlreadyOpenError extends Error {
+  periodId: string;
+  constructor(periodId: string) {
+    super(`A payroll period is already open: ${periodId}`);
+    this.periodId = periodId;
+  }
+}

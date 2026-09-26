@@ -61,6 +61,6 @@ El dueño ve empleados y días trabajados, corre la nómina y obtiene los recibo
 
 ## Fuera de alcance / pendiente conocido
 
-- Crear la siguiente quincena: hoy solo existen las sembradas (los tests crean las suyas en la base); cerrar la abierta deja la nómina sin quincena activa.
+- ~~Crear la siguiente quincena~~ ✅ spec 050 (2026-09-26).
 - Tablas reales de ISR e IMSS.
 - Alta y edición de empleados desde la pantalla.

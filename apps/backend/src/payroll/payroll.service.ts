@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   AttendanceSummary,
   Employee,
@@ -7,15 +7,24 @@ import type {
   Payslip,
 } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import type {
   Employee as EmployeeRow,
   PayrollPeriod as PeriodRow,
   Payslip as PayslipRow,
 } from '@prisma/client';
 import { calculatePayroll } from './payroll.math';
-import { periodAlreadyClosed, periodNotFound } from '../common/error-codes';
+import { nextPeriodRange, periodContaining, type PeriodRange } from './payroll-periods';
+import { dayDate, mexicoDay } from '../memberships/visit-stats';
+import { periodAlreadyClosed, periodAlreadyOpen, periodNotFound } from '../common/error-codes';
 
 const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
+
+const periodRow = (range: PeriodRange) => ({
+  startDate: dayDate(range.startDate),
+  endDate: dayDate(range.endDate),
+  totalDays: range.totalDays,
+});
 
 function toEmployee(row: EmployeeRow): Employee {
   return {
@@ -114,9 +123,37 @@ export class PayrollService {
   }
 
   /**
+   * "Abrir siguiente quincena" (spec 050): para destrabar una nómina que se
+   * quedó sin quincena abierta. La operación normal no la necesita — correr
+   * la nómina ya abre la siguiente. Sin ninguna quincena, la de hoy en CDMX.
+   */
+  async openNextPeriod(now: Date = new Date()): Promise<PayrollPeriod> {
+    const open = await this.prisma.payrollPeriod.findFirst({ where: { status: 'open' } });
+    if (open) throw new ConflictException(periodAlreadyOpen(open.id));
+
+    const latest = await this.prisma.payrollPeriod.findFirst({ orderBy: { endDate: 'desc' } });
+    const range = latest ? nextPeriodRange(isoDate(latest.endDate)) : periodContaining(mexicoDay(now));
+    try {
+      return toPeriod(await this.prisma.payrollPeriod.create({ data: periodRow(range) }));
+    } catch (error) {
+      // Dos clics simultáneos calculan la misma quincena; el índice único deja
+      // pasar uno y el otro ve la que ya se abrió.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const winner = await this.prisma.payrollPeriod.findUnique({ where: { startDate: dayDate(range.startDate) } });
+        throw new ConflictException(periodAlreadyOpen(winner?.id ?? range.startDate));
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Emite los recibos del periodo y lo cierra. Cerrar es final: un recibo
    * pagado no se recalcula porque alguien haya corregido una asistencia
    * después.
+   *
+   * En la misma transacción abre la quincena siguiente (spec 050), salvo que
+   * ya exista una posterior — así siempre queda una abierta y la nómina nunca
+   * se detiene esperando a que alguien la capture.
    *
    * Solo entran empleados activos CON días trabajados — a diferencia del mock,
    * que recorría un `ATTENDANCE_SUMMARIES` semilla y hacía `EMPLOYEES.find(...)!`
@@ -158,6 +195,13 @@ export class PayrollService {
     return this.prisma.$transaction(async (tx) => {
       await tx.payslip.createMany({ data: rows });
       await tx.payrollPeriod.update({ where: { id: periodId }, data: { status: 'closed' } });
+      const later = await tx.payrollPeriod.findFirst({ where: { startDate: { gt: period.endDate } } });
+      if (!later) {
+        await tx.payrollPeriod.createMany({
+          data: [periodRow(nextPeriodRange(isoDate(period.endDate)))],
+          skipDuplicates: true,
+        });
+      }
       const created = await tx.payslip.findMany({ where: { periodId } });
       return created.map(toPayslip);
     });
