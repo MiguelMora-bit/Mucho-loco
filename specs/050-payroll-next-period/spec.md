@@ -61,4 +61,4 @@
 
 ## Hallazgo fuera de alcance
 
-- `getAttendanceSummaries` cuenta el día trabajado por la fecha UTC de la entrada: un turno que empieza después de las 18:00 de CDMX cuenta como del día siguiente, y el día 15 o el último del mes cae en la otra quincena. Anotado en `specs/README.md`.
+- `getAttendanceSummaries` cuenta el día trabajado por la fecha UTC de la entrada: un turno que empieza después de las 18:00 de CDMX cuenta como del día siguiente, y el día 15 o el último del mes cae en la otra quincena. ✅ Resuelto en el spec [051](../051-payroll-cdmx-days/spec.md).

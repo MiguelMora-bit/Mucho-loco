@@ -95,6 +95,11 @@ export class PayrollService {
    * Se cuentan DÍAS DISTINTOS con turno cerrado, no turnos: alguien que
    * entra y sale dos veces el mismo día trabajó un día, no dos. Un turno
    * todavía abierto no cuenta — sin hora de salida no hay jornada completa.
+   *
+   * El día de un turno es el de CDMX en que empezó (spec 051), como el
+   * `visitDay` de un socio. Con la fecha UTC, un turno después de las 18:00
+   * contaba como del día siguiente y el 15 o el fin de mes caía en la otra
+   * quincena.
    */
   async getAttendanceSummaries(): Promise<AttendanceSummary[]> {
     const [periods, entries] = await Promise.all([
@@ -106,13 +111,15 @@ export class PayrollService {
     ]);
 
     const summaries: AttendanceSummary[] = [];
+    const shifts = entries.map((entry) => ({ employeeId: entry.employeeId as string, day: mexicoDay(entry.clockIn) }));
     for (const period of periods) {
+      const start = isoDate(period.startDate);
+      const end = isoDate(period.endDate);
       const daysByEmployee = new Map<string, Set<string>>();
-      for (const entry of entries) {
-        if (entry.clockIn < period.startDate || entry.clockIn > endOfDay(period.endDate)) continue;
-        const employeeId = entry.employeeId as string;
+      for (const { employeeId, day } of shifts) {
+        if (day < start || day > end) continue;
         const days = daysByEmployee.get(employeeId) ?? new Set<string>();
-        days.add(isoDate(entry.clockIn));
+        days.add(day);
         daysByEmployee.set(employeeId, days);
       }
       for (const [employeeId, days] of daysByEmployee) {
@@ -206,18 +213,4 @@ export class PayrollService {
       return created.map(toPayslip);
     });
   }
-}
-
-const ONE_DAY_MS = 86_400_000;
-
-/**
- * El último día del periodo cuenta completo, no hasta su medianoche inicial.
- *
- * En UTC a propósito: `startDate`/`endDate` se guardan como fecha sola (que
- * Postgres devuelve como medianoche UTC), así que usar `setHours` local
- * correría el límite tantas horas como esté desfasado el servidor — en México
- * (UTC-6) recortaba seis horas del último día y perdía los turnos de la tarde.
- */
-function endOfDay(d: Date): Date {
-  return new Date(d.getTime() + ONE_DAY_MS - 1);
 }

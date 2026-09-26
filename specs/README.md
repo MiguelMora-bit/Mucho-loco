@@ -62,6 +62,7 @@ Varios specs tocan más de un app (casi todos también el backend); cada uno apa
 | [043-executive-reports](043-executive-reports/spec.md) — Reportes ejecutivos | retroactivo | 1/1 |  |
 | [044-home-shipments](044-home-shipments/spec.md) — Envíos a domicilio desde la bodega | retroactivo | 3/3 |  |
 | [050-payroll-next-period](050-payroll-next-period/spec.md) — La nómina nunca se queda sin quincena | nuevo | 5/5 |  |
+| [051-payroll-cdmx-days](051-payroll-cdmx-days/spec.md) — Días trabajados en el calendario de CDMX | nuevo | 4/4 |  |
 
 ## Plataforma — backend, avisos, infraestructura
 
@@ -86,7 +87,6 @@ Cada tarea abierta de los specs retroactivos es algo que hoy no está verificado
 - **034** Auditoría de cortes desde owner-panel (pedido en el CLAUDE.md raíz: "auditable desde el panel del dueño").
 - **038** Pantalla para que el gerente corrija una salida olvidada.
 - **041** Editar o borrar un gasto capturado por error.
-- **050** (hallazgo) Los días trabajados se cuentan por la fecha UTC de la entrada: un turno después de las 18:00 de CDMX cuenta como del día siguiente, y el 15 o el fin de mes cae en la otra quincena.
 - **046** Probar contra el sandbox de Facturapi (requiere la cuenta).
 - **047** Probar contra la Cloud API de Meta con plantillas aprobadas.
 - **048** Instalar y montar `@nestjs/swagger` (documentación OpenAPI decidida en el CLAUDE.md raíz).

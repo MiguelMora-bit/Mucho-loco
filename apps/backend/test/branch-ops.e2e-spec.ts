@@ -31,6 +31,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { CognitoVerifierService } from '../src/auth/cognito-verifier.service';
 import type { IdTokenClaims } from '../src/auth/cognito';
 import { nextPeriodRange } from '../src/payroll/payroll-periods';
+import { mexicoDay } from '../src/memberships/visit-stats';
 
 /**
  * E2E de la operación de sucursal y HQ contra Postgres real.
@@ -1348,13 +1349,14 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
     // tests son de hoy. Se crea un periodo que SÍ los contiene — si no, la
     // nómina no tendría dónde contarlos y el test mediría otra cosa. Es el mes
     // completo (irregular a propósito): la siguiente tiene que volver a ser
-    // del 1 al 15. En UTC, como cuenta los días `getAttendanceSummaries`.
+    // del 1 al 15. El mes de CDMX, como cuenta los días `getAttendanceSummaries`
+    // (spec 051) — con el UTC, correr esto de noche a fin de mes fallaba.
     beforeAll(async () => {
-      const today = new Date();
+      const [year, month] = mexicoDay(new Date()).split('-').map(Number);
       const period = await prisma.payrollPeriod.create({
         data: {
-          startDate: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)),
-          endDate: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0)),
+          startDate: new Date(Date.UTC(year, month - 1, 1)),
+          endDate: new Date(Date.UTC(year, month, 0)),
           totalDays: 15,
           status: 'open',
         },

@@ -135,6 +135,37 @@ describe('PayrollService', () => {
       expect((await service.getAttendanceSummaries())[0].daysWorked).toBe(1);
     });
 
+    // Spec 051: el día es el de CDMX en que empezó el turno, no el UTC.
+    it('leaves an evening shift on the 15th in the first half of the month', async () => {
+      prisma.attendanceEntry.findMany.mockResolvedValue([
+        // 15 de agosto, 19:00 en CDMX.
+        { employeeId: 'emp-1', clockIn: new Date('2026-08-16T01:00:00.000Z') },
+      ]);
+
+      expect(await service.getAttendanceSummaries()).toEqual([]);
+    });
+
+    it('counts a night shift on the last day of the period', async () => {
+      prisma.attendanceEntry.findMany.mockResolvedValue([
+        // 31 de agosto, 21:00 en CDMX.
+        { employeeId: 'emp-1', clockIn: new Date('2026-09-01T03:00:00.000Z') },
+      ]);
+
+      expect(await service.getAttendanceSummaries()).toEqual([
+        { employeeId: 'emp-1', periodId: 'period-2', daysWorked: 1 },
+      ]);
+    });
+
+    it('counts morning and evening on the same CDMX day once', async () => {
+      prisma.attendanceEntry.findMany.mockResolvedValue([
+        // 20 de agosto, 10:00 y 20:00 en CDMX: dos fechas UTC distintas.
+        { employeeId: 'emp-1', clockIn: new Date('2026-08-20T16:00:00.000Z') },
+        { employeeId: 'emp-1', clockIn: new Date('2026-08-21T02:00:00.000Z') },
+      ]);
+
+      expect((await service.getAttendanceSummaries())[0].daysWorked).toBe(1);
+    });
+
     // Sin hora de salida no hay jornada, y sin empleado ligado no hay a quién
     // pagarle — los dos filtros van en la consulta.
     it('only looks at closed shifts belonging to a real employee', async () => {
