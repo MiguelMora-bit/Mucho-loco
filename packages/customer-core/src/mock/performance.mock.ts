@@ -48,8 +48,17 @@ const DIEGO_WORKOUTS: Logged[] = [
   ] },
 ];
 
+// Mismo motivo que __mlUserRecords en user.mock.ts: Next.js separa Server
+// Components y Route Handlers en distintas capas de módulo — sin globalThis,
+// un entrenamiento registrado en /api/performance/workouts nunca aparecería
+// en /performance (spec 021; en el móvil no se notaba: un solo bundle).
+declare global {
+  var __mlWorkouts: Record<string, Logged[]> | undefined;
+}
+
 /** Por socio, en orden cronológico. Vive en memoria, como el resto del mock. */
-const WORKOUTS: Record<string, Logged[]> = { 'diego@mucholoco.mx': DIEGO_WORKOUTS };
+const WORKOUTS: Record<string, Logged[]> =
+  globalThis.__mlWorkouts ?? (globalThis.__mlWorkouts = { 'diego@mucholoco.mx': DIEGO_WORKOUTS });
 let sequence = 0;
 
 export class PerformanceMockDatasource implements IPerformanceRepository {

@@ -1,6 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 import { E2E_TEST_EMAIL, E2E_TEST_PASSWORD } from './global-setup';
 
+// Las alertas de la app, dentro de <main>: Next.js pone en toda página su
+// anunciador de rutas, un role="alert" vacío que no es un error.
+const appAlerts = (page: Page) => page.getByRole('main').getByRole('alert');
+
 /**
  * Facturar (CFDI) contra el mock (NEXT_PUBLIC_DATA_SOURCE sin prender). Dos
  * cosas a saber antes de correrlo:
@@ -50,6 +54,8 @@ async function fillFiscal(page: Page, data: typeof VALID) {
 
 const charges = (page: Page, status: 'available' | 'invoiced' | 'closed' | 'unavailable') =>
   page.locator(`[data-charge-status="${status}"]`);
+// La fila del cobro, no el diálogo de confirmación, que lleva el mismo data-charge-id.
+const chargeRow = (page: Page, id: string | null) => page.locator(`li[data-charge-id="${id}"]`);
 
 test.beforeEach(async ({ page }) => {
   await login(page);
@@ -123,9 +129,9 @@ test.describe('facturar (US1)', () => {
     await dialog.getByRole('button', { name: 'EMITIR FACTURA' }).dblclick();
 
     await expect(page.getByRole('status').filter({ hasText: 'ya está tu factura' })).toContainText(E2E_TEST_EMAIL);
-    const row = page.locator(`[data-charge-id="${id}"]`);
+    const row = chargeRow(page, id);
     await expect(row).toHaveAttribute('data-charge-status', 'invoiced');
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(appAlerts(page)).toHaveCount(0);
   });
 
   test('without fiscal data, "Facturar" asks for them and comes back to the same charge (US2-5, FR-011)', async ({ page }) => {
@@ -189,6 +195,19 @@ test.describe('descargas y corrección (US3)', () => {
 });
 
 test.describe('rechazo del SAT (US4)', () => {
+  // Antes que el reintento del SAT: no factura nada (el 500 es simulado), así
+  // que corre con cobros disponibles — el mock trae dos por socio y los otros
+  // dos tests que facturan los gastan.
+  test('a server error is a connection error, never a SAT rejection', async ({ page }) => {
+    await saveFiscal(page, VALID);
+    await page.route('**/api/invoicing/charges/*/invoice', (route) => route.fulfill({ status: 500, body: 'boom' }));
+    await charges(page, 'available').first().getByRole('button', { name: 'FACTURAR' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'EMITIR FACTURA' }).click();
+
+    await expect(appAlerts(page)).toContainText('Error de conexión');
+    await expect(appAlerts(page)).not.toContainText('SAT');
+  });
+
   test("shows the SAT's reason, keeps the charge available, and lets the member fix and retry", async ({ page }) => {
     await saveFiscal(page, SAT_REJECTED);
     const target = charges(page, 'available').first();
@@ -197,10 +216,10 @@ test.describe('rechazo del SAT (US4)', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'EMITIR FACTURA' }).click();
 
     // US4-1: el motivo tal cual, el cobro sigue facturable.
-    const alert = page.getByRole('alert');
+    const alert = appAlerts(page);
     await expect(alert).toContainText('El SAT rechazó tus datos fiscales');
     await expect(alert).toContainText('RFC');
-    await expect(page.locator(`[data-charge-id="${id}"]`)).toHaveAttribute('data-charge-status', 'available');
+    await expect(chargeRow(page, id)).toHaveAttribute('data-charge-status', 'available');
 
     // US4-2: corregir desde el mensaje y reintentar ese mismo cobro.
     await alert.getByRole('button', { name: 'CORREGIR MIS DATOS' }).click();
@@ -209,17 +228,7 @@ test.describe('rechazo del SAT (US4)', () => {
     const dialog = page.getByRole('dialog', { name: 'CONFIRMA TU FACTURA' });
     await expect(dialog).toHaveAttribute('data-charge-id', id!);
     await dialog.getByRole('button', { name: 'EMITIR FACTURA' }).click();
-    await expect(page.locator(`[data-charge-id="${id}"]`)).toHaveAttribute('data-charge-status', 'invoiced');
-  });
-
-  test('a server error is a connection error, never a SAT rejection', async ({ page }) => {
-    await saveFiscal(page, VALID);
-    await page.route('**/api/invoicing/charges/*/invoice', (route) => route.fulfill({ status: 500, body: 'boom' }));
-    await charges(page, 'available').first().getByRole('button', { name: 'FACTURAR' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'EMITIR FACTURA' }).click();
-
-    await expect(page.getByRole('alert')).toContainText('Error de conexión');
-    await expect(page.getByRole('alert')).not.toContainText('SAT');
+    await expect(chargeRow(page, id)).toHaveAttribute('data-charge-status', 'invoiced');
   });
 });
 
