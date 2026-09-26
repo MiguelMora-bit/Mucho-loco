@@ -978,6 +978,17 @@ export interface CheckIn {
   firstToday: boolean;
 }
 
+/**
+ * El atraso de la suscripción de un socio en gracia (spec 019): la factura
+ * que Stripe no pudo cobrar, en pesos. Mostrador la cobra y Stripe la marca
+ * pagada fuera de su plataforma; la suscripción sigue viva.
+ */
+export interface OverdueBalance {
+  amount: number;
+  tierKey: TierKey;
+  periodKey: PlanKey;
+}
+
 /** Lo que responde validar en mostrador: la regla de acceso, y si dejó pasar, la entrada registrada. */
 export type CheckInResult =
   | Exclude<AccessCheckResult, { outcome: 'valid' }>

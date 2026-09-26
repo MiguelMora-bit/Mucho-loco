@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
-import type { CheckInResult, MemberAccessRecord, MembershipPayment } from '@mucho-loco/types';
+import type { CheckInResult, MemberAccessRecord, MembershipPayment, OverdueBalance } from '@mucho-loco/types';
 import { CounterMembershipsService } from './counter-memberships.service';
-import { CheckInDto, RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dto';
+import { CheckInDto, RenewMembershipDto, SettleOverdueDto, SignUpMemberDto } from './dto/counter-membership.dto';
 import { Roles } from '../auth/roles.decorator';
 
 /**
@@ -44,6 +44,26 @@ export class CounterMembershipsController {
     @Body() dto: RenewMembershipDto,
   ): Promise<MembershipPayment> {
     return this.memberships.renew(branchId, dto);
+  }
+
+  /** Spec 019: el atraso de la suscripción de un socio en gracia (409 si no hay). */
+  @Roles('staff')
+  @Get('memberships/overdue')
+  getOverdue(
+    @Param('branchId', ParseIntPipe) _branchId: number,
+    @Query('qrCode') qrCode = '',
+  ): Promise<OverdueBalance> {
+    return this.memberships.getOverdue(qrCode);
+  }
+
+  /** Cobrarlo en esta sucursal; Stripe marca la factura pagada fuera de su plataforma. */
+  @Roles('staff')
+  @Post('memberships/overdue')
+  settleOverdue(
+    @Param('branchId', ParseIntPipe) branchId: number,
+    @Body() dto: SettleOverdueDto,
+  ): Promise<MembershipPayment> {
+    return this.memberships.settleOverdue(branchId, dto);
   }
 
   @Roles('staff')

@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MemberRenewsOnlineError, membershipRepository } from '../../lib/repositories/membership.repository';
+import {
+  MemberRenewsOnlineError,
+  NothingOverdueError,
+  OverduePaymentFailedError,
+  membershipRepository,
+} from '../../lib/repositories/membership.repository';
 import { getCurrentBranchId, getCurrentBranchName } from '../../lib/currentBranch';
 import { CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '../../lib/membershipPlans';
 import { captureFingerprint } from '../../lib/fingerprintScanner';
-import type { CardType, MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import type { CardType, MemberAccessRecord, MembershipPayment, OverdueBalance, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import { CardTypePicker } from '../../components/CardTypePicker';
 import { formatDate, langOf } from '../../lib/dates';
 import { CounterTicket } from '../../components/CounterTicket';
@@ -183,6 +188,9 @@ export function MembershipTab() {
   const [qrCode, setQrCode] = useState('');
   const [searching, setSearching] = useState(false);
   const [foundMember, setFoundMember] = useState<MemberAccessRecord | null>(null);
+  // Spec 019: socio en gracia con suscripción — el atraso que Stripe no pudo cobrar.
+  const [overdue, setOverdue] = useState<OverdueBalance | null>(null);
+  const [settledOverdue, setSettledOverdue] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
@@ -196,7 +204,7 @@ export function MembershipTab() {
   const price = resolveMembershipTierPrice(tierKey, CURRENT_BRANCH_PRICE, PERIOD_MULTIPLIERS[periodKey]);
 
   function resetForm() {
-    setMemberName(''); setPhone(''); setQrCode(''); setFoundMember(null); setSearchError(null);
+    setMemberName(''); setPhone(''); setQrCode(''); setFoundMember(null); setOverdue(null); setSearchError(null);
     setEnrollMethod('qr'); setFingerprintId(null); setCapturingFingerprint(false);
   }
 
@@ -211,16 +219,22 @@ export function MembershipTab() {
   }
 
   function switchMode(next: 'new' | 'renew') {
-    setMode(next); setSuccessPayment(null); setSuccessFingerprintId(null); setSubmitError(null); resetForm();
+    setMode(next); setSuccessPayment(null); setSuccessFingerprintId(null); setSettledOverdue(false); setSubmitError(null); resetForm();
   }
 
   async function handleSearch(code: string) {
     if (!code.trim()) return;
-    setSearching(true); setSearchError(null); setFoundMember(null);
+    setSearching(true); setSearchError(null); setFoundMember(null); setOverdue(null);
     try {
       const member = await membershipRepository.findMember(code);
       if (!member) setSearchError(t('counter.membership.qrNotFound'));
-      else setFoundMember(member);
+      else {
+        setFoundMember(member);
+        // Solo en gracia con suscripción hay una factura atrasada que cobrar aquí.
+        if (member.renewsOnline && member.status === 'grace') {
+          setOverdue(await membershipRepository.getOverdue(getCurrentBranchId(), member.qrCode));
+        }
+      }
     } finally { setSearching(false); }
   }
 
@@ -238,6 +252,24 @@ export function MembershipTab() {
       });
       setSuccessPayment(payment); setSuccessFingerprintId(enrollMethod === 'fingerprint' ? fingerprintId : null); resetForm();
     } catch (e) { console.error(e); setSubmitError(t('counter.membership.errorSignUp')); }
+    finally { setSubmitting(false); }
+  }
+
+  async function handleSettleOverdue() {
+    if (!foundMember) return;
+    setSubmitting(true); setSubmitError(null);
+    try {
+      const payment = await membershipRepository.settleOverdue(getCurrentBranchId(), foundMember.qrCode, paymentMethod, chargedCardType);
+      setSettledOverdue(true); setSuccessPayment(payment); resetForm();
+    } catch (e) {
+      console.error(e);
+      if (e instanceof NothingOverdueError) setOverdue(null);
+      setSubmitError(t(
+        e instanceof OverduePaymentFailedError ? 'counter.membership.overdueFailed'
+          : e instanceof NothingOverdueError ? 'counter.membership.overdueGone'
+            : 'counter.membership.errorRenew',
+      ));
+    }
     finally { setSubmitting(false); }
   }
 
@@ -269,7 +301,7 @@ export function MembershipTab() {
       {successPayment && (
         <div className="bg-ml-green/10 border border-ml-green text-ml-green rounded p-4 mb-6">
           <div className="font-bold mb-1">
-            ✓ {successPayment.isNewMember ? t('counter.membership.successSignedUp') : t('counter.membership.successRenewed')} — {formatPrice(successPayment.amount)}
+            ✓ {successPayment.isNewMember ? t('counter.membership.successSignedUp') : settledOverdue ? t('counter.membership.successOverdue') : t('counter.membership.successRenewed')} — {formatPrice(successPayment.amount)}
           </div>
           <div className="text-sm">
             {successPayment.memberName} · {t(`counter.membership.${TIER_I18N_KEY[successPayment.tierKey]}`)} · {t(`counter.membership.${PERIOD_I18N_KEY[successPayment.periodKey]}`)}
@@ -348,9 +380,14 @@ export function MembershipTab() {
                   </span>
                   · {t('counter.membership.expiresLabel')} {formatDate(foundMember.expiresAt, langOf(i18n.language))}
                 </div>
-                {foundMember.renewsOnline && (
+                {foundMember.renewsOnline && !overdue && (
                   <p role="alert" data-renews-online className="mt-2 text-ml-orange text-sm">
                     {t('counter.membership.renewsOnline')}
+                  </p>
+                )}
+                {overdue && (
+                  <p role="alert" data-overdue className="mt-2 text-ml-orange text-sm">
+                    {t('counter.membership.overdueNotice')} <b>{formatPrice(overdue.amount)}</b>. {t('counter.membership.overdueNote')}
                   </p>
                 )}
               </div>
@@ -358,7 +395,28 @@ export function MembershipTab() {
           </div>
         )}
 
-        {(mode === 'new' || foundMember) && (
+        {mode === 'renew' && foundMember && overdue && (
+          <>
+            <div className="flex justify-between items-baseline pt-2 border-t border-ml-border">
+              <span className="text-sm text-ml-cream-dim">{t('counter.membership.totalLabel')}</span>
+              <span className="text-2xl font-bold text-ml-red">{formatPrice(overdue.amount)}</span>
+            </div>
+            <div>
+              <label className="text-xs font-mono uppercase text-ml-cream-dim block mb-1.5">{t('counter.membership.paymentMethodLabel')}</label>
+              <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
+              {paymentMethod === 'card' && <CardTypePicker value={cardType} onChange={setCardType} />}
+            </div>
+            {submitError && <p className="text-ml-red text-sm">{submitError}</p>}
+            <button
+              onClick={handleSettleOverdue}
+              disabled={submitting || (paymentMethod === 'card' && !cardType)}
+              className="w-full py-2.5 rounded bg-ml-red text-ml-cream font-medium hover:bg-ml-red-bright disabled:opacity-40 transition-colors">
+              {submitting ? t('counter.membership.processing') : t('counter.membership.chargeOverdue')}
+            </button>
+          </>
+        )}
+
+        {(mode === 'new' || (foundMember && !overdue)) && (
           <>
             <PlanPicker tierKey={tierKey} periodKey={periodKey} onTierChange={setTierKey} onPeriodChange={setPeriodKey} />
             <div className="flex justify-between items-baseline pt-2 border-t border-ml-border">

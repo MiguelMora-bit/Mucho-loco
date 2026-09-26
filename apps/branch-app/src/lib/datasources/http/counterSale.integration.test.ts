@@ -125,6 +125,9 @@ describe('every other branch endpoint is there and guarded too', () => {
       })],
     ['ticket.getTicket (sale)', () => tickets.getTicket('sale', 'sale-1', 1)],
     ['ticket.getTicket (membership)', () => tickets.getTicket('membership', 'mp-1', 1)],
+    // Spec 019: el atraso de una suscripción en gracia.
+    ['membership.getOverdue', () => memberships.getOverdue(1, 'ML-DIEGO-2026-ALLGYMS')],
+    ['membership.settleOverdue', () => memberships.settleOverdue(1, 'ML-DIEGO-2026-ALLGYMS', 'cash')],
     // Spec 012: validar en la puerta registra la entrada.
     ['access.checkIn (qr)', () => qrHttpAccessMethod.checkAccess('ML-DIEGO-2026-ALLGYMS', 1)],
   ];

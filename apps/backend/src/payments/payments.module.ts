@@ -12,6 +12,6 @@ import { ChargesModule } from '../charges/charges.module';
   imports: [UsersModule, NotificationsModule, MembershipsModule, ChargesModule],
   providers: [PaymentsService, MembershipBillingService, StripeService],
   controllers: [PaymentsController],
-  exports: [PaymentsService, StripeService],
+  exports: [PaymentsService, StripeService, MembershipBillingService],
 })
 export class PaymentsModule {}

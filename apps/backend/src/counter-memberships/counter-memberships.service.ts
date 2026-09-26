@@ -1,11 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import type {
   AccessCheckResult,
   CheckIn,
   CheckInResult,
   MemberAccessRecord,
   MembershipPayment,
+  OverdueBalance,
   PaymentMethod,
   PlanKey,
   TierKey,
@@ -18,11 +25,17 @@ import type {
   Prisma,
   User,
 } from '@prisma/client';
-import { RenewMembershipDto, SignUpMemberDto } from './dto/counter-membership.dto';
+import { RenewMembershipDto, SettleOverdueDto, SignUpMemberDto } from './dto/counter-membership.dto';
 import { PERIOD_DAYS, addDays, calculateMembershipPrice } from '../memberships/membership-plans';
 import { effectiveStatus } from '../memberships/membership-status';
 import { dayDate, mexicoDay } from '../memberships/visit-stats';
-import { memberNotFound, memberRenewsOnline } from '../common/error-codes';
+import {
+  memberNotFound,
+  memberRenewsOnline,
+  nothingToPay,
+  paymentProviderError,
+} from '../common/error-codes';
+import { MembershipBillingService } from '../payments/membership-billing.service';
 import { ChargesService, counterChargeMethod, toCents } from '../charges/charges.service';
 
 type MembershipWithOwner = Membership & { user: User; branch: Branch };
@@ -83,9 +96,12 @@ function generateAccessCode(): string {
 
 @Injectable()
 export class CounterMembershipsService {
+  private readonly logger = new Logger(CounterMembershipsService.name);
+
   constructor(
     private prisma: PrismaService,
     private charges: ChargesService,
+    private billing: MembershipBillingService,
   ) {}
 
   private readonly include = { user: true, branch: true } as const;
@@ -236,6 +252,82 @@ export class CounterMembershipsService {
       await this.recordCharge(tx, payment, membership.userId);
       return toPayment(payment);
     });
+  }
+
+  /**
+   * Spec 019: el atraso de un socio en gracia con suscripción — la factura que
+   * Stripe no pudo cobrar. Sin suscripción, sin gracia o sin factura abierta:
+   * no hay nada que cobrar aquí (409).
+   */
+  async getOverdue(qrCode: string): Promise<OverdueBalance> {
+    const { membership, invoice } = await this.overdueFor(qrCode);
+    return {
+      amount: Math.round(invoice.amountCents / 100),
+      tierKey: membership.tierKey,
+      periodKey: membership.periodKey,
+    };
+  }
+
+  /**
+   * Cobrar ese atraso. Primero Stripe (marcar la factura pagada fuera de su
+   * plataforma): si no acepta, no se registra nada. Después, en una
+   * transacción, el pago de caja y el cobro de ESTA sucursal — el webhook de
+   * esa factura ya no registra otro. Al final se relee la suscripción, así la
+   * membresía queda activa sin esperar el webhook.
+   */
+  async settleOverdue(branchId: number, dto: SettleOverdueDto): Promise<MembershipPayment> {
+    const { membership, invoice } = await this.overdueFor(dto.qrCode);
+    try {
+      await this.billing.settleOutOfBand(invoice.id);
+    } catch (e) {
+      throw new BadGatewayException(paymentProviderError(e instanceof Error ? e.message : String(e)));
+    }
+
+    let payment: MembershipPaymentRow;
+    try {
+      payment = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.membershipPayment.create({
+          data: {
+            branchId,
+            membershipId: membership.id,
+            qrCode: membership.accessCode,
+            memberName: membership.user.name,
+            phone: membership.user.phone,
+            tierKey: membership.tierKey,
+            periodKey: membership.periodKey,
+            amount: Math.round(invoice.amountCents / 100),
+            paymentMethod: dto.paymentMethod,
+            cardType: dto.paymentMethod === 'card' ? (dto.cardType ?? null) : null,
+            isNewMember: false,
+          },
+        });
+        await this.recordCharge(tx, created, membership.userId);
+        return created;
+      });
+    } catch (e) {
+      // Stripe ya la dio por pagada y aquí no quedó registro: hay que
+      // cuadrarlo a mano. Raro (la base falló justo después), pero no se calla.
+      this.logger.error(
+        `Factura ${invoice.id} marcada pagada en Stripe sin pago de caja registrado (socio ${membership.accessCode})`,
+      );
+      throw e;
+    }
+    await this.billing.syncSubscription(membership.stripeSubscriptionId as string);
+    return toPayment(payment);
+  }
+
+  private async overdueFor(qrCode: string) {
+    const membership = await this.prisma.membership.findUnique({
+      where: { accessCode: qrCode.trim() },
+      include: this.include,
+    });
+    if (!membership) throw new NotFoundException(memberNotFound(qrCode));
+    if (!membership.stripeSubscriptionId || effectiveStatus(membership) !== 'grace') {
+      throw new ConflictException(nothingToPay());
+    }
+    const invoice = await this.billing.overdueInvoice(membership.stripeSubscriptionId);
+    if (!invoice) throw new ConflictException(nothingToPay());
+    return { membership, invoice };
   }
 
   /**

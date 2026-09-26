@@ -71,3 +71,20 @@ export class CheckInDto {
   @IsString()
   name?: string;
 }
+
+/**
+ * Cobrar en mostrador el atraso de una suscripción (spec 019). Sin monto: lo
+ * que se cobra es lo que Stripe dice que se debe.
+ */
+export class SettleOverdueDto {
+  @IsString()
+  qrCode!: string;
+
+  @IsIn(PAYMENT_METHODS)
+  paymentMethod!: PaymentMethod;
+
+  /** Crédito o débito (spec 009). Solo cuenta con `card`. */
+  @IsOptional()
+  @IsIn(['credit', 'debit'])
+  cardType?: CardType;
+}

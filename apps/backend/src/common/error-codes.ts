@@ -52,7 +52,8 @@ export type ApiErrorCode =
   | 'CFDI_ALREADY_CANCELED'
   | 'CANCELLATION_REJECTED'
   | 'TICKET_NOT_FOUND'
-  | 'WORKOUT_NOT_FOUND';
+  | 'WORKOUT_NOT_FOUND'
+  | 'PAYMENT_PROVIDER_ERROR';
 
 export interface ApiErrorBody {
   code: ApiErrorCode;
@@ -336,4 +337,10 @@ export const workoutNotFound = (workoutId: string): ApiErrorBody => ({
   code: 'WORKOUT_NOT_FOUND',
   message: `Workout not found: ${workoutId}`,
   workoutId,
+});
+
+/** Spec 019: Stripe no aceptó marcar la factura como pagada — no se registró nada. */
+export const paymentProviderError = (detail: string): ApiErrorBody => ({
+  code: 'PAYMENT_PROVIDER_ERROR',
+  message: `Stripe rechazó la operación: ${detail}`,
 });

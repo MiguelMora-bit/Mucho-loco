@@ -1,9 +1,9 @@
-import type { CardType, MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import type { CardType, MemberAccessRecord, MembershipPayment, OverdueBalance, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import { MembershipMockDatasource } from '../datasources/mock/membership.mock';
 import { MembershipHttpDatasource } from '../datasources/http/membership.http';
 import { isHttpDatasourceEnabled } from '../datasources/http/config';
 
-export { MemberRenewsOnlineError } from './membership.errors';
+export { MemberRenewsOnlineError, NothingOverdueError, OverduePaymentFailedError } from './membership.errors';
 
 export interface SignUpInput {
   memberName: string;
@@ -31,6 +31,13 @@ export interface IMembershipRepository {
     cardType?: CardType
   ): Promise<MembershipPayment>;
   signUpNewMember(branchId: number, branchName: string, input: SignUpInput): Promise<MembershipPayment>;
+  /**
+   * Spec 019: el atraso de la suscripción de un socio en gracia (lo que Stripe
+   * no pudo cobrar), o `null` si no hay nada pendiente.
+   */
+  getOverdue(branchId: number, qrCode: string): Promise<OverdueBalance | null>;
+  /** Cobrarlo aquí: la suscripción sigue viva. `NothingOverdueError` / `OverduePaymentFailedError`. */
+  settleOverdue(branchId: number, qrCode: string, paymentMethod: PaymentMethod, cardType?: CardType): Promise<MembershipPayment>;
 }
 
 // Mock o backend NestJS real, según VITE_DATA_SOURCE — ver datasources/http/config.ts.

@@ -1,4 +1,4 @@
-import type { AttendanceEntry, BranchInventoryLevel, CashRegisterShift, CounterSale, MemberAccessRecord, MembershipPayment, PickupOrder } from '@mucho-loco/types';
+import type { AttendanceEntry, BranchInventoryLevel, CashRegisterShift, CounterSale, MemberAccessRecord, MembershipPayment, OverdueBalance, PickupOrder } from '@mucho-loco/types';
 
 export const PICKUP_ORDERS: PickupOrder[] = [
   {
@@ -73,7 +73,15 @@ export const MEMBER_ACCESS_RECORDS: MemberAccessRecord[] = [
   // en el método de acceso por nombre debe dar 'ambiguous' con los dos, para
   // demostrar que el staff necesita desambiguar antes de decidir el acceso.
   { qrCode: 'ML-QR-CARLOS06', memberName: 'Carlos Vega', status: 'active', expiresAt: '2026-09-30', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur', renewsOnline: false },
+  // Spec 019: su tarjeta falló — suscripción en línea en periodo de gracia, con atraso.
+  { qrCode: 'ML-QR-SOFIA07', memberName: 'Sofía Castro', status: 'grace', expiresAt: '2026-09-22', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur', renewsOnline: true },
 ];
+
+// Spec 019: lo que Stripe no pudo cobrarle a un socio en gracia con
+// suscripción — en el backend es la factura abierta. Se borra al cobrarlo.
+export const MEMBER_OVERDUE: Record<string, OverdueBalance> = {
+  'ML-QR-SOFIA07': { amount: 1550, tierKey: 'all', periodKey: 'monthly' },
+};
 
 function daysAgo(days: number, hour: number): string {
   const d = new Date();

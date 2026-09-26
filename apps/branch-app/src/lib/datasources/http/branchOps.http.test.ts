@@ -11,7 +11,11 @@ import {
 } from '../../repositories/cashRegisterShift.errors';
 import { AlreadyClockedInError, NoOpenEntryError } from '../../repositories/attendance.errors';
 import { useAuthStore } from '../../stores/auth.store';
-import { MemberRenewsOnlineError } from '../../repositories/membership.errors';
+import {
+  MemberRenewsOnlineError,
+  NothingOverdueError,
+  OverduePaymentFailedError,
+} from '../../repositories/membership.errors';
 
 /** `body` como texto crudo para poder simular una respuesta 200 SIN cuerpo. */
 function stubFetch(status = 200, body: string | unknown = '[]') {
@@ -207,6 +211,30 @@ describe('MembershipHttpDatasource', () => {
       paymentMethod: 'card',
     });
     expect(String(call(spy).init.body)).not.toContain('Santa Fe');
+  });
+
+  // Spec 019: el atraso de una suscripción en gracia se consulta y se cobra en mostrador.
+  it('asks for the overdue balance by QR and reads NOTHING_TO_PAY as null', async () => {
+    const spy = stubFetch(200, { amount: 1550, tierKey: 'all', periodKey: 'monthly' });
+    await expect(ds.getOverdue(3, ' ML-QR-SOFIA07 ')).resolves.toEqual({ amount: 1550, tierKey: 'all', periodKey: 'monthly' });
+    expect(call(spy).url).toContain('/branches/3/memberships/overdue?');
+    expect(call(spy).url).toContain('qrCode=ML-QR-SOFIA07');
+
+    stubFetch(409, { code: 'NOTHING_TO_PAY' });
+    await expect(ds.getOverdue(3, 'ML-QR-ANA02')).resolves.toBeNull();
+  });
+
+  it('settles the overdue balance without an amount, and types its rejections', async () => {
+    const spy = stubFetch(201, { id: 'mp-1' });
+    await ds.settleOverdue(1, 'ML-QR-SOFIA07', 'card', 'debit');
+    expect(call(spy).url).toContain('/branches/1/memberships/overdue');
+    expect(call(spy).init.method).toBe('POST');
+    expect(call(spy).body).toEqual({ qrCode: 'ML-QR-SOFIA07', paymentMethod: 'card', cardType: 'debit' });
+
+    stubFetch(409, { code: 'NOTHING_TO_PAY' });
+    await expect(ds.settleOverdue(1, 'ML-QR-SOFIA07', 'cash')).rejects.toBeInstanceOf(NothingOverdueError);
+    stubFetch(502, { code: 'PAYMENT_PROVIDER_ERROR' });
+    await expect(ds.settleOverdue(1, 'ML-QR-SOFIA07', 'cash')).rejects.toBeInstanceOf(OverduePaymentFailedError);
   });
 
   it('reads MEMBER_RENEWS_ONLINE as the typed error the mock throws (spec 006)', async () => {

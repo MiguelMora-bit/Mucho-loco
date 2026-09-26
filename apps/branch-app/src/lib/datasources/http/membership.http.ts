@@ -1,7 +1,7 @@
-import type { CardType, MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import type { CardType, MemberAccessRecord, MembershipPayment, OverdueBalance, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
 import type { IMembershipRepository, SignUpInput } from '../../repositories/membership.repository';
 import { ApiRequestError, api } from './client';
-import { MemberRenewsOnlineError } from '../../repositories/membership.errors';
+import { MemberRenewsOnlineError, NothingOverdueError, OverduePaymentFailedError } from '../../repositories/membership.errors';
 
 /**
  * Membresías de mostrador.
@@ -64,5 +64,36 @@ export class MembershipHttpDatasource implements IMembershipRepository {
       ...(input.paymentMethod === 'card' && input.cardType ? { cardType: input.cardType } : {}),
       ...(input.fingerprintId ? { fingerprintId: input.fingerprintId } : {}),
     });
+  }
+
+  /** 409 `NOTHING_TO_PAY` (sin suscripción, sin gracia o sin factura abierta) y 404 → `null`. */
+  async getOverdue(branchId: number, qrCode: string): Promise<OverdueBalance | null> {
+    try {
+      return await api.get<OverdueBalance>(`/branches/${branchId}/memberships/overdue`, {
+        query: { qrCode: qrCode.trim() },
+      });
+    } catch (e) {
+      if (e instanceof ApiRequestError && (e.code === 'NOTHING_TO_PAY' || e.status === 404)) return null;
+      throw e;
+    }
+  }
+
+  async settleOverdue(
+    branchId: number,
+    qrCode: string,
+    paymentMethod: PaymentMethod,
+    cardType?: CardType,
+  ): Promise<MembershipPayment> {
+    try {
+      return await api.post<MembershipPayment>(`/branches/${branchId}/memberships/overdue`, {
+        qrCode: qrCode.trim(),
+        paymentMethod,
+        ...(paymentMethod === 'card' && cardType ? { cardType } : {}),
+      });
+    } catch (e) {
+      if (e instanceof ApiRequestError && e.code === 'NOTHING_TO_PAY') throw new NothingOverdueError(qrCode.trim());
+      if (e instanceof ApiRequestError && e.code === 'PAYMENT_PROVIDER_ERROR') throw new OverduePaymentFailedError(qrCode.trim());
+      throw e;
+    }
   }
 }

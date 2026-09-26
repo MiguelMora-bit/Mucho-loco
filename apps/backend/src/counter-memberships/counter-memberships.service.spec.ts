@@ -6,6 +6,7 @@ import { CounterMembershipsService, evaluateAccess } from './counter-memberships
 import { PrismaService } from '../prisma/prisma.service';
 import { calculateMembershipPrice } from '../memberships/membership-plans';
 import { ChargesService } from '../charges/charges.service';
+import { MembershipBillingService } from '../payments/membership-billing.service';
 
 const ROMA_SUR = 1;
 const CONDESA = 3;
@@ -97,6 +98,8 @@ describe('CounterMembershipsService', () => {
         CounterMembershipsService,
         { provide: PrismaService, useValue: prisma },
         { provide: ChargesService, useValue: charges },
+        // Solo lo usa el cobro del atraso (spec 019), cubierto por su e2e.
+        { provide: MembershipBillingService, useValue: {} },
       ],
     }).compile();
     service = module.get(CounterMembershipsService);

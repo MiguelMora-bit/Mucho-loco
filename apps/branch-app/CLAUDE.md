@@ -70,6 +70,10 @@ Datos demo en `lib/data.ts`: Rosa Jiménez (`FP-DEMO-ROSA`, tier `all`, Roma Sur
 
 Validar en `/qr` registra la entrada del socio (`AccessMethod.checkAccess` devuelve `CheckInResult`): un acceso permitido trae `checkIn` y el panel dice "Entrada registrada · HH:MM", o en naranja "Ya había entrado hoy a las HH:MM" si es el segundo escaneo del día (una visita por socio por día de CDMX; puede ser un QR prestado). HTTP: `POST /branches/:id/check-ins`. Mock: `lib/access/mockCheckIns.ts`, bitácora en memoria gemela de la del backend. La lista de integración (`counterSale.integration.test.ts`) ahora también cubre la ruta de acceso.
 
+## Cobrar el atraso de una suscripción (2026-09-25, spec 019)
+
+Al buscar en Renovar a un socio en gracia con suscripción (`renewsOnline` + `grace`), en vez de solo "se renueva en línea" aparece el atraso ("Su suscripción tiene un pago atrasado de $1,550") y "COBRAR ATRASO" con forma de pago (y crédito/débito). Cobra lo que Stripe dice que se debe, reactiva la membresía y la suscripción sigue renovándose sola. Imprime el ticket como cualquier cobro de mostrador. `membershipRepository.getOverdue`/`settleOverdue`; errores tipados `NothingOverdueError` (ya se cobró) y `OverduePaymentFailedError` (Stripe no aceptó, no se cobró nada). Mock: Sofía Castro (`ML-QR-SOFIA07`) con $1,550 atrasados. **Sin revisar en navegador**: `ProtectedRoute` verifica el JWT contra Cognito, sin User Pool no se entra.
+
 ## Crédito o débito (2026-09-25)
 
 Spec 009. Al cobrar con tarjeta en mostrador (venta, alta, renovación), `components/CardTypePicker.tsx` pide "¿Crédito o débito?" y no deja confirmar sin elegir. Viaja como `cardType` y el backend registra el cobro como `card_credit`/`card_debit` — la forma de pago del CFDI (04/28). El corte de caja sigue sumando tarjeta en un solo renglón (cuadra con el cierre de la terminal).

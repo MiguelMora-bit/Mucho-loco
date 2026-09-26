@@ -13,3 +13,21 @@ export class MemberRenewsOnlineError extends Error {
     this.qrCode = qrCode;
   }
 }
+
+/** Spec 019: ese atraso ya no está pendiente (se cobró en otra caja o en línea). */
+export class NothingOverdueError extends Error {
+  readonly qrCode: string;
+  constructor(qrCode: string) {
+    super(`Nothing overdue: ${qrCode}`);
+    this.qrCode = qrCode;
+  }
+}
+
+/** Spec 019: Stripe no aceptó marcar la factura pagada — no se registró nada; se puede reintentar. */
+export class OverduePaymentFailedError extends Error {
+  readonly qrCode: string;
+  constructor(qrCode: string) {
+    super(`Overdue payment not accepted by Stripe: ${qrCode}`);
+    this.qrCode = qrCode;
+  }
+}

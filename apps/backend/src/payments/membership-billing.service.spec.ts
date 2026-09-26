@@ -105,8 +105,13 @@ describe('MembershipBillingService', () => {
         update: jest.fn(),
         cancel: jest.fn(),
       },
-      paymentIntents: { retrieve: jest.fn() },
-      invoicePayments: { list: jest.fn().mockResolvedValue({ data: [] }) },
+      paymentIntents: { retrieve: jest.fn().mockResolvedValue({}) },
+      // Por defecto, una factura cobrada por Stripe (con PaymentIntent).
+      invoicePayments: {
+        list: jest.fn().mockResolvedValue({
+          data: [{ payment: { type: 'payment_intent', payment_intent: 'pi_default' } }],
+        }),
+      },
     };
     memberships = {
       findByUser: jest.fn().mockResolvedValue(null),
@@ -538,6 +543,16 @@ describe('MembershipBillingService', () => {
         totalCents: 109000,
         origin: { stripeInvoiceId: 'in_1' },
       });
+    });
+
+    // Spec 019: la cobró mostrador en efectivo y Stripe solo la marcó pagada.
+    it('does not record an invoice paid outside Stripe — the counter already did', async () => {
+      stripe.invoicePayments.list.mockResolvedValue({ data: [] });
+
+      await service.handleEvent(renewalPaid());
+
+      expect(memberships.grant).toHaveBeenCalled();
+      expect(charges.recordMembership).not.toHaveBeenCalled();
     });
 
     it('does not record a $0 invoice — a renewal started early charged nothing', async () => {

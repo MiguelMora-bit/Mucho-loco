@@ -1,9 +1,9 @@
-import type { CardType, MemberAccessRecord, MembershipPayment, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
-import { MEMBER_ACCESS_RECORDS, MEMBERSHIP_PAYMENTS } from '../../data';
+import type { CardType, MemberAccessRecord, MembershipPayment, OverdueBalance, PaymentMethod, PlanKey, TierKey } from '@mucho-loco/types';
+import { MEMBER_ACCESS_RECORDS, MEMBER_OVERDUE, MEMBERSHIP_PAYMENTS } from '../../data';
 import { CURRENT_BRANCH_PRICE, PERIOD_DAYS, PERIOD_MULTIPLIERS, resolveMembershipTierPrice } from '../../membershipPlans';
 import { delay } from './delay';
 import type { SignUpInput } from '../../repositories/membership.repository';
-import { MemberRenewsOnlineError } from '../../repositories/membership.errors';
+import { MemberRenewsOnlineError, NothingOverdueError } from '../../repositories/membership.errors';
 import type { IMembershipRepository } from '../../repositories/membership.repository';
 
 /**
@@ -121,6 +121,47 @@ export class MembershipMockDatasource implements IMembershipRepository {
       paymentMethod: input.paymentMethod,
       ...(input.paymentMethod === 'card' && input.cardType ? { cardType: input.cardType } : {}),
       isNewMember: true,
+      createdAt: new Date().toISOString(),
+    };
+    MEMBERSHIP_PAYMENTS.push(payment);
+    return payment;
+  }
+
+  /** Misma regla que el backend (spec 019): solo con suscripción en gracia y un atraso pendiente. */
+  async getOverdue(_branchId: number, qrCode: string): Promise<OverdueBalance | null> {
+    await delay(150);
+    const member = MEMBER_ACCESS_RECORDS.find((r) => r.qrCode === qrCode.trim());
+    if (!member?.renewsOnline || member.status !== 'grace') return null;
+    return MEMBER_OVERDUE[member.qrCode] ?? null;
+  }
+
+  /** Stripe marcaría la factura pagada y la suscripción volvería a activa por un periodo. */
+  async settleOverdue(
+    branchId: number,
+    qrCode: string,
+    paymentMethod: PaymentMethod,
+    cardType?: CardType,
+  ): Promise<MembershipPayment> {
+    await delay(250);
+    const overdue = await this.getOverdue(branchId, qrCode);
+    const member = MEMBER_ACCESS_RECORDS.find((r) => r.qrCode === qrCode.trim());
+    if (!overdue || !member) throw new NothingOverdueError(qrCode.trim());
+
+    delete MEMBER_OVERDUE[member.qrCode];
+    member.status = 'active';
+    member.expiresAt = isoDate(addDays(new Date(), PERIOD_DAYS[overdue.periodKey]));
+    const payment: MembershipPayment = {
+      id: `#MP-${Date.now()}`,
+      branchId,
+      qrCode: member.qrCode,
+      memberName: member.memberName,
+      phone: '',
+      tierKey: overdue.tierKey,
+      periodKey: overdue.periodKey,
+      amount: overdue.amount,
+      paymentMethod,
+      ...(paymentMethod === 'card' && cardType ? { cardType } : {}),
+      isNewMember: false,
       createdAt: new Date().toISOString(),
     };
     MEMBERSHIP_PAYMENTS.push(payment);

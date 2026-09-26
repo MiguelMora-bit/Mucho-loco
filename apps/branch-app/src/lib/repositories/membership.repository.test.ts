@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { MemberRenewsOnlineError, membershipRepository } from './membership.repository';
+import { MemberRenewsOnlineError, NothingOverdueError, membershipRepository } from './membership.repository';
+import { MEMBERSHIP_PAYMENTS } from '../data';
 
 describe('membershipRepository', () => {
   it('signUpNewMember mints a QR code that immediately validates as active', async () => {
@@ -112,5 +113,19 @@ describe('membershipRepository', () => {
     const asNumbers = suffixes.map((s) => parseInt(s, 16));
     expect(asNumbers[1] - asNumbers[0]).not.toBe(1);
     expect(asNumbers[2] - asNumbers[1]).not.toBe(1);
+  });
+
+  // Spec 019: socia en gracia con suscripción — su atraso se cobra aquí y la
+  // suscripción sigue viva; un segundo cobro ya no encuentra nada pendiente.
+  it('settles the overdue subscription balance of a member in grace, once', async () => {
+    expect(await membershipRepository.getOverdue(1, 'ML-QR-SOFIA07')).toEqual({ amount: 1550, tierKey: 'all', periodKey: 'monthly' });
+    expect(await membershipRepository.getOverdue(1, 'ML-QR-ANA02')).toBeNull();
+
+    const payment = await membershipRepository.settleOverdue(1, 'ML-QR-SOFIA07', 'cash');
+
+    expect(payment).toMatchObject({ amount: 1550, paymentMethod: 'cash', isNewMember: false });
+    expect(MEMBERSHIP_PAYMENTS).toContainEqual(payment);
+    expect((await membershipRepository.findMember('ML-QR-SOFIA07'))?.status).toBe('active');
+    await expect(membershipRepository.settleOverdue(1, 'ML-QR-SOFIA07', 'cash')).rejects.toBeInstanceOf(NothingOverdueError);
   });
 });

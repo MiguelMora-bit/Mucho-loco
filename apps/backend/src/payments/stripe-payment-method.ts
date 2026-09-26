@@ -48,16 +48,24 @@ export async function paymentIntentMethod(
 /**
  * Lo mismo para la factura de una suscripción: con la API `dahlia` la factura
  * ya no trae su PaymentIntent directo, vive en sus InvoicePayments.
+ *
+ * `null` = pagada sin ningún pago de Stripe (ni PaymentIntent ni cargo): la
+ * marcaron pagada fuera de su plataforma — el atraso que cobró mostrador
+ * (spec 019). El dinero no pasó por Stripe, así que no hay método que leer.
  */
 export async function invoiceMethod(
   stripe: Stripe,
   invoiceId: string,
-): Promise<ChargeMethod> {
+): Promise<ChargeMethod | null> {
   const payments = await stripe.invoicePayments.list({
     invoice: invoiceId,
     status: 'paid',
   });
-  const intent = payments.data
+  const collected = payments.data.filter(
+    (p) => p.payment.payment_intent !== undefined || p.payment.charge !== undefined,
+  );
+  if (collected.length === 0) return null;
+  const intent = collected
     .map((p) => p.payment.payment_intent)
     .find((ref) => ref !== undefined);
   const intentId = typeof intent === 'string' ? intent : (intent?.id ?? null);

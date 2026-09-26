@@ -291,6 +291,33 @@ export class MembershipBillingService {
   }
 
   /**
+   * Spec 019: la factura que Stripe no pudo cobrar (la que tiene al socio en
+   * gracia), para cobrarla en mostrador. `null` si no hay una abierta.
+   */
+  async overdueInvoice(
+    subscriptionId: string,
+  ): Promise<{ id: string; amountCents: number } | null> {
+    const sub = await this.stripe.stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ['latest_invoice'],
+    });
+    const invoice =
+      typeof sub.latest_invoice === 'object' ? sub.latest_invoice : null;
+    if (!invoice?.id || invoice.status !== 'open' || !(invoice.amount_due > 0)) {
+      return null;
+    }
+    return { id: invoice.id, amountCents: invoice.amount_due };
+  }
+
+  /**
+   * Mostrador cobró la factura en efectivo (o su terminal): se marca pagada
+   * fuera de Stripe. La suscripción sigue viva y se cobra sola los meses
+   * siguientes — cancelarla obligaría al socio a volver a contratar en línea.
+   */
+  async settleOutOfBand(invoiceId: string): Promise<void> {
+    await this.stripe.stripe.invoices.pay(invoiceId, { paid_out_of_band: true });
+  }
+
+  /**
    * Portal de cliente de Stripe (spec 005): cancelar o reactivar la
    * renovación, cambiar la tarjeta, ver sus cobros. Solo con una suscripción
    * viva — sin ella no hay nada que administrar. Lo que el socio haga ahí
@@ -522,6 +549,7 @@ export class MembershipBillingService {
   ): Promise<void> {
     const invoiceId = invoice.id;
     if (!invoiceId || !(invoice.amount_paid > 0)) return;
+
     // Reentregado: ya está, y así no se repiten las llamadas a Stripe de abajo.
     const existing = await this.prisma.charge.findUnique({
       where: { stripeInvoiceId: invoiceId },
@@ -544,6 +572,9 @@ export class MembershipBillingService {
     }
 
     const method = await invoiceMethod(this.stripe.stripe, invoiceId);
+    // Spec 019: pagada fuera de Stripe — la cobró mostrador y ya la registró
+    // (pago de caja + cobro de la sucursal). No entró dinero por aquí.
+    if (method === null) return;
     const paidAtSeconds = invoice.status_transitions?.paid_at;
     await this.prisma.$transaction((tx) =>
       this.charges.recordMembership(tx, {
