@@ -281,7 +281,9 @@ export function QrValidationPage() {
               {!result.checkIn.firstToday && result.checkIn.firstBranchId !== getCurrentBranchId() ? (
                 <p role="alert" data-shared-qr className="text-sm mt-2 font-medium text-ml-red">
                   {t('qr.sharedQrPrefix')} <b className="uppercase">{result.checkIn.firstBranch}</b> {t('qr.sharedQrAt')}{' '}
-                  {formatTime(result.checkIn.visitedAt, langOf(i18n.language))}. {t('qr.sharedQrNote')}
+                  {formatTime(result.checkIn.visitedAt, langOf(i18n.language))}
+                  {/* En su línea: la hora en español ya termina en punto ("a.m."). */}
+                  <span className="block">{t('qr.sharedQrNote')}</span>
                 </p>
               ) : (
                 <p className={'text-sm mt-2 font-medium ' + (result.checkIn.firstToday ? 'text-ml-green' : 'text-ml-orange')}>
