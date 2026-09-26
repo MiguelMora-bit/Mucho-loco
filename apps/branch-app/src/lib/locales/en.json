@@ -153,7 +153,10 @@
     "expiredOn": "Expired on",
     "scanNext": "Check another",
     "checkInRecorded": "Entry recorded ·",
-    "checkInRepeat": "Already checked in today at"
+    "checkInRepeat": "Already checked in today at",
+    "sharedQrPrefix": "Already checked in today at",
+    "sharedQrAt": "at",
+    "sharedQrNote": "Ask for an ID: it may be a borrowed QR."
   },
   "qrScanner": {
     "start": "📷 Turn on camera",

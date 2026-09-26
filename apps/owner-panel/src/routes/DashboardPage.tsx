@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBranchStatsStore } from '../lib/stores/branchStats.store';
 import { useGlobalInventoryStore } from '../lib/stores/globalInventory.store';
+import { useAccessAlertsStore } from '../lib/stores/accessAlerts.store';
+import { formatDateTime } from '../lib/dates';
+import type { Lang } from '@mucho-loco/types';
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-MX')}`;
@@ -18,16 +21,20 @@ function TableSkeleton({ rows }: { rows: number }) {
 }
 
 export function DashboardPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'es';
   const branchStats = useBranchStatsStore();
   const inventory = useGlobalInventoryStore();
+  const alerts = useAccessAlertsStore();
   const { fetch: fetchBranchStats } = branchStats;
   const { fetch: fetchInventory } = inventory;
+  const { fetch: fetchAlerts } = alerts;
 
   useEffect(() => {
     fetchBranchStats();
     fetchInventory();
-  }, [fetchBranchStats, fetchInventory]);
+    fetchAlerts();
+  }, [fetchBranchStats, fetchInventory, fetchAlerts]);
 
   const totalRevenue = (branchStats.data ?? []).reduce((sum, b) => sum + b.revenue, 0);
   const totalCustomers = (branchStats.data ?? []).reduce((sum, b) => sum + b.activeCustomers, 0);
@@ -127,6 +134,48 @@ export function DashboardPage() {
               </tbody>
             </table>
           )
+        )}
+      </section>
+
+      {/* Spec 020: el mismo QR en dos sucursales el mismo día. Mostrador ya lo
+          vio en rojo en el momento; aquí se ven los patrones. */}
+      <section>
+        <h2 className="text-sm font-mono uppercase tracking-wide text-ml-cream-dim mb-1">
+          {t('dashboard.accessAlerts')}
+        </h2>
+        <p className="text-ml-cream-dim text-xs mb-3">{t('dashboard.accessAlertsNote')}</p>
+        {alerts.error && (
+          <div className="bg-ml-red/10 border border-ml-red text-ml-red rounded p-3 text-sm">
+            {t('dashboard.accessAlertsError')}: {alerts.error}
+          </div>
+        )}
+        {alerts.loading && !alerts.data ? (
+          <TableSkeleton rows={2} />
+        ) : (
+          alerts.data && (alerts.data.length === 0 ? (
+            <p className="text-sm text-ml-cream-dim">{t('dashboard.accessAlertsEmpty')}</p>
+          ) : (
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="text-left text-ml-cream-dim font-mono text-xs uppercase border-b border-ml-border">
+                  <th className="py-2">{t('dashboard.alertWhen')}</th>
+                  <th className="py-2">{t('dashboard.alertMember')}</th>
+                  <th className="py-2">{t('dashboard.alertFirst')}</th>
+                  <th className="py-2">{t('dashboard.alertAgain')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alerts.data.map((a) => (
+                  <tr key={a.id} className="border-b border-ml-border">
+                    <td className="py-2 font-mono text-xs">{formatDateTime(a.at, lang)}</td>
+                    <td className="py-2">{a.memberName} <span className="font-mono text-xs text-ml-cream-dim">{a.qrCode}</span></td>
+                    <td className="py-2">{a.firstBranch} · {formatDateTime(a.firstAt, lang)}</td>
+                    <td className="py-2 text-ml-red font-medium">{a.branch}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ))
         )}
       </section>
     </div>

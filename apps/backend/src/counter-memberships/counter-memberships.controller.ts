@@ -1,5 +1,11 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
-import type { CheckInResult, MemberAccessRecord, MembershipPayment, OverdueBalance } from '@mucho-loco/types';
+import type {
+  AccessAlert,
+  CheckInResult,
+  MemberAccessRecord,
+  MembershipPayment,
+  OverdueBalance,
+} from '@mucho-loco/types';
 import { CounterMembershipsService } from './counter-memberships.service';
 import { CheckInDto, RenewMembershipDto, SettleOverdueDto, SignUpMemberDto } from './dto/counter-membership.dto';
 import { Roles } from '../auth/roles.decorator';
@@ -93,5 +99,20 @@ export class MembersController {
   @Get()
   findMember(@Query('qrCode') qrCode?: string): Promise<MemberAccessRecord | null> {
     return this.memberships.findByQrCode(qrCode ?? '');
+  }
+}
+
+/**
+ * Spec 020: el mismo QR en dos sucursales el mismo día. Es de HQ: una sucursal
+ * solo ve el aviso en su mostrador, en el momento.
+ */
+@Controller('access-alerts')
+export class AccessAlertsController {
+  constructor(private memberships: CounterMembershipsService) {}
+
+  @Roles('owner')
+  @Get()
+  list(): Promise<AccessAlert[]> {
+    return this.memberships.listAccessAlerts();
   }
 }

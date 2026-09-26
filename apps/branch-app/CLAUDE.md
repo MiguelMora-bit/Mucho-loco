@@ -70,6 +70,10 @@ Datos demo en `lib/data.ts`: Rosa Jiménez (`FP-DEMO-ROSA`, tier `all`, Roma Sur
 
 Validar en `/qr` registra la entrada del socio (`AccessMethod.checkAccess` devuelve `CheckInResult`): un acceso permitido trae `checkIn` y el panel dice "Entrada registrada · HH:MM", o en naranja "Ya había entrado hoy a las HH:MM" si es el segundo escaneo del día (una visita por socio por día de CDMX; puede ser un QR prestado). HTTP: `POST /branches/:id/check-ins`. Mock: `lib/access/mockCheckIns.ts`, bitácora en memoria gemela de la del backend. La lista de integración (`counterSale.integration.test.ts`) ahora también cubre la ruta de acceso.
 
+## QR compartido (2026-09-25, spec 020)
+
+Si el QR ya entró hoy en OTRA sucursal (`checkIn.firstBranchId` ≠ la de este mostrador), `/qr` lo dice en rojo: "Hoy ya entró en CONDESA a las 07:05. Pide una identificación: puede ser un QR prestado." Se compara por id, no por nombre (la base dice "ROMA SUR" y la sesión "Roma Sur"). Deja pasar (decide mostrador) y el backend registra la alerta para HQ. El mock guarda la sucursal de la primera entrada (`MOCK_BRANCH_NAMES`).
+
 ## Cobrar el atraso de una suscripción (2026-09-25, spec 019)
 
 Al buscar en Renovar a un socio en gracia con suscripción (`renewsOnline` + `grace`), en vez de solo "se renueva en línea" aparece el atraso ("Su suscripción tiene un pago atrasado de $1,550") y "COBRAR ATRASO" con forma de pago (y crédito/débito). Cobra lo que Stripe dice que se debe, reactiva la membresía y la suscripción sigue renovándose sola. Imprime el ticket como cualquier cobro de mostrador. `membershipRepository.getOverdue`/`settleOverdue`; errores tipados `NothingOverdueError` (ya se cobró) y `OverduePaymentFailedError` (Stripe no aceptó, no se cobró nada). Mock: Sofía Castro (`ML-QR-SOFIA07`) con $1,550 atrasados. **Sin revisar en navegador**: `ProtectedRoute` verifica el JWT contra Cognito, sin User Pool no se entra.

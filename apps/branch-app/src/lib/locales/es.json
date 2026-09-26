@@ -153,7 +153,10 @@
     "expiredOn": "Venció el",
     "scanNext": "Validar otro",
     "checkInRecorded": "Entrada registrada ·",
-    "checkInRepeat": "Ya había entrado hoy a las"
+    "checkInRepeat": "Ya había entrado hoy a las",
+    "sharedQrPrefix": "Hoy ya entró en",
+    "sharedQrAt": "a las",
+    "sharedQrNote": "Pide una identificación: puede ser un QR prestado."
   },
   "qrScanner": {
     "start": "📷 Activar cámara",

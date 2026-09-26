@@ -28,6 +28,8 @@ SPA pura sin servidor propio, así que a diferencia de `customer-app` (donde Cog
 
 Mismo patrón mock-first: `datasources/mock/stats.mock.ts` (un solo datasource cubre `getBranchStats()` y `getGlobalInventory()`, porque son dos vistas del mismo "dashboard de solo lectura", no dominios independientes) → `repositories/stats.repository.ts` → dos stores independientes (`branchStats.store.ts`, `globalInventory.store.ts`) — uno por sección de la página, no un mega-store combinado.
 
+**Alertas de acceso (2026-09-25, spec 020)**: el resumen lista "Alertas de acceso (30 días)": el mismo QR entró el mismo día en dos sucursales (cuándo, socio, dónde entró primero y dónde volvió a entrar). `statsRepository.getAccessAlerts()` → `GET /access-alerts`; mock en `ACCESS_ALERTS`.
+
 **Afluencia (2026-09-25, spec 014)**: el resumen suma "Entradas hoy" (total de la cadena y por sucursal) y "Entradas (30 días)" por sucursal — `BranchStatsSummary.checkInsToday`/`.checkIns`, que el backend cuenta de las entradas que registra `branch-app` al validar el acceso (spec 012).
 
 `BRANCH_INVENTORY: BranchInventoryLevel[]` (`lib/data.ts`) es la única fuente de verdad del stock — vive por sucursal, reutilizando el mismo tipo de dominio que ya usa `branch-app`. `statsRepository.getGlobalInventory()` sólo suma `qty` por `productId` sobre ese arreglo en cada llamada (nunca guarda un total aparte), así que una transferencia entre sucursales jamás puede dejar el total del dashboard desincronizado.

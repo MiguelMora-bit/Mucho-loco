@@ -10,7 +10,7 @@ export class FingerprintAccessMethod implements AccessMethod {
   async checkAccess(fingerprintId: string, branchId: number): Promise<CheckInResult> {
     await delay(220); // simula la lectura del sensor + lookup roundtrip
     const record = MEMBER_ACCESS_RECORDS.find((r) => r.fingerprintId === fingerprintId.trim());
-    return withMockCheckIn(evaluateAccess(record, branchId));
+    return withMockCheckIn(evaluateAccess(record, branchId), branchId);
   }
 }
 

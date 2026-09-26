@@ -66,6 +66,7 @@ describe('HQ endpoints are there and guarded', () => {
   const calls: Array<[string, () => Promise<unknown>]> = [
     ['stats.getBranchStats', () => stats.getBranchStats()],
     ['stats.getGlobalInventory', () => stats.getGlobalInventory()],
+    ['stats.getAccessAlerts (spec 020)', () => stats.getAccessAlerts()],
     ['inventoryTransfer.getBranchInventory', () => transfers.getBranchInventory()],
     ['inventoryTransfer.getAll', () => transfers.getAll()],
     ['inventoryTransfer.create', () =>

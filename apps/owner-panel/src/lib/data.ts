@@ -1,10 +1,19 @@
-import type { AttendanceSummary, BranchInventoryLevel, BranchStatsSummary, Employee, Expense, InventoryTransfer, Payslip, PayrollPeriod, ShipmentOrder } from '@mucho-loco/types';
+import type { AccessAlert, AttendanceSummary, BranchInventoryLevel, BranchStatsSummary, Employee, Expense, InventoryTransfer, Payslip, PayrollPeriod, ShipmentOrder } from '@mucho-loco/types';
 
 export const BRANCH_STATS: BranchStatsSummary[] = [
   { branchId: 1, branchName: 'Roma Sur', revenue: 186400, activeCustomers: 312, checkInsToday: 118, checkIns: 3240 },
   { branchId: 2, branchName: 'Roma Norte', revenue: 142200, activeCustomers: 248, checkInsToday: 87, checkIns: 2410 },
   { branchId: 3, branchName: 'Condesa', revenue: 168900, activeCustomers: 287, checkInsToday: 102, checkIns: 2790 },
   { branchId: 5, branchName: 'Santa Fe', revenue: 231500, activeCustomers: 401, checkInsToday: 151, checkIns: 4320 },
+];
+
+// Spec 020: el mismo QR en dos sucursales el mismo día (en el backend las
+// registra el check-in de branch-app). Fechas relativas a hoy para que caigan
+// en la ventana de 30 días del tablero.
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+export const ACCESS_ALERTS: AccessAlert[] = [
+  { id: 'alert-2', memberName: 'Carlos Vega', qrCode: 'ML-QR-CARLOS06', firstBranch: 'Roma Sur', firstAt: hoursAgo(28), branch: 'Santa Fe', at: hoursAgo(26) },
+  { id: 'alert-1', memberName: 'Carlos Vega', qrCode: 'ML-QR-CARLOS06', firstBranch: 'Roma Sur', firstAt: hoursAgo(76), branch: 'Condesa', at: hoursAgo(75) },
 ];
 
 // Per-branch stock — statsRepository.getGlobalInventory() sums this at call

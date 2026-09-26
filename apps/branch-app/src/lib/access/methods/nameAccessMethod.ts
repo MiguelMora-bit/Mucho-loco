@@ -25,7 +25,7 @@ export class NameAccessMethod implements AccessMethod {
     const matches = MEMBER_ACCESS_RECORDS.filter((r) => r.memberName.toLowerCase().includes(q));
     if (matches.length === 0) return { outcome: 'not_found' };
     if (matches.length > 1) return { outcome: 'ambiguous', candidates: matches };
-    return withMockCheckIn(evaluateAccess(matches[0], branchId));
+    return withMockCheckIn(evaluateAccess(matches[0], branchId), branchId);
   }
 }
 

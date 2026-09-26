@@ -275,11 +275,20 @@ export function QrValidationPage() {
                 {formatDate(result.record.expiresAt, langOf(i18n.language))}
               </p>
               {/* Spec 012: validar registró la entrada. Un segundo escaneo el
-                  mismo día pasa igual, pero avisa — puede ser un QR prestado. */}
-              <p className={'text-sm mt-2 font-medium ' + (result.checkIn.firstToday ? 'text-ml-green' : 'text-ml-orange')}>
-                {result.checkIn.firstToday ? t('qr.checkInRecorded') : t('qr.checkInRepeat')}{' '}
-                {formatTime(result.checkIn.visitedAt, langOf(i18n.language))}
-              </p>
+                  mismo día pasa igual, pero avisa. Spec 020: si la primera fue
+                  en OTRA sucursal, es la señal de un QR prestado — en rojo, y
+                  HQ recibe la alerta. */}
+              {!result.checkIn.firstToday && result.checkIn.firstBranchId !== getCurrentBranchId() ? (
+                <p role="alert" data-shared-qr className="text-sm mt-2 font-medium text-ml-red">
+                  {t('qr.sharedQrPrefix')} <b className="uppercase">{result.checkIn.firstBranch}</b> {t('qr.sharedQrAt')}{' '}
+                  {formatTime(result.checkIn.visitedAt, langOf(i18n.language))}. {t('qr.sharedQrNote')}
+                </p>
+              ) : (
+                <p className={'text-sm mt-2 font-medium ' + (result.checkIn.firstToday ? 'text-ml-green' : 'text-ml-orange')}>
+                  {result.checkIn.firstToday ? t('qr.checkInRecorded') : t('qr.checkInRepeat')}{' '}
+                  {formatTime(result.checkIn.visitedAt, langOf(i18n.language))}
+                </p>
+              )}
             </>
           )}
 

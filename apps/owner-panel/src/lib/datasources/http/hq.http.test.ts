@@ -59,9 +59,12 @@ describe('StatsHttpDatasource', () => {
 
     await ds.getBranchStats();
     await ds.getGlobalInventory();
+    await ds.getAccessAlerts();
 
     expect(call(spy, 0).url).toContain('http://api.test/stats/branches');
     expect(call(spy, 1).url).toContain('http://api.test/inventory/global');
+    // Spec 020.
+    expect(call(spy, 2).url).toContain('http://api.test/access-alerts');
     expect(call(spy, 0).auth).toBe('Bearer owner-token');
   });
 

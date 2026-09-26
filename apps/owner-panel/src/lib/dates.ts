@@ -24,3 +24,13 @@ export function formatPeriodRange(startIso: string, endIso: string, lang: Lang):
   });
   return formatter.formatRange(new Date(startIso), new Date(endIso));
 }
+
+/** Un instante (fecha + hora) en la zona local — a diferencia de formatDate, sin fijar UTC. */
+export function formatDateTime(iso: string, lang: Lang): string {
+  return new Intl.DateTimeFormat(lang === 'es' ? 'es-MX' : 'en-US', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}

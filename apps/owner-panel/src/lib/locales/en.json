@@ -146,7 +146,15 @@
     "globalInventory": "Consolidated global inventory",
     "inventoryError": "We couldn't load the inventory",
     "productLabel": "Product",
-    "totalStockLabel": "Total stock"
+    "totalStockLabel": "Total stock",
+    "accessAlerts": "Access alerts (30 days)",
+    "accessAlertsNote": "The same QR checked in at two branches on the same day: it may be a borrowed QR. The counter saw the warning at the time.",
+    "accessAlertsEmpty": "No alerts in the last 30 days.",
+    "accessAlertsError": "We couldn't load the alerts",
+    "alertWhen": "When",
+    "alertMember": "Member",
+    "alertFirst": "First check-in at",
+    "alertAgain": "Checked in again at"
   },
   "executiveReports": {
     "title": "Executive reports",

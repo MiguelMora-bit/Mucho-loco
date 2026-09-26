@@ -17,4 +17,12 @@ describe('statsRepository', () => {
     const expectedWheyQty = BRANCH_INVENTORY.filter((i) => i.productId === 'p1').reduce((sum, i) => sum + i.qty, 0);
     expect(whey?.totalQty).toBe(expectedWheyQty);
   });
+
+  // Spec 020: el mismo QR en dos sucursales el mismo día, la más reciente primero.
+  it('getAccessAlerts lists the shared-QR alerts, newest first', async () => {
+    const alerts = await statsRepository.getAccessAlerts();
+    expect(alerts.length).toBeGreaterThan(0);
+    expect(alerts.map((a) => a.at)).toEqual([...alerts.map((a) => a.at)].sort().reverse());
+    expect(alerts[0]).toMatchObject({ firstBranch: 'Roma Sur', branch: 'Santa Fe' });
+  });
 });

@@ -180,6 +180,8 @@ model Branch {
   attendance         AttendanceEntry[]
   transfersOut       InventoryTransfer[] @relation("transfersFrom")
   transfersIn        InventoryTransfer[] @relation("transfersTo")
+  accessAlerts       AccessAlert[]       @relation("alertAt")
+  firstAccessAlerts  AccessAlert[]       @relation("alertFirstAt")
   expenses           Expense[]
   employees          Employee[]
 
@@ -261,6 +263,7 @@ model User {
   membershipPurchases MembershipPurchase[]
   visits              Visit[]
   workouts            Workout[]
+  accessAlerts        AccessAlert[]
   orders              Order[]
   charges             Charge[]
   fiscalProfile       FiscalProfile?
@@ -329,6 +332,26 @@ model Visit {
 
   @@unique([userId, visitDay])
   @@map("visits")
+}
+
+/// El mismo QR entró el mismo día en OTRA sucursal (spec 020). No se bloquea
+/// (un socio de 15 sucursales puede ir a dos): mostrador lo ve y HQ lo revisa.
+/// Una fila por intento — tres intentos en un día también son señal.
+model AccessAlert {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  /// Donde volvió a entrar.
+  branchId      Int
+  branch        Branch   @relation("alertAt", fields: [branchId], references: [id])
+  /// La primera entrada de ese día.
+  firstBranchId Int
+  firstBranch   Branch   @relation("alertFirstAt", fields: [firstBranchId], references: [id])
+  firstAt       DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("access_alerts")
 }
 
 model Order {

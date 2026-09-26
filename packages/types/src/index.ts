@@ -976,6 +976,25 @@ export type AccessCheckResult =
 export interface CheckIn {
   visitedAt: string;
   firstToday: boolean;
+  /** Sucursal de la primera entrada del día (spec 020): si no es esta, puede ser un QR prestado. */
+  firstBranchId: number;
+  firstBranch: string;
+}
+
+/**
+ * El mismo QR entró el mismo día en otra sucursal (spec 020). No se bloquea
+ * — un socio de 15 sucursales puede ir a dos — pero mostrador lo ve y HQ lo revisa.
+ */
+export interface AccessAlert {
+  id: string;
+  memberName: string;
+  qrCode: string;
+  /** Dónde y cuándo entró primero ese día. */
+  firstBranch: string;
+  firstAt: string;
+  /** Dónde volvió a entrar. */
+  branch: string;
+  at: string;
 }
 
 /**

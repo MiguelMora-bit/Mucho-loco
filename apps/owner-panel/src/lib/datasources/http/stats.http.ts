@@ -1,4 +1,4 @@
-import type { BranchStatsSummary, GlobalInventoryItem } from '@mucho-loco/types';
+import type { AccessAlert, BranchStatsSummary, GlobalInventoryItem } from '@mucho-loco/types';
 import type { IStatsRepository } from '../../repositories/stats.repository';
 import { api } from './client';
 
@@ -17,5 +17,9 @@ export class StatsHttpDatasource implements IStatsRepository {
 
   getGlobalInventory(): Promise<GlobalInventoryItem[]> {
     return api.get<GlobalInventoryItem[]>('/inventory/global');
+  }
+
+  getAccessAlerts(): Promise<AccessAlert[]> {
+    return api.get<AccessAlert[]>('/access-alerts');
   }
 }

@@ -77,6 +77,11 @@ export const MEMBER_ACCESS_RECORDS: MemberAccessRecord[] = [
   { qrCode: 'ML-QR-SOFIA07', memberName: 'Sofía Castro', status: 'grace', expiresAt: '2026-09-22', tierKey: 'all', homeBranchId: 1, homeBranchName: 'Roma Sur', renewsOnline: true },
 ];
 
+// Nombres de las sucursales que usa el mock (el backend manda los reales).
+export const MOCK_BRANCH_NAMES: Record<number, string> = {
+  1: 'Roma Sur', 2: 'Roma Norte', 3: 'Condesa', 4: 'Interlomas', 5: 'Santa Fe',
+};
+
 // Spec 019: lo que Stripe no pudo cobrarle a un socio en gracia con
 // suscripción — en el backend es la factura abierta. Se borra al cobrarlo.
 export const MEMBER_OVERDUE: Record<string, OverdueBalance> = {

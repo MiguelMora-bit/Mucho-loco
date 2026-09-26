@@ -1,5 +1,5 @@
-import type { BranchStatsSummary, GlobalInventoryItem } from '@mucho-loco/types';
-import { BRANCH_STATS, BRANCH_INVENTORY } from '../../data';
+import type { AccessAlert, BranchStatsSummary, GlobalInventoryItem } from '@mucho-loco/types';
+import { ACCESS_ALERTS, BRANCH_STATS, BRANCH_INVENTORY } from '../../data';
 import { delay } from './delay';
 import type { IStatsRepository } from '../../repositories/stats.repository';
 
@@ -21,5 +21,10 @@ export class StatsMockDatasource implements IStatsRepository {
       }
     }
     return Array.from(byProduct.values());
+  }
+
+  async getAccessAlerts(): Promise<AccessAlert[]> {
+    await delay(120);
+    return [...ACCESS_ALERTS].sort((a, b) => b.at.localeCompare(a.at));
   }
 }

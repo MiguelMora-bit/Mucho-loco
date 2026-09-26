@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import request, { type Response } from 'supertest';
 import type {
+  AccessAlert,
   CheckInResult,
   BranchInventoryLevel,
   CashRegisterShift,
@@ -111,6 +112,7 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
     // Los socios dados de alta en mostrador durante estos tests no tienen
     // cognitoSub, así que borrarlos no toca a ningún usuario de la app.
     // Spec 012: las entradas registradas en mostrador (el seed no crea visitas).
+    await prisma.accessAlert.deleteMany();
     await prisma.visit.deleteMany();
     await prisma.membership.deleteMany({ where: { user: { cognitoSub: null } } });
     await prisma.membership.deleteMany({ where: { user: { email: { startsWith: 'checkin-e2e' } } } });
@@ -135,8 +137,13 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
   }
 
   afterAll(async () => {
-    await resetOperationalState();
-    await app.close();
+    // En finally: si la limpieza truena, la app igual se cierra (si no, Jest
+    // se queda esperando conexiones abiertas para siempre).
+    try {
+      await resetOperationalState();
+    } finally {
+      await app.close();
+    }
   });
 
   describe('roles', () => {
@@ -640,7 +647,7 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
 
       if (first.outcome !== 'valid' || second.outcome !== 'valid') throw new Error('expected valid');
       expect(first.checkIn.firstToday).toBe(true);
-      expect(second.checkIn).toEqual({ visitedAt: first.checkIn.visitedAt, firstToday: false });
+      expect(second.checkIn).toEqual({ visitedAt: first.checkIn.visitedAt, firstToday: false, firstBranchId: 1, firstBranch: first.checkIn.firstBranch });
       const { userId } = await prisma.membership.findUniqueOrThrow({ where: { accessCode: qrCode } });
       const visits = await prisma.visit.findMany({ where: { userId } });
       expect(visits).toHaveLength(1);
@@ -691,6 +698,48 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         visitsLastMonth: firstOfMonth ? 5 : 4,
         branchesThisMonth: firstOfMonth ? 1 : 2,
       });
+    });
+
+    // Spec 020: el mismo QR en otra sucursal el mismo día pasa, pero deja alerta.
+    it('flags a same-day entry at another branch, not a return to the same one', async () => {
+      const signup = await request(app.getHttpServer())
+        .post('/branches/1/memberships/signup')
+        .set(...auth('staff'))
+        .send({ memberName: 'Socio Viajero', phone: '55 9090 9090', tierKey: 'all', periodKey: 'monthly', paymentMethod: 'cash' })
+        .expect(201);
+      const { qrCode } = body<MembershipPayment>(signup);
+      const [romaSur, condesa] = await Promise.all([
+        prisma.branch.findUniqueOrThrow({ where: { id: 1 } }),
+        prisma.branch.findUniqueOrThrow({ where: { id: 3 } }),
+      ]);
+      const checkIn = async (branchId: number) =>
+        body<CheckInResult>(
+          await request(app.getHttpServer())
+            .post(`/branches/${branchId}/check-ins`)
+            .send({ qrCode })
+            .set(...auth('staff'))
+            .expect(200),
+        );
+      const alertsFor = async () =>
+        body<AccessAlert[]>(
+          await request(app.getHttpServer()).get('/access-alerts').set(...auth('owner')).expect(200),
+        ).filter((a) => a.qrCode === qrCode);
+
+      const first = await checkIn(1);
+      const elsewhere = await checkIn(3);
+      await checkIn(1);
+
+      if (first.outcome !== 'valid' || elsewhere.outcome !== 'valid') throw new Error('expected valid');
+      expect(first.checkIn.firstBranch).toBe(romaSur.name);
+      expect(elsewhere.checkIn).toMatchObject({ firstToday: false, firstBranchId: 1, firstBranch: romaSur.name });
+      const alerts = await alertsFor();
+      expect(alerts).toHaveLength(1);
+      expect(alerts[0]).toMatchObject({ memberName: 'Socio Viajero', firstBranch: romaSur.name, branch: condesa.name });
+      expect(alerts[0].firstAt).toBe(first.checkIn.visitedAt);
+    });
+
+    it('keeps access alerts for HQ only', async () => {
+      await request(app.getHttpServer()).get('/access-alerts').set(...auth('manager')).expect(403);
     });
 
     it('lets an app member see the entry, their visits and their streak', async () => {

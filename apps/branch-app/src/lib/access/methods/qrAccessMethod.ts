@@ -10,7 +10,7 @@ export class QrAccessMethod implements AccessMethod {
   async checkAccess(qrCode: string, branchId: number): Promise<CheckInResult> {
     await delay(220); // simula el scan + lookup roundtrip
     const record = MEMBER_ACCESS_RECORDS.find((r) => r.qrCode === qrCode.trim());
-    return withMockCheckIn(evaluateAccess(record, branchId));
+    return withMockCheckIn(evaluateAccess(record, branchId), branchId);
   }
 }
 

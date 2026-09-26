@@ -146,7 +146,15 @@
     "globalInventory": "Inventario global consolidado",
     "inventoryError": "No pudimos cargar el inventario",
     "productLabel": "Producto",
-    "totalStockLabel": "Stock total"
+    "totalStockLabel": "Stock total",
+    "accessAlerts": "Alertas de acceso (30 días)",
+    "accessAlertsNote": "El mismo QR entró el mismo día en dos sucursales: puede ser un QR prestado. Mostrador ya vio el aviso en el momento.",
+    "accessAlertsEmpty": "Sin alertas en los últimos 30 días.",
+    "accessAlertsError": "No pudimos cargar las alertas",
+    "alertWhen": "Cuándo",
+    "alertMember": "Socio",
+    "alertFirst": "Entró primero en",
+    "alertAgain": "Volvió a entrar en"
   },
   "executiveReports": {
     "title": "Reportes ejecutivos",

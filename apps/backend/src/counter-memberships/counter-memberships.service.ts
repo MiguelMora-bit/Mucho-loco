@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type {
+  AccessAlert,
   AccessCheckResult,
   CheckIn,
   CheckInResult,
@@ -194,8 +195,40 @@ export class CounterMembershipsService {
     });
     const visit = await this.prisma.visit.findUniqueOrThrow({
       where: { userId_visitDay: { userId, visitDay } },
+      include: { branch: true },
     });
-    return { visitedAt: visit.visitedAt.toISOString(), firstToday: count === 1 };
+    // Spec 020: ya entró hoy en OTRA sucursal — puede ser un QR prestado. Pasa
+    // (mostrador decide con el aviso), pero queda para que HQ lo revise.
+    if (count === 0 && visit.branchId !== branchId) {
+      await this.prisma.accessAlert.create({
+        data: { userId, branchId, firstBranchId: visit.branchId, firstAt: visit.visitedAt },
+      });
+    }
+    return {
+      visitedAt: visit.visitedAt.toISOString(),
+      firstToday: count === 1,
+      firstBranchId: visit.branchId,
+      firstBranch: visit.branch.name,
+    };
+  }
+
+  /** Spec 020: las alertas de QR compartido de los últimos `days` días, la más reciente primero. */
+  async listAccessAlerts(days = 30, now = new Date()): Promise<AccessAlert[]> {
+    const rows = await this.prisma.accessAlert.findMany({
+      where: { createdAt: { gte: new Date(now.getTime() - days * 86_400_000) } },
+      include: { user: { include: { membership: true } }, branch: true, firstBranch: true },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      memberName: row.user.name,
+      qrCode: row.user.membership?.accessCode ?? '',
+      firstBranch: row.firstBranch.name,
+      firstAt: row.firstAt.toISOString(),
+      branch: row.branch.name,
+      at: row.createdAt.toISOString(),
+    }));
   }
 
   /**
