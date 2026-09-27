@@ -48,7 +48,8 @@ Varios specs tocan más de un app (casi todos también el backend); cada uno apa
 | [035-counter-memberships](035-counter-memberships/spec.md) — Altas y renovaciones de membresía en mostrador | retroactivo | 4/4 |  |
 | [036-access-validation](036-access-validation/spec.md) — Validar el acceso en la puerta | retroactivo | 4/4 |  |
 | [037-branch-reports](037-branch-reports/spec.md) — Reportes e inventario local del gerente | retroactivo | 3/3 |  |
-| [038-attendance](038-attendance/spec.md) — Asistencia del personal | retroactivo | 3/4 | 1 |
+| [038-attendance](038-attendance/spec.md) — Asistencia del personal | retroactivo | 4/4 |  |
+| [055-attendance-corrections](055-attendance-corrections/spec.md) — Corregir una salida olvidada | nuevo | 6/6 |  |
 
 ## Dueño — owner-panel
 
@@ -87,7 +88,6 @@ Cada tarea abierta de los specs retroactivos es algo que hoy no está verificado
 - **026** Renovación natural al fin de periodo contra Stripe real (test clocks).
 - **029** FR-003 · test automatizado del mapa con y sin llave de Google Maps (hoy solo revisión visual).
 - **052** (hallazgo) El backend no liga al gerente con su sucursal: cualquier gerente puede cerrar (y cualquier staff leer) un turno de otra sucursal por su id. La sucursal del staff vive en `staffDirectory.ts` de branch-app.
-- **038** Pantalla para que el gerente corrija una salida olvidada.
 - **046** Probar contra el sandbox de Facturapi (requiere la cuenta).
 - **047** Probar contra la Cloud API de Meta con plantillas aprobadas.
 - **048** Instalar y montar `@nestjs/swagger` (documentación OpenAPI decidida en el CLAUDE.md raíz).

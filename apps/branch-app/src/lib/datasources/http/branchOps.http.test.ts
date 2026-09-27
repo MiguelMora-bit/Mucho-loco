@@ -9,7 +9,13 @@ import {
   ShiftAlreadyClosedError,
   ShiftNotFoundError,
 } from '../../repositories/cashRegisterShift.errors';
-import { AlreadyClockedInError, NoOpenEntryError } from '../../repositories/attendance.errors';
+import {
+  AlreadyClockedInError,
+  EntryAlreadyClosedError,
+  EntryNotFoundError,
+  InvalidClockOutError,
+  NoOpenEntryError,
+} from '../../repositories/attendance.errors';
 import { useAuthStore } from '../../stores/auth.store';
 import {
   MemberRenewsOnlineError,
@@ -272,5 +278,33 @@ describe('MembershipHttpDatasource', () => {
     });
 
     expect(call(spy).body.fingerprintId).toBe('fp-1');
+  });
+});
+
+describe('AttendanceHttpDatasource (spec 055)', () => {
+  const ds = new AttendanceHttpDatasource();
+
+  it('lists open entries and closes one with only the time', async () => {
+    const spy = stubFetch(200, []);
+    await ds.getForgottenEntries(1);
+    await ds.closeEntry('att-1', '2026-09-25T21:00:00.000Z');
+
+    expect(call(spy, 0).url).toContain('/branches/1/attendance/forgotten-entries');
+    expect(call(spy, 1).url).toContain('/attendance/entries/att-1/close');
+    expect(call(spy, 1).init.method).toBe('POST');
+    expect(call(spy, 1).body).toEqual({ clockOut: '2026-09-25T21:00:00.000Z' });
+  });
+
+  it('translates the correction error codes', async () => {
+    stubFetch(400, { code: 'INVALID_CLOCK_OUT', entryId: 'att-1', reason: 'in_future' });
+    const invalid = await ds.closeEntry('att-1', 'x').catch((e: unknown) => e);
+    expect(invalid).toBeInstanceOf(InvalidClockOutError);
+    expect((invalid as InvalidClockOutError).reason).toBe('in_future');
+
+    stubFetch(400, { code: 'ENTRY_ALREADY_CLOSED', entryId: 'att-1' });
+    expect(await ds.closeEntry('att-1', 'x').catch((e: unknown) => e)).toBeInstanceOf(EntryAlreadyClosedError);
+
+    stubFetch(404, { code: 'ENTRY_NOT_FOUND', entryId: 'att-9' });
+    expect(await ds.closeEntry('att-9', 'x').catch((e: unknown) => e)).toBeInstanceOf(EntryNotFoundError);
   });
 });

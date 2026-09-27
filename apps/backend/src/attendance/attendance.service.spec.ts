@@ -11,19 +11,36 @@ const entryRow = (overrides: Record<string, unknown> = {}) => ({
   staffName: 'Luis Ángel Ortega',
   clockIn: new Date('2026-09-12T14:00:00.000Z'),
   clockOut: null,
+  correctedBy: null,
   ...overrides,
 });
 
 describe('AttendanceService', () => {
   let service: AttendanceService;
   let prisma: {
-    attendanceEntry: { findFirst: jest.Mock; findMany: jest.Mock; create: jest.Mock; update: jest.Mock };
+    attendanceEntry: {
+      findFirst: jest.Mock;
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+      updateMany: jest.Mock;
+    };
     employee: { findUnique: jest.Mock };
   };
 
   beforeEach(async () => {
     prisma = {
-      attendanceEntry: { findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
+      attendanceEntry: {
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       employee: { findUnique: jest.fn() },
     };
     const module = await Test.createTestingModule({
@@ -105,5 +122,67 @@ describe('AttendanceService', () => {
     expect(args.where.branchId).toBe(1);
     expect(args.where.clockIn.gte.getHours()).toBe(0);
     expect(args.orderBy).toEqual({ clockIn: 'desc' });
+  });
+
+  // Spec 055: el gerente cierra el turno que alguien olvidó.
+  describe('closeEntry', () => {
+    const NOW = new Date('2026-09-13T15:00:00.000Z');
+    const manager = { name: 'Ana Sofía Martínez' };
+    const clockOut = new Date('2026-09-12T22:00:00.000Z');
+
+    it('closes it with the real time and records who corrected it', async () => {
+      prisma.attendanceEntry.findUnique.mockResolvedValue(entryRow());
+      prisma.attendanceEntry.findUniqueOrThrow.mockResolvedValue(
+        entryRow({ clockOut, correctedBy: manager.name }),
+      );
+
+      const closed = await service.closeEntry('a1', clockOut, manager, NOW);
+
+      expect(prisma.attendanceEntry.updateMany).toHaveBeenCalledWith({
+        where: { id: 'a1', clockOut: null },
+        data: { clockOut, correctedBy: 'Ana Sofía Martínez', correctedAt: NOW },
+      });
+      expect(closed).toMatchObject({ clockOut: clockOut.toISOString(), correctedBy: 'Ana Sofía Martínez' });
+    });
+
+    it('refuses a time the rule rejects, and leaves it open', async () => {
+      prisma.attendanceEntry.findUnique.mockResolvedValue(entryRow());
+
+      await expect(
+        service.closeEntry('a1', new Date('2026-09-12T13:00:00.000Z'), manager, NOW),
+      ).rejects.toMatchObject({ response: { code: 'INVALID_CLOCK_OUT', reason: 'before_clock_in' } });
+      expect(prisma.attendanceEntry.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('does not overwrite a clock-out the employee made meanwhile', async () => {
+      prisma.attendanceEntry.findUnique.mockResolvedValue(entryRow());
+      prisma.attendanceEntry.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.closeEntry('a1', clockOut, manager, NOW)).rejects.toMatchObject({
+        response: { code: 'ENTRY_ALREADY_CLOSED' },
+      });
+    });
+
+    it('answers ENTRY_ALREADY_CLOSED and ENTRY_NOT_FOUND', async () => {
+      prisma.attendanceEntry.findUnique.mockResolvedValue(entryRow({ clockOut }));
+      await expect(service.closeEntry('a1', clockOut, manager, NOW)).rejects.toBeInstanceOf(BadRequestException);
+
+      prisma.attendanceEntry.findUnique.mockResolvedValue(null);
+      await expect(service.closeEntry('nope', clockOut, manager, NOW)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // Uno abierto hoy es alguien trabajando, no un olvido.
+  it('getForgottenEntries lists the branch shifts left open before today, oldest first', async () => {
+    prisma.attendanceEntry.findMany.mockResolvedValue([entryRow()]);
+
+    await service.getForgottenEntries(1);
+
+    const [args] = prisma.attendanceEntry.findMany.mock.calls[0] as [
+      { where: { branchId: number; clockOut: null; clockIn: { lt: Date } }; orderBy: unknown },
+    ];
+    expect(args.where).toMatchObject({ branchId: 1, clockOut: null });
+    expect(args.where.clockIn.lt.getHours()).toBe(0);
+    expect(args.orderBy).toEqual({ clockIn: 'asc' });
   });
 });

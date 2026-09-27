@@ -127,5 +127,8 @@ export const CASH_REGISTER_SHIFTS: CashRegisterShift[] = [];
 // staffDirectory/test account) starts with none so clocking in can be
 // demoed cleanly.
 export const ATTENDANCE_ENTRIES: AttendanceEntry[] = [
-  { id: '#ATT-SEED-1', branchId: 1, staffEmail: 'luis@mucholoco.mx', staffName: 'Luis', clockIn: daysAgo(0, 5), clockOut: daysAgo(0, 9) },
+  { id: '#ATT-SEED-1', branchId: 1, staffEmail: 'luis@mucholoco.mx', staffName: 'Luis', clockIn: daysAgo(0, 5), clockOut: daysAgo(0, 9), correctedBy: null },
+  // Spec 055: Itzel olvidó fichar su salida ayer — su turno sigue abierto y
+  // el gerente lo ve en "Turnos sin salida".
+  { id: '#ATT-SEED-2', branchId: 1, staffEmail: 'itzel@mucholoco.mx', staffName: 'Itzel Navarro', clockIn: daysAgo(1, 7), clockOut: null, correctedBy: null },
 ];

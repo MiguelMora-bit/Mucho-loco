@@ -2,7 +2,11 @@ import type { AttendanceEntry } from '@mucho-loco/types';
 import type { IAttendanceRepository } from '../../repositories/attendance.repository';
 import {
   AlreadyClockedInError,
+  EntryAlreadyClosedError,
+  EntryNotFoundError,
+  InvalidClockOutError,
   NoOpenEntryError,
+  type ClockOutProblem,
 } from '../../repositories/attendance.errors';
 import { ApiRequestError, api } from './client';
 
@@ -14,6 +18,12 @@ function toDomainError(e: unknown): unknown {
       return new AlreadyClockedInError(staffEmail);
     case 'NO_OPEN_ENTRY':
       return new NoOpenEntryError(staffEmail);
+    case 'ENTRY_NOT_FOUND':
+      return new EntryNotFoundError(String(e.body.entryId ?? ''));
+    case 'ENTRY_ALREADY_CLOSED':
+      return new EntryAlreadyClosedError(String(e.body.entryId ?? ''));
+    case 'INVALID_CLOCK_OUT':
+      return new InvalidClockOutError(String(e.body.entryId ?? ''), e.body.reason as ClockOutProblem);
     default:
       return e;
   }
@@ -61,5 +71,18 @@ export class AttendanceHttpDatasource implements IAttendanceRepository {
 
   getTeamToday(branchId: number): Promise<AttendanceEntry[]> {
     return api.get<AttendanceEntry[]>(`/branches/${branchId}/attendance/today`);
+  }
+
+  getForgottenEntries(branchId: number): Promise<AttendanceEntry[]> {
+    return api.get<AttendanceEntry[]>(`/branches/${branchId}/attendance/forgotten-entries`);
+  }
+
+  /** Quién corrigió no viaja: lo pone el backend desde el token. */
+  async closeEntry(entryId: string, clockOut: string): Promise<AttendanceEntry> {
+    try {
+      return await api.post<AttendanceEntry>(`/attendance/entries/${encodeURIComponent(entryId)}/close`, { clockOut });
+    } catch (e) {
+      throw toDomainError(e);
+    }
   }
 }

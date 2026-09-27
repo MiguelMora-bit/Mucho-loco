@@ -25,6 +25,9 @@ export type ApiErrorCode =
   | 'PERIOD_ALREADY_CLOSED'
   | 'PERIOD_ALREADY_OPEN'
   | 'EXPENSE_NOT_FOUND'
+  | 'ENTRY_NOT_FOUND'
+  | 'ENTRY_ALREADY_CLOSED'
+  | 'INVALID_CLOCK_OUT'
   | 'INVALID_EXPENSE_DATE'
   | 'ORDER_ALREADY_DELIVERED'
   | 'NOT_A_PICKUP_ORDER'
@@ -147,6 +150,26 @@ export const periodAlreadyOpen = (periodId: string): ApiErrorBody => ({
   code: 'PERIOD_ALREADY_OPEN',
   message: `A payroll period is already open: ${periodId}`,
   periodId,
+});
+
+/** Spec 055: corregir la salida de un turno olvidado. */
+export const entryNotFound = (entryId: string): ApiErrorBody => ({
+  code: 'ENTRY_NOT_FOUND',
+  message: `Attendance entry not found: ${entryId}`,
+  entryId,
+});
+
+export const entryAlreadyClosed = (entryId: string): ApiErrorBody => ({
+  code: 'ENTRY_ALREADY_CLOSED',
+  message: `Attendance entry already closed: ${entryId}`,
+  entryId,
+});
+
+export const invalidClockOut = (entryId: string, reason: string): ApiErrorBody => ({
+  code: 'INVALID_CLOCK_OUT',
+  message: `Invalid clock-out for ${entryId}: ${reason}`,
+  entryId,
+  reason,
 });
 
 /** Spec 054. */

@@ -2,7 +2,15 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { AttendanceEntry } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AttendanceEntry as EntryRow } from '@prisma/client';
-import { alreadyClockedIn, noOpenEntry } from '../common/error-codes';
+import {
+  alreadyClockedIn,
+  entryAlreadyClosed,
+  entryNotFound,
+  invalidClockOut,
+  noOpenEntry,
+} from '../common/error-codes';
+import type { IdTokenClaims } from '../auth/cognito';
+import { clockOutProblem } from './clock-out-rule';
 
 function toEntry(row: EntryRow): AttendanceEntry {
   return {
@@ -12,6 +20,7 @@ function toEntry(row: EntryRow): AttendanceEntry {
     staffName: row.staffName,
     clockIn: row.clockIn.toISOString(),
     clockOut: row.clockOut?.toISOString() ?? null,
+    correctedBy: row.correctedBy,
   };
 }
 
@@ -74,6 +83,46 @@ export class AttendanceService {
       data: { clockOut: new Date() },
     });
     return toEntry(row);
+  }
+
+  /**
+   * Turnos sin salida de la sucursal (spec 055): abiertos desde antes de hoy,
+   * el más viejo primero. El que olvidó fichar su salida no puede volver a
+   * entrar, y ese día no se paga hasta que se cierre. Uno abierto hoy es
+   * alguien trabajando, no un olvido.
+   */
+  async getForgottenEntries(branchId: number): Promise<AttendanceEntry[]> {
+    const rows = await this.prisma.attendanceEntry.findMany({
+      where: { branchId, clockOut: null, clockIn: { lt: startOfToday() } },
+      orderBy: { clockIn: 'asc' },
+    });
+    return rows.map(toEntry);
+  }
+
+  /**
+   * El gerente captura la hora real de salida (spec 055). Queda quién y cuándo
+   * lo corrigió. Condicional a que siga abierto: si el empleado fichó su salida
+   * mientras tanto, gana la suya.
+   */
+  async closeEntry(
+    entryId: string,
+    clockOut: Date,
+    closer: Pick<IdTokenClaims, 'name'>,
+    now: Date = new Date(),
+  ): Promise<AttendanceEntry> {
+    const entry = await this.prisma.attendanceEntry.findUnique({ where: { id: entryId } });
+    if (!entry) throw new NotFoundException(entryNotFound(entryId));
+    if (entry.clockOut) throw new BadRequestException(entryAlreadyClosed(entryId));
+
+    const problem = clockOutProblem(entry.clockIn, clockOut, now);
+    if (problem) throw new BadRequestException(invalidClockOut(entryId, problem));
+
+    const { count } = await this.prisma.attendanceEntry.updateMany({
+      where: { id: entryId, clockOut: null },
+      data: { clockOut, correctedBy: closer.name, correctedAt: now },
+    });
+    if (count === 0) throw new BadRequestException(entryAlreadyClosed(entryId));
+    return toEntry(await this.prisma.attendanceEntry.findUniqueOrThrow({ where: { id: entryId } }));
   }
 
   /** Vista de gerente: quién de la sucursal fichó hoy, más reciente primero. */

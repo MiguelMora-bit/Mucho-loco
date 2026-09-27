@@ -716,6 +716,10 @@ model AttendanceEntry {
   staffName  String
   clockIn    DateTime  @default(now())
   clockOut   DateTime?
+  /// Si la salida la capturó un gerente porque el empleado la olvidó (spec
+  /// 055): quién y cuándo. Nulos cuando el empleado fichó su salida.
+  correctedBy String?
+  correctedAt DateTime?
 
   @@index([branchId, clockIn])
   @@index([staffEmail, clockIn])

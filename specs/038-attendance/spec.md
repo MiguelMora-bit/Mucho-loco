@@ -69,4 +69,4 @@ El gerente ve quién ha entrado y salido hoy en su sucursal.
 
 ## Fuera de alcance / pendiente conocido
 
-- Correcciones de asistencia por el gerente (olvidos de salida).
+- ~~Correcciones de asistencia por el gerente (olvidos de salida)~~ ✅ spec 055 (2026-09-26).

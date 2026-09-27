@@ -1,7 +1,15 @@
 import type { AttendanceEntry } from '@mucho-loco/types';
 import { ATTENDANCE_ENTRIES } from '../../data';
 import { delay } from './delay';
-import { AlreadyClockedInError, NoOpenEntryError } from '../../repositories/attendance.errors';
+import {
+  AlreadyClockedInError,
+  EntryAlreadyClosedError,
+  EntryNotFoundError,
+  InvalidClockOutError,
+  NoOpenEntryError,
+} from '../../repositories/attendance.errors';
+import { clockOutProblem } from '../../clockOutRule';
+import { useAuthStore } from '../../stores/auth.store';
 import type { IAttendanceRepository } from '../../repositories/attendance.repository';
 
 function findOpenEntry(staffEmail: string): AttendanceEntry | undefined {
@@ -25,6 +33,7 @@ export class AttendanceMockDatasource implements IAttendanceRepository {
       staffName,
       clockIn: new Date().toISOString(),
       clockOut: null,
+      correctedBy: null,
     };
     ATTENDANCE_ENTRIES.push(entry);
     return entry;
@@ -40,9 +49,34 @@ export class AttendanceMockDatasource implements IAttendanceRepository {
 
   async getTeamToday(branchId: number): Promise<AttendanceEntry[]> {
     await delay(150);
-    const todayKey = new Date().toISOString().slice(0, 10);
+    // "Hoy" en hora local, como el backend (TZ=America/Mexico_City) — con el
+    // día UTC, a partir de las 18:00 la lista salía vacía.
+    const today = new Date().toDateString();
     return ATTENDANCE_ENTRIES
-      .filter((e) => e.branchId === branchId && e.clockIn.slice(0, 10) === todayKey)
+      .filter((e) => e.branchId === branchId && new Date(e.clockIn).toDateString() === today)
       .sort((a, b) => b.clockIn.localeCompare(a.clockIn));
+  }
+
+  async getForgottenEntries(branchId: number): Promise<AttendanceEntry[]> {
+    await delay(150);
+    // Abiertos desde antes de hoy (hora local), como el backend.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return ATTENDANCE_ENTRIES
+      .filter((e) => e.branchId === branchId && e.clockOut === null && new Date(e.clockIn) < startOfToday)
+      .sort((a, b) => a.clockIn.localeCompare(b.clockIn));
+  }
+
+  async closeEntry(entryId: string, clockOut: string): Promise<AttendanceEntry> {
+    await delay(200);
+    const entry = ATTENDANCE_ENTRIES.find((e) => e.id === entryId);
+    if (!entry) throw new EntryNotFoundError(entryId);
+    if (entry.clockOut) throw new EntryAlreadyClosedError(entryId);
+    const problem = clockOutProblem(new Date(entry.clockIn), new Date(clockOut));
+    if (problem) throw new InvalidClockOutError(entryId, problem);
+    // Quién corrigió sale de la sesión, como en el backend sale del token.
+    entry.clockOut = new Date(clockOut).toISOString();
+    entry.correctedBy = useAuthStore.getState().user?.name ?? null;
+    return entry;
   }
 }

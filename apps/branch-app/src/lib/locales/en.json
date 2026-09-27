@@ -242,7 +242,22 @@
     "staffLabel": "Staff",
     "clockInLabel": "Clock in",
     "clockOutLabel": "Clock out",
-    "onShift": "On shift"
+    "onShift": "On shift",
+    "forgottenTitle": "Shifts with no clock-out",
+    "forgottenHint": "If someone forgot to clock out, enter the time they actually left. Until then they can't clock in again and that day isn't paid.",
+    "forgottenEmpty": "No open shifts.",
+    "clockedInAt": "Clocked in {{date}}",
+    "fixClockOut": "Fix clock-out",
+    "clockOutAt": "Left at",
+    "saveClockOut": "Save clock-out",
+    "cancel": "Cancel",
+    "correctedBy": "Clock-out fixed by {{name}}",
+    "fixedNotice": "{{name}}'s clock-out saved ({{date}}). That day now counts for payroll.",
+    "errorBeforeClockIn": "The clock-out must be after the clock-in.",
+    "errorInFuture": "The clock-out can't be in the future.",
+    "errorTooLong": "A shift can't last more than 24 hours.",
+    "errorAlreadyClosed": "That shift was already closed; the list was refreshed.",
+    "errorFix": "We couldn't save the clock-out. Try again."
   },
   "ticket": {
     "title": "Receipt",

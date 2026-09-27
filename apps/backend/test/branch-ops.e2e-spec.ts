@@ -1611,6 +1611,124 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
     });
   });
 
+  // Spec 055: alguien olvidó fichar su salida ayer y hoy no puede entrar.
+  describe('attendance corrections (sucursal)', () => {
+    const LUIS = 'luis@mucholoco.mx';
+    const HOUR = 3_600_000;
+    const clockIn = new Date(Date.now() - 30 * HOUR);
+    let entryId: string;
+
+    beforeAll(async () => {
+      // Sin turnos abiertos de Luis de los tests anteriores.
+      await prisma.attendanceEntry.updateMany({ where: { staffEmail: LUIS, clockOut: null }, data: { clockOut: new Date() } });
+      const employee = await prisma.employee.findUniqueOrThrow({ where: { email: LUIS } });
+      const entry = await prisma.attendanceEntry.create({
+        data: { branchId: 1, staffEmail: LUIS, staffName: 'Luis Ángel Ortega', employeeId: employee.id, clockIn },
+      });
+      entryId = entry.id;
+    });
+
+    it('the manager sees the forgotten shift among the open ones', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/branches/1/attendance/forgotten-entries')
+        .set(...auth('manager'))
+        .expect(200);
+
+      expect(body<AttendanceEntry[]>(res).find((e) => e.id === entryId)).toMatchObject({
+        staffEmail: LUIS,
+        clockOut: null,
+        correctedBy: null,
+      });
+    });
+
+    it('is not for counter staff', async () => {
+      await request(app.getHttpServer()).get('/branches/1/attendance/forgotten-entries').set(...auth('staff')).expect(403);
+      await request(app.getHttpServer())
+        .post(`/attendance/entries/${entryId}/close`)
+        .set(...auth('staff'))
+        .send({ clockOut: new Date(clockIn.getTime() + 8 * HOUR).toISOString() })
+        .expect(403);
+    });
+
+    it('until it is closed, the employee cannot clock in', async () => {
+      await request(app.getHttpServer())
+        .post('/branches/1/attendance/clock-in')
+        .set(...auth('staff'))
+        .send({ staffEmail: LUIS, staffName: 'Luis Ángel Ortega' })
+        .expect(400);
+    });
+
+    it('refuses a clock-out before the clock-in, in the future, too long or not a date', async () => {
+      for (const clockOut of [
+        new Date(clockIn.getTime() - HOUR).toISOString(),
+        new Date(Date.now() + HOUR).toISOString(),
+        new Date(clockIn.getTime() + 25 * HOUR).toISOString(),
+      ]) {
+        const res = await request(app.getHttpServer())
+          .post(`/attendance/entries/${entryId}/close`)
+          .set(...auth('manager'))
+          .send({ clockOut })
+          .expect(400);
+        expect(body<{ code: string }>(res).code).toBe('INVALID_CLOCK_OUT');
+      }
+      await request(app.getHttpServer())
+        .post(`/attendance/entries/${entryId}/close`)
+        .set(...auth('manager'))
+        .send({ clockOut: 'ayer a las 3' })
+        .expect(400);
+    });
+
+    it('closes it with the real time, marks who corrected it, and unblocks the employee', async () => {
+      const clockOut = new Date(clockIn.getTime() + 8 * HOUR).toISOString();
+      const res = await request(app.getHttpServer())
+        .post(`/attendance/entries/${entryId}/close`)
+        .set(...auth('manager'))
+        .send({ clockOut })
+        .expect(201);
+      expect(body<AttendanceEntry>(res)).toMatchObject({ id: entryId, clockOut, correctedBy: 'MANAGER' });
+
+      const open = await request(app.getHttpServer())
+        .get('/branches/1/attendance/forgotten-entries')
+        .set(...auth('manager'))
+        .expect(200);
+      expect(body<AttendanceEntry[]>(open).some((e) => e.id === entryId)).toBe(false);
+
+      await request(app.getHttpServer())
+        .post('/branches/1/attendance/clock-in')
+        .set(...auth('staff'))
+        .send({ staffEmail: LUIS, staffName: 'Luis Ángel Ortega' })
+        .expect(201);
+      // Abierto hoy = está trabajando: no sale como olvidado.
+      const working = await request(app.getHttpServer())
+        .get('/branches/1/attendance/forgotten-entries')
+        .set(...auth('manager'))
+        .expect(200);
+      expect(body<AttendanceEntry[]>(working).some((e) => e.staffEmail === LUIS)).toBe(false);
+      await request(app.getHttpServer())
+        .post('/attendance/clock-out')
+        .set(...auth('staff'))
+        .send({ staffEmail: LUIS })
+        .expect(201);
+    });
+
+    it('a second close is ENTRY_ALREADY_CLOSED, an unknown one ENTRY_NOT_FOUND', async () => {
+      const clockOut = new Date(clockIn.getTime() + 9 * HOUR).toISOString();
+      const again = await request(app.getHttpServer())
+        .post(`/attendance/entries/${entryId}/close`)
+        .set(...auth('manager'))
+        .send({ clockOut })
+        .expect(400);
+      expect(body<{ code: string }>(again).code).toBe('ENTRY_ALREADY_CLOSED');
+
+      const missing = await request(app.getHttpServer())
+        .post('/attendance/entries/no-existe/close')
+        .set(...auth('manager'))
+        .send({ clockOut })
+        .expect(404);
+      expect(body<{ code: string }>(missing).code).toBe('ENTRY_NOT_FOUND');
+    });
+  });
+
   describe('expenses', () => {
     it('logs a branch expense and lists it', async () => {
       const res = await request(app.getHttpServer())

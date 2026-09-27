@@ -242,7 +242,22 @@
     "staffLabel": "Empleado",
     "clockInLabel": "Entrada",
     "clockOutLabel": "Salida",
-    "onShift": "En turno"
+    "onShift": "En turno",
+    "forgottenTitle": "Turnos sin salida",
+    "forgottenHint": "Si alguien olvidó fichar su salida, captura la hora real a la que se fue. Hasta entonces no puede volver a entrar y ese día no se paga.",
+    "forgottenEmpty": "No hay turnos abiertos.",
+    "clockedInAt": "Entró {{date}}",
+    "fixClockOut": "Corregir salida",
+    "clockOutAt": "Salió a las",
+    "saveClockOut": "Guardar salida",
+    "cancel": "Cancelar",
+    "correctedBy": "Salida corregida por {{name}}",
+    "fixedNotice": "Salida de {{name}} guardada ({{date}}). Ese día ya cuenta para la nómina.",
+    "errorBeforeClockIn": "La salida tiene que ser después de la entrada.",
+    "errorInFuture": "La salida no puede ser en el futuro.",
+    "errorTooLong": "Un turno no puede durar más de 24 horas.",
+    "errorAlreadyClosed": "Ese turno ya se cerró; la lista se actualizó.",
+    "errorFix": "No pudimos guardar la salida. Intenta de nuevo."
   },
   "ticket": {
     "title": "Ticket",

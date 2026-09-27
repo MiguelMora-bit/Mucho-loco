@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import type { AttendanceEntry } from '@mucho-loco/types';
 import { AttendanceService } from './attendance.service';
-import { ClockInDto, ClockOutDto } from './dto/clock-in.dto';
+import { ClockInDto, ClockOutDto, CloseEntryDto } from './dto/clock-in.dto';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { IdTokenClaims } from '../auth/cognito';
 import { Roles } from '../auth/roles.decorator';
 
 /**
@@ -36,6 +38,23 @@ export class AttendanceController {
   @Post('attendance/clock-out')
   clockOut(@Body() dto: ClockOutDto): Promise<AttendanceEntry> {
     return this.attendance.clockOut(dto.staffEmail);
+  }
+
+  /** Spec 055: los turnos que alguien olvidó cerrar, para corregirlos. */
+  @Roles('manager')
+  @Get('branches/:branchId/attendance/forgotten-entries')
+  getForgottenEntries(@Param('branchId', ParseIntPipe) branchId: number): Promise<AttendanceEntry[]> {
+    return this.attendance.getForgottenEntries(branchId);
+  }
+
+  @Roles('manager')
+  @Post('attendance/entries/:entryId/close')
+  closeEntry(
+    @Param('entryId') entryId: string,
+    @Body() dto: CloseEntryDto,
+    @CurrentUser() user: IdTokenClaims,
+  ): Promise<AttendanceEntry> {
+    return this.attendance.closeEntry(entryId, new Date(dto.clockOut), user);
   }
 
   @Roles('manager')

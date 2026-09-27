@@ -1137,6 +1137,8 @@ export interface AttendanceEntry {
   staffName: string;
   clockIn: string;
   clockOut: string | null;
+  /** Spec 055: el gerente que capturó la salida porque el empleado la olvidó; `null` si la fichó él. */
+  correctedBy: string | null;
 }
 
 // --- owner-panel (Phase 1, read-only) ---

@@ -35,7 +35,7 @@ Segunda gran tanda: los dominios que `branch-app` y `owner-panel` tenían como m
 | `cash-register` | `branches/:id/cash-register/open-shift`, `history`, `cash-register/shifts/:id/{transactions,close}`, `cash-register/audit` | staff / manager / owner | `cashRegisterShift.*`, `cashAudit.*` |
 | `pickup-orders` | `branches/:id/pickup-orders`, `pickup-orders/:id/deliver` | staff | `pickupOrder.*` |
 | `reports` | `branches/:id/reports/sales`, `stats/branches` | manager / owner | `reports.getSalesReport`, `stats.getBranchStats` |
-| `attendance` | `attendance/open`, `branches/:id/attendance/{clock-in,today}`, `attendance/clock-out` | staff / manager | `attendance.*` |
+| `attendance` | `attendance/open`, `branches/:id/attendance/{clock-in,today,forgotten-entries}`, `attendance/clock-out`, `attendance/entries/:id/close` | staff / manager | `attendance.*` |
 | `payroll` | `payroll/{employees,periods,attendance,payslips}`, `payroll/periods/:id/run`, `payroll/periods/next` | owner | `payroll.*` |
 | `expenses` | `expenses`, `expenses/:id` (PUT/DELETE, spec 054) | owner | `expenses.*` |
 
@@ -61,6 +61,10 @@ Dos índices únicos **parciales**, escritos a mano en `20260912090000_branch_op
 - `attendance_entries_one_open_per_staff` — `WHERE "clockOut" IS NULL`.
 
 Sin ellos, dos requests simultáneos abrirían dos turnos. `getOpenShift` incluso maneja la carrera: si su insert pierde, relee y devuelve el turno que ganó.
+
+### Salidas olvidadas (2026-09-26, spec 055)
+
+Un turno sin salida bloqueaba al empleado (`ALREADY_CLOCKED_IN` al día siguiente) y ese día no se pagaba (la nómina cuenta turnos cerrados). `GET /branches/:id/attendance/forgotten-entries` (gerente) lista los abiertos **desde antes de hoy** (uno de hoy es alguien trabajando) y `POST /attendance/entries/:id/close { clockOut }` los cierra con la hora real: `clockOutProblem` (`attendance/clock-out-rule.ts`) exige después de la entrada, no futura y ≤ 24 h (400 `INVALID_CLOCK_OUT` con `reason`); cierre condicional a que siga abierto (`ENTRY_ALREADY_CLOSED`), 404 `ENTRY_NOT_FOUND`. Guarda `correctedBy`/`correctedAt` del token (migración `20260927023917_attendance_corrections`) y `AttendanceEntry.correctedBy` lo expone. e2e en `branch-ops.e2e-spec.ts` ("attendance corrections").
 
 ### Gastos: fecha real y correcciones (2026-09-26, spec 054)
 
