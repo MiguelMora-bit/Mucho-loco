@@ -9,6 +9,7 @@ import type {
   HeatmapLevel,
   MembershipInfo,
   MembershipTier,
+  NotificationPreferences,
   Order,
   PerformanceSummary,
   PersonalRecord,
@@ -21,6 +22,8 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { CognitoVerifierService } from '../src/auth/cognito-verifier.service';
 import type { IdTokenClaims } from '../src/auth/cognito';
+import { NotificationsService } from '../src/notifications/notifications.service';
+import { WhatsAppService } from '../src/notifications/whatsapp.provider';
 
 // "Bearer <email>" — el fake verifier de abajo usa el token tal cual como
 // email, así cada test controla exactamente qué usuario está "logueado"
@@ -507,6 +510,86 @@ describe('AppModule (e2e, Postgres real vía Prisma)', () => {
 
   // Spec 015: quien entra con Google/Facebook no trae teléfono y sin él no
   // hay avisos de WhatsApp. El socio lo completa (o lo cambia) en su perfil.
+  // Spec 053: los interruptores de Configuración se guardan y el backend los respeta.
+  describe('notification preferences', () => {
+    const email = 'prefs-e2e@mucholoco.mx';
+
+    afterAll(async () => {
+      jest.restoreAllMocks();
+      await prisma.notification.deleteMany({ where: { user: { email } } });
+      await prisma.orderItem.deleteMany({ where: { order: { user: { email } } } });
+      await prisma.order.deleteMany({ where: { user: { email } } });
+      await prisma.user.deleteMany({ where: { email } });
+    });
+
+    it('starts with every notice on', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/users/me/notification-preferences')
+        .set(...fakeAuthHeader(email))
+        .expect(200);
+
+      expect(body<NotificationPreferences>(res)).toEqual({ membership: true, orders: true, payments: true });
+    });
+
+    it('saves what the member turns off, and reads it back', async () => {
+      const saved = await request(app.getHttpServer())
+        .put('/users/me/notification-preferences')
+        .set(...fakeAuthHeader(email))
+        .send({ membership: true, orders: true, payments: false })
+        .expect(200);
+      expect(body<NotificationPreferences>(saved)).toEqual({ membership: true, orders: true, payments: false });
+
+      const read = await request(app.getHttpServer())
+        .get('/users/me/notification-preferences')
+        .set(...fakeAuthHeader(email))
+        .expect(200);
+      expect(body<NotificationPreferences>(read).payments).toBe(false);
+    });
+
+    it('rejects a partial body, a non-boolean and any other field', async () => {
+      for (const payload of [
+        { membership: true, orders: true },
+        { membership: true, orders: 'yes', payments: true },
+        { membership: true, orders: true, payments: true, phone: '+525500000000' },
+      ]) {
+        await request(app.getHttpServer())
+          .put('/users/me/notification-preferences')
+          .set(...fakeAuthHeader(email))
+          .send(payload)
+          .expect(400);
+      }
+    });
+
+    it('is only for a signed-in member', async () => {
+      await request(app.getHttpServer()).get('/users/me/notification-preferences').expect(401);
+    });
+
+    // De punta a punta contra la base: con pagos apagados, un pedido pagado
+    // para recoger manda "pedido listo" pero no "pago confirmado".
+    it('the WhatsApp notices skip what the member turned off', async () => {
+      const whatsapp = app.get(WhatsAppService);
+      jest.spyOn(whatsapp, 'configured', 'get').mockReturnValue(true);
+      const send = jest.spyOn(whatsapp, 'sendTemplate').mockResolvedValue({ messageId: 'wamid.e2e' });
+      const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+      await prisma.user.update({ where: { id: user.id }, data: { phone: '+525512345678' } });
+      const order = await prisma.order.create({
+        data: {
+          userId: user.id,
+          status: 'ready',
+          total: 389,
+          paymentMethod: 'stripe',
+          delivery: 'pickup',
+          branchId: 1,
+          items: { create: [{ name: 'Shaker Loco', flav: '700ml', img: '/assets/mucho-loco-logo.jpg', qty: 1 }] },
+        },
+      });
+
+      await app.get(NotificationsService).notifyPaymentConfirmed(order.id);
+
+      expect(send.mock.calls.map((call) => call[1])).toEqual(['pedido_listo']);
+    });
+  });
+
   describe('member phone', () => {
     const email = 'phone-e2e@mucholoco.mx';
 

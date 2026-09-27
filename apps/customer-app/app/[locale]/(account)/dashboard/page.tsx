@@ -35,12 +35,13 @@ export default async function DashboardPage(props: Props) {
     // comprueba que exista, así que esta es la última línea de defensa real.
     return redirect({ href: '/account', locale: params.locale });
   }
-  const [profile, membership, history, orders, feed] = await Promise.all([
+  const [profile, membership, history, orders, feed, notificationPreferences] = await Promise.all([
     userRepository.getProfile(email),
     userRepository.getMembership(email),
     userRepository.getVisitHistory(email),
     userRepository.getOrders(email),
     communityRepository.getFeed(email),
+    userRepository.getNotificationPreferences(email),
   ]);
 
   // Regreso desde Stripe tras contratar. No significa "pagado": la membresía
@@ -55,6 +56,7 @@ export default async function DashboardPage(props: Props) {
       history={history}
       orders={orders}
       feed={feed}
+      notificationPreferences={notificationPreferences}
     />
   );
 }

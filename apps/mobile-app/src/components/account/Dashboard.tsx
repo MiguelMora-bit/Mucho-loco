@@ -10,6 +10,7 @@ import { orderStatusLabel } from '@mucho-loco/customer-core/order-status';
 import { formatPrice } from '@mucho-loco/customer-core/pricing';
 import { Body, Button, Card, Chip, Display, ErrorState, Heading, Loading, Mono, Screen } from '@/components/ui';
 import { PhoneEditor } from '@/components/account/PhoneEditor';
+import { NotificationSettings } from '@/components/account/NotificationSettings';
 import { useLangStore, useT } from '@/lib/i18n';
 import { paymentRepository, userRepository } from '@/lib/repositories';
 import { useSessionStore } from '@/lib/stores/session.store';
@@ -313,6 +314,8 @@ export function Dashboard({ email }: { email: string }) {
           <Mono style={styles.orange}>{formatDuration(v.durationMinutes, lang)}</Mono>
         </View>
       ))}
+
+      <NotificationSettings email={email} />
 
       <Heading>{m.account.language}</Heading>
       <View style={styles.row}>

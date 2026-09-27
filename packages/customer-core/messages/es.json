@@ -377,9 +377,10 @@
       "languageLabel": "Idioma",
       "notificationsLabel": "Notificaciones",
       "notificationsSub": "Vía WhatsApp",
-      "notifMembership": "Avisos de vencimiento de membresía",
-      "notifOrderReady": "Pedido listo para recoger",
-      "notifPayment": "Confirmación de pago"
+      "notifMembership": "Membresía: por vencer y pago atrasado",
+      "notifOrderReady": "Pedidos: listo para recoger y en camino",
+      "notifPayment": "Confirmación de pago",
+      "notifSaveError": "No se guardó el cambio. Intenta de nuevo."
     },
     "qr": {
       "title": "MUESTRA ESTE QR",

@@ -259,6 +259,12 @@ model User {
   stripeCustomerId String? @unique
   createdAt  DateTime @default(now())
 
+  /// Qué avisos de WhatsApp quiere (spec 053), por categoría. Prendidos por
+  /// default: apagar es decisión del socio, desde Configuración.
+  notifyMembership Boolean @default(true)
+  notifyOrders     Boolean @default(true)
+  notifyPayments   Boolean @default(true)
+
   membership          Membership?
   membershipPurchases MembershipPurchase[]
   visits              Visit[]

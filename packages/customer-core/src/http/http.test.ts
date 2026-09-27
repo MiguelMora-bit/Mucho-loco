@@ -194,6 +194,20 @@ describe('UserHttpDatasource', () => {
     expect(JSON.parse(init.body as string)).toEqual({ phone: '+525512345678' });
   });
 
+  // Spec 053: las tres categorías, y nada más (el backend rechaza campos de más).
+  it('reads and replaces the notification preferences of the token owner', async () => {
+    const spy = stubFetch({ membership: true, orders: false, payments: true });
+    const users = new UserHttpDatasource(client().api);
+    await users.getNotificationPreferences('otro@mucholoco.mx');
+    await users.updateNotificationPreferences('otro@mucholoco.mx', { membership: true, orders: false, payments: true });
+
+    expect(call(spy, 0).url).toBe('http://api.test/users/me/notification-preferences');
+    const { url, init } = call(spy, 1);
+    expect(url).toBe('http://api.test/users/me/notification-preferences');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual({ membership: true, orders: false, payments: true });
+  });
+
   it('posts an order as productId+qty with no client-supplied total', async () => {
     const spy = stubFetch({});
     await new UserHttpDatasource(client().api).createOrder(

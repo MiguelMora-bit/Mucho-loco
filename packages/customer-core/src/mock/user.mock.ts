@@ -1,4 +1,5 @@
 import type {
+  NotificationPreferences,
   UserProfile,
   MembershipInfo,
   MembershipPlanChoice,
@@ -28,7 +29,11 @@ interface UserRecord {
   membership: MembershipInfo | null;
   history: Visit[];
   orders: Order[];
+  /** Spec 053. Ausente = nunca las ha tocado: todo prendido, como en el backend. */
+  notifications?: NotificationPreferences;
 }
+
+const ALL_NOTIFICATIONS_ON: NotificationPreferences = { membership: true, orders: true, payments: true };
 
 // Mismos días que membership-plans del backend.
 const PERIOD_DAYS: Record<PlanKey, number> = { visit: 1, weekly: 7, monthly: 30, quarterly: 90, annual: 365 };
@@ -232,6 +237,18 @@ export class UserMockDatasource implements IUserRepository {
     const record = getRecord(email);
     record.profile = { ...record.profile, phone };
     return record.profile;
+  }
+
+  async getNotificationPreferences(email: string): Promise<NotificationPreferences> {
+    await delay(120);
+    return getRecord(email).notifications ?? ALL_NOTIFICATIONS_ON;
+  }
+
+  async updateNotificationPreferences(email: string, preferences: NotificationPreferences): Promise<NotificationPreferences> {
+    await delay(150);
+    const record = getRecord(email);
+    record.notifications = { membership: preferences.membership, orders: preferences.orders, payments: preferences.payments };
+    return record.notifications;
   }
 
   async getMembership(email: string): Promise<MembershipInfo | null> {

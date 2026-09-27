@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Order, UserProfile, Visit } from '@mucho-loco/types';
+import type { NotificationPreferences, Order, UserProfile, Visit } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateOrderDto } from './dto/create-order.dto';
 import { Prisma } from '@prisma/client';
@@ -22,6 +22,7 @@ import {
   productNotFound,
 } from '../common/error-codes';
 import { shippingAddressFromJson } from './shipping-address';
+import { preferencesOf } from '../notifications/preferences';
 
 /**
  * Quién es el socio según su ID token. Estructuralmente es un subconjunto de
@@ -179,6 +180,27 @@ export class UsersService {
     const user = await this.findOrCreateByCognito(identity);
     await this.prisma.user.update({ where: { id: user.id }, data: { phone } });
     return this.getProfile(identity);
+  }
+
+  /** Qué avisos de WhatsApp quiere (spec 053). Un socio nuevo nace con todo prendido. */
+  async getNotificationPreferences(identity: CognitoIdentity): Promise<NotificationPreferences> {
+    return preferencesOf(await this.findOrCreateByCognito(identity));
+  }
+
+  async updateNotificationPreferences(
+    identity: CognitoIdentity,
+    preferences: NotificationPreferences,
+  ): Promise<NotificationPreferences> {
+    const user = await this.findOrCreateByCognito(identity);
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        notifyMembership: preferences.membership,
+        notifyOrders: preferences.orders,
+        notifyPayments: preferences.payments,
+      },
+    });
+    return preferencesOf(updated);
   }
 
   async getProfile(identity: CognitoIdentity): Promise<UserProfile> {

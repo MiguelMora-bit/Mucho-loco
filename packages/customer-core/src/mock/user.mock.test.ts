@@ -15,3 +15,17 @@ describe('UserMockDatasource.updatePhone', () => {
     expect((await users.getProfile(email)).phone).toBe('+525512345678');
   });
 });
+
+// Spec 053: los interruptores de avisos de Configuración.
+describe('UserMockDatasource notification preferences', () => {
+  const users = new UserMockDatasource();
+
+  it('starts with every notice on and keeps what the member turns off', async () => {
+    const email = `prefs.${Date.now()}@test.mx`;
+    expect(await users.getNotificationPreferences(email)).toEqual({ membership: true, orders: true, payments: true });
+
+    await users.updateNotificationPreferences(email, { membership: false, orders: true, payments: true });
+
+    expect(await users.getNotificationPreferences(email)).toEqual({ membership: false, orders: true, payments: true });
+  });
+});

@@ -355,6 +355,10 @@ Avisos por WhatsApp Business Platform (Cloud API de Meta) — se eligió sobre e
 - **Teléfonos normalizados a E.164 sin `+`.** El seed los tiene como `"+52 55 1234 5678"` y Meta responde 400 sin explicar por qué; `normalizePhone` los limpia y le antepone 52 a un número mexicano de 10 dígitos.
 - **El webhook responde 200 incluso a una firma inválida.** Meta desactiva un webhook que responde errores de forma sostenida, así que alguien mandando basura no debe poder tirarnos el canal. El evento simplemente se descarta. (Distinto de Stripe, que sí quiere un 400: ahí un 5xx provoca reintentos.)
 
+### Preferencias del socio (2026-09-26, spec 053)
+
+El socio apaga categorías en Configuración (web y móvil): **membresía** (`membership_expiring`, `membership_grace`), **pedidos** (`order_ready`, `order_shipped`) y **pagos** (`payment_confirmed`). Columnas `notifyMembership`/`notifyOrders`/`notifyPayments` en `users` (default `true`, migración `20260927015104_notification_preferences`); `GET`/`PUT /users/me/notification-preferences` (`NotificationPreferencesDto`, las tres obligatorias). `notifyOnce` recibe las preferencias (`preferencesOf(user)`) y omite lo apagado **sin registrarlo**: si el socio lo vuelve a prender dentro del ciclo, el siguiente intento sale. El mapeo aviso → categoría (`notifications/preferences.ts`) es un `Record` sobre el enum: un aviso nuevo sin categoría no compila. e2e en `app.e2e-spec.ts` ("notification preferences").
+
 ### Limitación conocida: el cron corre en cada instancia
 
 Es un cron **en proceso**. Con `desired_count = 1` en ECS (lo que hay hoy) está bien; con dos tareas, el barrido corre dos veces. El índice único evita el aviso duplicado, así que el daño está acotado, pero la solución correcta al escalar es sacarlo del proceso: EventBridge Scheduler pegándole a un endpoint, o una tarea programada de ECS.

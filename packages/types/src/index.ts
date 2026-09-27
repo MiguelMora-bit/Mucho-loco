@@ -96,6 +96,19 @@ export interface AuthUser {
   name: string;
 }
 
+/**
+ * Qué avisos de WhatsApp quiere recibir el socio (spec 053), por categoría.
+ * Todo prendido por default; el backend omite lo que esté apagado.
+ */
+export interface NotificationPreferences {
+  /** Membresía por vencer y periodo de gracia. */
+  membership: boolean;
+  /** Pedido listo para recoger y pedido en camino. */
+  orders: boolean;
+  /** Confirmación de pago. */
+  payments: boolean;
+}
+
 export interface UserProfile {
   email: string;
   name: string;
@@ -638,6 +651,7 @@ export interface Translations {
       notifMembership: string;
       notifOrderReady: string;
       notifPayment: string;
+      notifSaveError: string;
     };
     qr: {
       title: string;

@@ -377,9 +377,10 @@
       "languageLabel": "Language",
       "notificationsLabel": "Notifications",
       "notificationsSub": "Via WhatsApp",
-      "notifMembership": "Membership expiry reminders",
-      "notifOrderReady": "Order ready for pickup",
-      "notifPayment": "Payment confirmation"
+      "notifMembership": "Membership: expiring and overdue payment",
+      "notifOrderReady": "Orders: ready for pickup and on the way",
+      "notifPayment": "Payment confirmation",
+      "notifSaveError": "The change wasn't saved. Try again."
     },
     "qr": {
       "title": "SHOW THIS QR",

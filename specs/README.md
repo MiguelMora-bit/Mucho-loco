@@ -25,10 +25,11 @@ Varios specs tocan más de un app (casi todos también el backend); cada uno apa
 | [024-member-auth](024-member-auth/spec.md) — Registro e inicio de sesión del socio | retroactivo | 6/6 |  |
 | [025-social-login](025-social-login/spec.md) — Inicio de sesión con Google y Facebook | retroactivo | 3/4 | 1 |
 | [026-membership-billing](026-membership-billing/spec.md) — Contratar y pagar la membresía | retroactivo | 5/6 | 1 |
-| [027-member-dashboard](027-member-dashboard/spec.md) — Panel del socio | retroactivo | 4/5 | 1 |
+| [027-member-dashboard](027-member-dashboard/spec.md) — Panel del socio | retroactivo | 5/5 |  |
 | [028-community](028-community/spec.md) — Comunidad entre socios | retroactivo | 3/3 |  |
 | [029-landing](029-landing/spec.md) — Landing: sucursales, planes, avisos y redes | retroactivo | 5/6 | 1 |
 | [030-i18n](030-i18n/spec.md) — Idiomas (español e inglés) y fechas | retroactivo | 3/3 |  |
+| [053-notification-preferences](053-notification-preferences/spec.md) — Preferencias de avisos de WhatsApp | nuevo | 8/8 |  |
 
 ## Sucursal — branch-app
 
@@ -83,7 +84,6 @@ Cada tarea abierta de los specs retroactivos es algo que hoy no está verificado
 - **022** Test unitario del carrito de la web (`cart.store.ts`): hoy solo lo cubre el e2e de compra.
 - **025** Login social de punta a punta con Google y Facebook reales (requiere crear las apps OAuth).
 - **026** Renovación natural al fin de periodo contra Stripe real (test clocks).
-- **027** Guardar las preferencias de avisos de Configuración y respetarlas en el backend (hoy son solo visuales).
 - **029** FR-003 · test automatizado del mapa con y sin llave de Google Maps (hoy solo revisión visual).
 - **052** (hallazgo) El backend no liga al gerente con su sucursal: cualquier gerente puede cerrar (y cualquier staff leer) un turno de otra sucursal por su id. La sucursal del staff vive en `staffDirectory.ts` de branch-app.
 - **038** Pantalla para que el gerente corrija una salida olvidada.

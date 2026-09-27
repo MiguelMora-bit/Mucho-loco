@@ -287,6 +287,16 @@ test('el socio compra, entra, ve su QR, usa la comunidad y cambia de idioma', as
     await expect(page.getByRole('button', { name: 'CÓMO LLEGAR' }).first()).toBeVisible();
   });
 
+  await test.step('los avisos de WhatsApp se apagan y prenden desde Cuenta (spec 053)', async () => {
+    await tab(page, /Cuenta/).click();
+    const payments = page.getByRole('switch', { name: 'Confirmación de pago' });
+    await expect(payments).toBeChecked();
+    await payments.click();
+    await expect(payments).not.toBeChecked();
+    await payments.click();
+    await expect(payments).toBeChecked();
+  });
+
   await test.step('cambiar a inglés vuelve a pintar con en.json', async () => {
     await tab(page, /Cuenta/).click();
     await page.getByRole('button', { name: 'ENGLISH' }).click();

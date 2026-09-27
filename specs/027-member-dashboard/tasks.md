@@ -11,4 +11,4 @@ Spec retroactivo: cada tarea es un requisito ya implementado y lo que lo verific
 - [X] FR-002 · walkthrough del móvil ("el QR de acceso es el código fijo del socio").
 - [X] FR-004 · `apps/customer-app/lib/repositories/user.repository.test.ts`; `tests/e2e/shop-checkout.spec.ts`.
 - [X] FR-005 · walkthrough del móvil ("cambiar a inglés").
-- [ ] Guardar las preferencias de avisos de Configuración y respetarlas en el backend (hoy son solo visuales).
+- [X] Guardar las preferencias de avisos de Configuración y respetarlas en el backend — ✅ spec [053](../053-notification-preferences/spec.md).

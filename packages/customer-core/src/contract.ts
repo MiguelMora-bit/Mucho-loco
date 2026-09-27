@@ -25,6 +25,7 @@ import type {
   MembershipTier,
   MemberCharge,
   NewOrderLine,
+  NotificationPreferences,
   OfflinePaymentMethod,
   Order,
   OrderDelivery,
@@ -192,6 +193,10 @@ export interface IUserRepository {
    * devuelve el perfil (spec 015). Sin teléfono no hay avisos de WhatsApp.
    */
   updatePhone(email: string, phone: string): Promise<UserProfile>;
+  /** Qué avisos de WhatsApp quiere el socio (spec 053). Todo prendido de inicio. */
+  getNotificationPreferences(email: string): Promise<NotificationPreferences>;
+  /** Reemplaza las tres categorías y devuelve lo guardado. */
+  updateNotificationPreferences(email: string, preferences: NotificationPreferences): Promise<NotificationPreferences>;
   /**
    * `null` = nunca ha contratado. Un socio nuevo nace sin membresía: existe
    * desde su primer cobro confirmado (en línea o en mostrador).

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Put } from '@nestjs/common';
 import type {
   MembershipInfo,
+  NotificationPreferences,
   Order,
   UserProfile,
   Visit,
@@ -11,6 +12,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import type { IdTokenClaims } from '../auth/cognito';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdatePhoneDto } from './dto/update-phone.dto';
+import { NotificationPreferencesDto } from './dto/notification-preferences.dto';
 
 /** Todo detrás de CognitoAuthGuard (default global, ver main.ts) — "me"
  *  siempre es quien mandó el ID token, nunca un email que el cliente pueda
@@ -37,6 +39,24 @@ export class UsersController {
     @Body() dto: UpdatePhoneDto,
   ): Promise<UserProfile> {
     return this.users.updatePhone(user, dto.phone);
+  }
+
+  /** Qué avisos de WhatsApp quiere el socio (spec 053). */
+  @Get('notification-preferences')
+  getNotificationPreferences(@CurrentUser() user: IdTokenClaims): Promise<NotificationPreferences> {
+    return this.users.getNotificationPreferences(user);
+  }
+
+  @Put('notification-preferences')
+  updateNotificationPreferences(
+    @CurrentUser() user: IdTokenClaims,
+    @Body() dto: NotificationPreferencesDto,
+  ): Promise<NotificationPreferences> {
+    return this.users.updateNotificationPreferences(user, {
+      membership: dto.membership,
+      orders: dto.orders,
+      payments: dto.payments,
+    });
   }
 
   @Get('membership')

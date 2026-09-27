@@ -139,6 +139,10 @@ Spec 007. `SignupForm` pide teléfono (obligatorio, con la nota de que ahí lleg
 
 **Completar o cambiar el teléfono (spec 015)**: quien entra con Google/Facebook no da teléfono y sin él no hay avisos de WhatsApp. El inicio del panel muestra "Agrega tu teléfono" con el campo (`components/dashboard/PhoneForm.tsx`) cuando falta, y el perfil ofrece "Cambiar". `PUT /api/profile/phone` valida con `toE164` (400 `INVALID_PHONE`) y llama `userRepository.updatePhone`; `DashboardClient` reemplaza el perfil con el que devuelve. De paso, el perfil ya no pinta un renglón de cumpleaños vacío. Tests: `app/api/profile/phone/route.test.ts` e integración (401, no 404). **Probado en navegador (2026-09-26, Cognito vivo)**: en mock y en HTTP (el teléfono llegó a Postgres).
 
+## Preferencias de avisos (2026-09-26, spec 053)
+
+Los tres interruptores de Configuración (membresía, pedidos, pagos) ya no son visuales: la página del panel carga `userRepository.getNotificationPreferences` y `SettingsPane` guarda al tocar vía `PUT /api/profile/notifications` (valida sesión y que las tres sean booleanas → 400 `INVALID_PREFERENCES`; solo esas viajan). Si falla, el interruptor vuelve a su lugar y aparece `notifSaveError`. El backend omite los avisos de WhatsApp de lo apagado. Test: `app/api/profile/notifications/route.test.ts`. **Sin verificar en navegador** (el panel necesita sesión de Cognito); el móvil, sí (walkthrough).
+
 ## Administrar suscripción — portal de Stripe (2026-09-24)
 
 Spec en `specs/005-stripe-billing-portal/`. En el inicio del panel, junto a "Se renueva sola el …", el botón "Administrar suscripción" → `POST /api/membership/portal` → portal hospedado de Stripe (cancelar/reactivar la renovación, cambiar tarjeta) y regreso al panel, que el Server Component relee. Con la renovación cancelada (`hasSubscription && !autoRenews`) el panel lo dice con banner y "Reactivar renovación" (también en el portal): NO manda a contratar un plan nuevo, porque la suscripción sigue viva y el backend respondería `ALREADY_SUBSCRIBED`. `purchaseBlock` de customer-core usa `hasSubscription` por lo mismo. En mock, cada visita al "portal" alterna la renovación.

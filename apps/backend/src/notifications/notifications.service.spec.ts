@@ -11,12 +11,15 @@ const daysFromNow = (days: number): Date => {
   return d;
 };
 
+/** Las tres categorías de avisos prendidas, como nace todo socio (spec 053). */
+const ALL_ON = { notifyMembership: true, notifyOrders: true, notifyPayments: true };
+
 const member = (overrides: Record<string, unknown> = {}) => ({
   userId: 'u1',
   status: 'active',
   expiresAt: daysFromNow(3),
   graceEndsAt: null,
-  user: { name: 'Diego Ramírez', phone: '+52 55 1234 5678' },
+  user: { name: 'Diego Ramírez', phone: '+52 55 1234 5678', ...ALL_ON },
   ...overrides,
 });
 
@@ -65,6 +68,7 @@ describe('NotificationsService', () => {
     phone: '+52 55 1234 5678',
     lang: 'es',
     params: ['Diego', '3'],
+    preferences: { membership: true, orders: true, payments: true },
   };
 
   describe('notifyOnce', () => {
@@ -122,6 +126,16 @@ describe('NotificationsService', () => {
     it('skips a member with no phone number', async () => {
       expect(await service.notifyOnce({ ...base, phone: '' })).toBe(false);
       expect(whatsapp.sendTemplate).not.toHaveBeenCalled();
+    });
+
+    // Spec 053: lo que el socio apagó en Configuración no sale, y tampoco se
+    // registra — si lo vuelve a prender, el siguiente intento sí manda.
+    it('skips a category the member turned off, without recording it', async () => {
+      const sent = await service.notifyOnce({ ...base, preferences: { membership: false, orders: true, payments: true } });
+
+      expect(sent).toBe(false);
+      expect(whatsapp.sendTemplate).not.toHaveBeenCalled();
+      expect(prisma.notification.create).not.toHaveBeenCalled();
     });
 
     // El resto del backend tiene que funcionar sin credenciales de Meta.
@@ -221,7 +235,7 @@ describe('NotificationsService', () => {
       userId: 'u1',
       total: 2580,
       delivery: 'pickup',
-      user: { name: 'Diego Ramírez', phone: '+52 55 1234 5678' },
+      user: { name: 'Diego Ramírez', phone: '+52 55 1234 5678', ...ALL_ON },
     };
 
     it('confirms the payment and tells the member the order is ready to collect', async () => {
@@ -243,6 +257,15 @@ describe('NotificationsService', () => {
       expect(templates).toEqual(['pago_confirmado']);
     });
 
+    it('keeps the pickup notice when only payment confirmations are off', async () => {
+      prisma.order.findUnique.mockResolvedValue({ ...order, user: { ...order.user, notifyPayments: false } });
+
+      await service.notifyPaymentConfirmed('order-1');
+
+      const templates = whatsapp.sendTemplate.mock.calls.map((c) => c[1] as string);
+      expect(templates).toEqual(['pedido_listo']);
+    });
+
     it('does nothing for an order that does not exist', async () => {
       prisma.order.findUnique.mockResolvedValue(null);
 
@@ -258,7 +281,7 @@ describe('NotificationsService', () => {
       id: 'order-1234-abcd',
       userId: 'u1',
       trackingNumber: 'DHL-998877',
-      user: { name: 'Diego Ramírez', phone: '+52 55 1234 5678' },
+      user: { name: 'Diego Ramírez', phone: '+52 55 1234 5678', ...ALL_ON },
     };
 
     it('tells the member the order is on its way, with the tracking number, once per order', async () => {

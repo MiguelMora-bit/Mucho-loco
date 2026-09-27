@@ -7,7 +7,7 @@ import { useT } from '@/lib/hooks/useT';
 import { useAsyncSubmit } from '@/lib/hooks/useAsyncSubmit';
 import { postJson, putJson } from '@/lib/api-client';
 import { QrModal, OrderDetailModal, Header, HomePane, AccessPane, OrdersPane, CommunityPane, ProfilePane, SettingsPane } from './dashboard';
-import type { UserProfile, MembershipInfo, Visit, Order, CommunityPost, Lang } from '@mucho-loco/types';
+import type { UserProfile, MembershipInfo, Visit, Order, CommunityPost, Lang, NotificationPreferences } from '@mucho-loco/types';
 
 interface DashboardClientProps {
   profile: UserProfile;
@@ -18,13 +18,18 @@ interface DashboardClientProps {
   history: Visit[];
   orders: Order[];
   feed: CommunityPost[];
+  /** Los interruptores de avisos de Configuración (spec 053). */
+  notificationPreferences: NotificationPreferences;
 }
 
-export default function DashboardClient({ profile: initialProfile, membership, justPaid, history, orders, feed }: DashboardClientProps) {
+export default function DashboardClient({ profile: initialProfile, membership, justPaid, history, orders, feed, notificationPreferences }: DashboardClientProps) {
   // El teléfono se edita aquí mismo (spec 015): el perfil guardado reemplaza al de la página.
   const [profile, setProfile] = useState(initialProfile);
   async function handleSavePhone(phone: string) {
     setProfile(await putJson<UserProfile>('/api/profile/phone', { phone }));
+  }
+  function handleSavePreferences(preferences: NotificationPreferences) {
+    return putJson<NotificationPreferences>('/api/profile/notifications', preferences);
   }
   const t = useT();
   const lang = useLocale() as Lang;
@@ -136,7 +141,12 @@ export default function DashboardClient({ profile: initialProfile, membership, j
         onAddComment={handleAddComment}
       />
       <ProfilePane t={t} lang={lang} active={isActive('profile')} profile={profile} membership={membership} planHref={planHref} onSavePhone={handleSavePhone} />
-      <SettingsPane t={t} active={isActive('settings')} />
+      <SettingsPane
+        t={t}
+        active={isActive('settings')}
+        preferences={notificationPreferences}
+        onSavePreferences={handleSavePreferences}
+      />
     </>
   );
 }

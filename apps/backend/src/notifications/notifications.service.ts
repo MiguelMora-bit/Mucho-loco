@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type { NotificationKind } from '@prisma/client';
+import type { NotificationPreferences } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsAppService } from './whatsapp.provider';
+import { allows, preferencesOf } from './preferences';
 
 /**
  * Cuántos días antes del vencimiento se avisa. Tres avisos y no uno solo: la
@@ -44,6 +46,10 @@ export class NotificationsService {
    *
    * Nunca tira: que un aviso falle no puede tumbar el cobro ni la entrega que
    * lo disparó. El fallo queda registrado con `status: 'failed'`.
+   *
+   * Si el socio apagó esa categoría en Configuración (spec 053), no se manda y
+   * tampoco se registra: si la vuelve a prender dentro del mismo ciclo, el
+   * siguiente intento sí sale.
    */
   async notifyOnce(input: {
     userId: string;
@@ -52,8 +58,14 @@ export class NotificationsService {
     phone: string;
     lang: string;
     params: string[];
+    preferences: NotificationPreferences;
   }): Promise<boolean> {
-    const { userId, kind, dedupeKey, phone, lang, params } = input;
+    const { userId, kind, dedupeKey, phone, lang, params, preferences } = input;
+
+    if (!allows(preferences, kind)) {
+      this.logger.log(`Socio ${userId} apagó los avisos de ${kind} — se omite`);
+      return false;
+    }
 
     const already = await this.prisma.notification.findUnique({
       where: { userId_kind_dedupeKey: { userId, kind, dedupeKey } },
@@ -101,6 +113,7 @@ export class NotificationsService {
       kind: 'payment_confirmed',
       dedupeKey: order.id,
       phone: order.user.phone,
+      preferences: preferencesOf(order.user),
       lang: 'es',
       params: [order.user.name, `$${order.total.toLocaleString('es-MX')}`],
     });
@@ -113,6 +126,7 @@ export class NotificationsService {
         kind: 'order_ready',
         dedupeKey: order.id,
         phone: order.user.phone,
+      preferences: preferencesOf(order.user),
         lang: 'es',
         params: [order.user.name, order.id.slice(0, 8).toUpperCase()],
       });
@@ -135,6 +149,7 @@ export class NotificationsService {
       kind: 'order_shipped',
       dedupeKey: order.id,
       phone: order.user.phone,
+      preferences: preferencesOf(order.user),
       lang: 'es',
       params: [order.user.name, order.id.slice(0, 8).toUpperCase(), order.trackingNumber ?? NO_TRACKING],
     });
@@ -176,6 +191,7 @@ export class NotificationsService {
           kind: 'membership_grace',
           dedupeKey: isoDay(membership.graceEndsAt),
           phone: membership.user.phone,
+          preferences: preferencesOf(membership.user),
           lang: 'es',
           params: [membership.user.name, isoDay(membership.graceEndsAt)],
         });
@@ -196,6 +212,7 @@ export class NotificationsService {
           // siguiente vuelve a avisar.
           dedupeKey: isoDay(membership.expiresAt),
           phone: membership.user.phone,
+          preferences: preferencesOf(membership.user),
           lang: 'es',
           params: [membership.user.name, String(daysLeft)],
         });

@@ -7,6 +7,7 @@ import type {
   MembershipPlanChoice,
   NewOrderLine,
   NewWorkout,
+  NotificationPreferences,
   OfflinePaymentMethod,
   Order,
   OrderDelivery,
@@ -61,6 +62,15 @@ export class UserHttpDatasource implements IUserRepository {
 
   updatePhone(_email: string, phone: string): Promise<UserProfile> {
     return this.api.put<UserProfile>('/users/me/phone', { phone }, ACCOUNT);
+  }
+
+  getNotificationPreferences(_email: string): Promise<NotificationPreferences> {
+    return this.api.get<NotificationPreferences>('/users/me/notification-preferences', ACCOUNT);
+  }
+
+  updateNotificationPreferences(_email: string, preferences: NotificationPreferences): Promise<NotificationPreferences> {
+    const { membership, orders, payments } = preferences;
+    return this.api.put<NotificationPreferences>('/users/me/notification-preferences', { membership, orders, payments }, ACCOUNT);
   }
 
   /** 404 = todavía no contrata (un socio nuevo nace sin membresía). */

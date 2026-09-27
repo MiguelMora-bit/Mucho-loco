@@ -81,5 +81,5 @@ Datos personales, membresía y cambio de idioma.
 
 ## Fuera de alcance / pendiente conocido
 
-- Los interruptores de avisos de Configuración (web) son solo visuales: no se guardan ni cambian qué avisos de WhatsApp manda el backend.
+- ~~Los interruptores de avisos de Configuración son solo visuales~~ ✅ spec 053 (2026-09-26): se guardan (web y móvil) y el backend omite lo apagado.
 - El cumpleaños ya no se captura en el registro (spec 007); el perfil lo oculta si falta.
