@@ -68,5 +68,5 @@ Identidad del token, campos del DTO y errores con código.
 
 ## Fuera de alcance / pendiente conocido
 
-- Documentación OpenAPI con `@nestjs/swagger`: se decidió (CLAUDE.md raíz) pero no está instalada ni montada.
+- ~~Documentación OpenAPI con `@nestjs/swagger`~~ ✅ spec 056 (2026-09-26).
 - Hacer `http` el default cuando el backend esté desplegado.

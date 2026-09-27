@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { apiDocsEnabled, setupApiDocs } from './api-docs';
 
 async function bootstrap() {
   // rawBody: conserva los bytes exactos del request. Los necesita la
@@ -35,6 +36,10 @@ async function bootstrap() {
       'http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:8081'
     ).split(','),
   });
+
+  // Swagger UI en /docs y el documento en /docs-json (spec 056). Apagado en
+  // producción salvo API_DOCS=true — ver api-docs.ts.
+  if (apiDocsEnabled()) setupApiDocs(app);
 
   await app.listen(process.env.PORT ?? 3000);
 }

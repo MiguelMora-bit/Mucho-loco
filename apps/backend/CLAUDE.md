@@ -114,6 +114,10 @@ Antes `workouts` era una tabla sembrada, igual para todos y con texto armado (`v
 
 **Resumen y récords (spec 018)**: `GET /performance/summary` devuelve `PerformanceSummary` en números (entrenamientos y volumen del mes vs el anterior, récords del mes, y la racha de ASISTENCIA — la misma del panel —); `GET /performance/records`, los últimos 3 récords con `previousKg`. `summarize`/`latestRecords` en `workout-progress.ts` (gemelas en customer-core). El texto y el color de cada tarjeta los arma el cliente (`performanceCards`). Se borraron `performance_stats`, `personal_records` (migración `20260925214935_drop_seeded_performance`) y el normalizador de colores del spec 010, que quedó sin uso. **Rendimiento ya no tiene nada sembrado.**
 
+## Documentación OpenAPI (2026-09-26, spec 056)
+
+`@nestjs/swagger` (decidido en el CLAUDE.md raíz, montado por fin): Swagger UI en **`/docs`** y el documento en **`/docs-json`**, generados de los controllers y DTOs. `src/api-docs.ts` lo arma: el Bearer de Cognito (`cognito`) es el requisito global y las rutas `@Public()` salen sin candado — el decorador deja `x-public` y `markPublicOperations` lo convierte en `security: []`, una sola fuente. Etiquetas por controller (`autoTagControllers`). El plugin del CLI (`nest-cli.json`, `introspectComments`) infiere los cuerpos de los DTOs con sus validadores y usa los comentarios JSDoc como descripciones; **solo corre con `nest build`/`nest start`**, así que en Jest el documento sale sin esos esquemas. Las respuestas son interfaces de `@mucho-loco/types` y salen sin esquema. Se monta en Express, fuera del guard (no pide token), y **está apagado en producción** salvo `API_DOCS=true` (`apiDocsEnabled`). `@scarf/scarf` (telemetría de `swagger-ui-dist` al instalar) tiene el build deshabilitado en `pnpm-workspace.yaml`. Tests: `src/api-docs.spec.ts` y `test/api-docs.e2e-spec.ts`.
+
 ## Pagos con Stripe (2026-09-12)
 
 Cobro con pasarela para los pedidos de la tienda. Módulo `payments`, dos endpoints:

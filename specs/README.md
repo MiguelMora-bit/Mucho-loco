@@ -76,8 +76,9 @@ Varios specs tocan más de un app (casi todos también el backend); cada uno apa
 | [045-charges-ledger](045-charges-ledger/spec.md) — Registro de cobros | retroactivo | 4/4 |  |
 | [046-cfdi-core](046-cfdi-core/spec.md) — Facturación CFDI 4.0 (núcleo del backend) | retroactivo | 4/5 | 1 |
 | [047-whatsapp-notices](047-whatsapp-notices/spec.md) — Avisos por WhatsApp | retroactivo | 3/4 | 1 |
-| [048-api-platform](048-api-platform/spec.md) — Plataforma de la API y contrato compartido | retroactivo | 4/5 | 1 |
+| [048-api-platform](048-api-platform/spec.md) — Plataforma de la API y contrato compartido | retroactivo | 5/5 |  |
 | [049-deploy-infra](049-deploy-infra/spec.md) — Infraestructura y despliegue | retroactivo | 5/6 | 1 |
+| [056-openapi-docs](056-openapi-docs/spec.md) — Documentación OpenAPI del backend | nuevo | 4/4 |  |
 
 ## Huecos abiertos
 
@@ -90,5 +91,4 @@ Cada tarea abierta de los specs retroactivos es algo que hoy no está verificado
 - **052** (hallazgo) El backend no liga al gerente con su sucursal: cualquier gerente puede cerrar (y cualquier staff leer) un turno de otra sucursal por su id. La sucursal del staff vive en `staffDirectory.ts` de branch-app.
 - **046** Probar contra el sandbox de Facturapi (requiere la cuenta).
 - **047** Probar contra la Cloud API de Meta con plantillas aprobadas.
-- **048** Instalar y montar `@nestjs/swagger` (documentación OpenAPI decidida en el CLAUDE.md raíz).
 - **049** Reducir la imagen del backend (requiere Docker).
