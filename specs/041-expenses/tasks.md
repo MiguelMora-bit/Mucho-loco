@@ -10,4 +10,4 @@ Spec retroactivo: cada tarea es un requisito ya implementado y lo que lo verific
 - [X] FR-001 · `apps/backend/src/expenses/expenses.service.spec.ts`; `branch-ops.e2e-spec.ts` ("expenses").
 - [X] FR-002 · `apps/owner-panel/src/lib/dates.test.ts`; `expenses.repository.test.ts`.
 - [X] FR-003 · `hq.http.test.ts` (`branchId: null` explícito) y rol `owner` en el controlador.
-- [ ] Editar o borrar un gasto capturado por error.
+- [X] Editar o borrar un gasto capturado por error — ✅ spec [054](../054-expense-corrections/spec.md) (y de paso: fecha capturada en días de CDMX, monto entero, orden por fecha).

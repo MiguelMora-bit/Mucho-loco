@@ -75,7 +75,19 @@
     "saving": "Guardando…",
     "errorGeneric": "No pudimos registrar el gasto",
     "historyTitle": "Historial de gastos",
-    "loadError": "No pudimos cargar los gastos"
+    "loadError": "No pudimos cargar los gastos",
+    "editExpense": "Editar gasto",
+    "saveChanges": "Guardar cambios",
+    "cancelEdit": "Cancelar",
+    "edit": "Editar",
+    "delete": "Borrar",
+    "confirmDelete": "¿Borrar este gasto?",
+    "confirmYes": "Sí, borrar",
+    "confirmNo": "No",
+    "errorNotFound": "Ese gasto ya no existe; la lista se actualizó.",
+    "errorSave": "No pudimos guardar el gasto. Intenta de nuevo.",
+    "errorDelete": "No pudimos borrar el gasto. Intenta de nuevo.",
+    "wholePesos": "Pesos enteros, sin centavos."
   },
   "payroll": {
     "title": "Nómina",

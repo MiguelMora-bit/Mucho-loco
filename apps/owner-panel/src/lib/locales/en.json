@@ -75,7 +75,19 @@
     "saving": "Saving…",
     "errorGeneric": "We couldn't log the expense",
     "historyTitle": "Expense history",
-    "loadError": "We couldn't load the expenses"
+    "loadError": "We couldn't load the expenses",
+    "editExpense": "Edit expense",
+    "saveChanges": "Save changes",
+    "cancelEdit": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete this expense?",
+    "confirmYes": "Yes, delete",
+    "confirmNo": "No",
+    "errorNotFound": "That expense no longer exists; the list was refreshed.",
+    "errorSave": "We couldn't save the expense. Try again.",
+    "errorDelete": "We couldn't delete the expense. Try again.",
+    "wholePesos": "Whole pesos, no cents."
   },
   "payroll": {
     "title": "Payroll",

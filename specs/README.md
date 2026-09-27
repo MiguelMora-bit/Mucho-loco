@@ -58,13 +58,14 @@ Varios specs tocan más de un app (casi todos también el backend); cada uno apa
 | [014-branch-traffic](014-branch-traffic/spec.md) — Afluencia por sucursal en el panel del dueño | nuevo | 5/5 |  |
 | [039-owner-dashboard](039-owner-dashboard/spec.md) — Resumen de la cadena e inventario global | retroactivo | 3/3 |  |
 | [040-inventory-transfers](040-inventory-transfers/spec.md) — Transferencias de inventario entre sucursales | retroactivo | 3/3 |  |
-| [041-expenses](041-expenses/spec.md) — Gastos | retroactivo | 3/4 | 1 |
+| [041-expenses](041-expenses/spec.md) — Gastos | retroactivo | 4/4 |  |
 | [042-payroll](042-payroll/spec.md) — Nómina | retroactivo | 5/5 |  |
 | [043-executive-reports](043-executive-reports/spec.md) — Reportes ejecutivos | retroactivo | 1/1 |  |
 | [044-home-shipments](044-home-shipments/spec.md) — Envíos a domicilio desde la bodega | retroactivo | 3/3 |  |
 | [050-payroll-next-period](050-payroll-next-period/spec.md) — La nómina nunca se queda sin quincena | nuevo | 5/5 |  |
 | [051-payroll-cdmx-days](051-payroll-cdmx-days/spec.md) — Días trabajados en el calendario de CDMX | nuevo | 4/4 |  |
 | [052-owner-cash-audit](052-owner-cash-audit/spec.md) — Auditoría de cortes de caja desde HQ | nuevo | 7/7 |  |
+| [054-expense-corrections](054-expense-corrections/spec.md) — Corregir gastos | nuevo | 6/6 |  |
 
 ## Plataforma — backend, avisos, infraestructura
 
@@ -87,7 +88,6 @@ Cada tarea abierta de los specs retroactivos es algo que hoy no está verificado
 - **029** FR-003 · test automatizado del mapa con y sin llave de Google Maps (hoy solo revisión visual).
 - **052** (hallazgo) El backend no liga al gerente con su sucursal: cualquier gerente puede cerrar (y cualquier staff leer) un turno de otra sucursal por su id. La sucursal del staff vive en `staffDirectory.ts` de branch-app.
 - **038** Pantalla para que el gerente corrija una salida olvidada.
-- **041** Editar o borrar un gasto capturado por error.
 - **046** Probar contra el sandbox de Facturapi (requiere la cuenta).
 - **047** Probar contra la Cloud API de Meta con plantillas aprobadas.
 - **048** Instalar y montar `@nestjs/swagger` (documentación OpenAPI decidida en el CLAUDE.md raíz).

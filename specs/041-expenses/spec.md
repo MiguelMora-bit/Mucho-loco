@@ -55,5 +55,5 @@ El dueño captura concepto, monto, categoría, fecha y sucursal (o corporativo).
 
 ## Fuera de alcance / pendiente conocido
 
-- Editar o borrar un gasto.
+- ~~Editar o borrar un gasto~~ ✅ spec 054 (2026-09-26).
 - Adjuntar comprobante.

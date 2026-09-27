@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { StatsHttpDatasource } from './stats.http';
 import { InventoryTransferHttpDatasource } from './inventoryTransfer.http';
 import { ExpensesHttpDatasource } from './expenses.http';
+import { ExpenseNotFoundError } from '../../repositories/expenses.errors';
 import { PayrollHttpDatasource } from './payroll.http';
 import { ShipmentsHttpDatasource } from './shipments.http';
 import { ShipmentStateError } from '../../repositories/shipments.errors';
@@ -162,6 +163,28 @@ describe('ExpensesHttpDatasource', () => {
     });
 
     expect(call(spy).body).toHaveProperty('branchId', null);
+  });
+
+  // Spec 054: corregir y borrar, con la fecha solo si se eligió.
+  it('puts a correction and deletes, translating EXPENSE_NOT_FOUND', async () => {
+    const spy = stubFetch(200, {});
+    const ds = new ExpensesHttpDatasource();
+    await ds.update('exp-1', { branchId: 1, category: 'rent', description: 'Renta', amount: 1200, date: '2026-09-03' });
+    expect(new URL(call(spy).url).pathname).toBe('/expenses/exp-1');
+    expect(call(spy).init.method).toBe('PUT');
+    expect(call(spy).body).toEqual({ branchId: 1, category: 'rent', description: 'Renta', amount: 1200, date: '2026-09-03' });
+
+    const noDate = stubFetch(200, {});
+    await ds.update('exp-1', { branchId: 1, category: 'rent', description: 'Renta', amount: 1200 });
+    expect(call(noDate).body).not.toHaveProperty('date');
+
+    const del = stubFetch(204, '');
+    await ds.remove('exp-1');
+    expect(call(del).init.method).toBe('DELETE');
+
+    stubFetch(404, { code: 'EXPENSE_NOT_FOUND', expenseId: 'exp-1' });
+    const missing = await ds.remove('exp-1').catch((e: unknown) => e);
+    expect(missing).toBeInstanceOf(ExpenseNotFoundError);
   });
 });
 

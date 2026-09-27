@@ -24,6 +24,8 @@ export type ApiErrorCode =
   | 'PERIOD_NOT_FOUND'
   | 'PERIOD_ALREADY_CLOSED'
   | 'PERIOD_ALREADY_OPEN'
+  | 'EXPENSE_NOT_FOUND'
+  | 'INVALID_EXPENSE_DATE'
   | 'ORDER_ALREADY_DELIVERED'
   | 'NOT_A_PICKUP_ORDER'
   | 'CASH_REQUIRES_PICKUP'
@@ -145,6 +147,20 @@ export const periodAlreadyOpen = (periodId: string): ApiErrorBody => ({
   code: 'PERIOD_ALREADY_OPEN',
   message: `A payroll period is already open: ${periodId}`,
   periodId,
+});
+
+/** Spec 054. */
+export const expenseNotFound = (expenseId: string): ApiErrorBody => ({
+  code: 'EXPENSE_NOT_FOUND',
+  message: `Expense not found: ${expenseId}`,
+  expenseId,
+});
+
+/** Spec 054: un día real, y no futuro en CDMX. */
+export const invalidExpenseDate = (date: string): ApiErrorBody => ({
+  code: 'INVALID_EXPENSE_DATE',
+  message: `Invalid expense date: ${date}`,
+  date,
 });
 
 export const orderAlreadyDelivered = (orderId: string): ApiErrorBody => ({

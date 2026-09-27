@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common';
 import type { Expense } from '@mucho-loco/types';
 import { ExpensesService } from './expenses.service';
-import { CreateExpenseDto } from './dto/create-expense.dto';
+import { ExpenseDto } from './dto/expense.dto';
 import { Roles } from '../auth/roles.decorator';
 
 @Controller('expenses')
@@ -15,7 +15,19 @@ export class ExpensesController {
   }
 
   @Post()
-  create(@Body() dto: CreateExpenseDto): Promise<Expense> {
+  create(@Body() dto: ExpenseDto): Promise<Expense> {
     return this.expenses.create(dto);
+  }
+
+  /** Corregir lo capturado (spec 054). */
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: ExpenseDto): Promise<Expense> {
+    return this.expenses.update(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  remove(@Param('id') id: string): Promise<void> {
+    return this.expenses.remove(id);
   }
 }

@@ -1653,6 +1653,107 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
         .get('/expenses')
         .set(...auth('manager'))
         .expect(403);
+      await request(app.getHttpServer())
+        .delete('/expenses/cualquiera')
+        .set(...auth('manager'))
+        .expect(403);
+    });
+
+    // Spec 054: la fecha se captura, en días de CDMX, y nunca futura.
+    it('takes the day it happened, defaults to today in CDMX and refuses the future', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/expenses')
+        .set(...auth('owner'))
+        .send({ branchId: 2, category: 'supplies', description: 'E2E toallas', amount: 640, date: '2026-09-01' })
+        .expect(201);
+      expect(body<Expense>(res).date).toBe('2026-09-01');
+
+      const today = await request(app.getHttpServer())
+        .post('/expenses')
+        .set(...auth('owner'))
+        .send({ branchId: 2, category: 'supplies', description: 'E2E jabón', amount: 90 })
+        .expect(201);
+      expect(body<Expense>(today).date).toBe(mexicoDay(new Date()));
+
+      for (const date of ['2999-01-01', '2026-02-30', '01/09/2026']) {
+        await request(app.getHttpServer())
+          .post('/expenses')
+          .set(...auth('owner'))
+          .send({ branchId: 2, category: 'supplies', description: 'E2E', amount: 90, date })
+          .expect(400);
+      }
+    });
+
+    it('refuses cents, zero and an empty description', async () => {
+      for (const payload of [
+        { amount: 12.5, description: 'E2E' },
+        { amount: 0, description: 'E2E' },
+        { amount: 100, description: '   ' },
+      ]) {
+        await request(app.getHttpServer())
+          .post('/expenses')
+          .set(...auth('owner'))
+          .send({ branchId: 1, category: 'other', ...payload })
+          .expect(400);
+      }
+    });
+
+    // Spec 054: un gasto mal capturado se corrige o se quita.
+    it('corrects an expense and then deletes it', async () => {
+      const created = body<Expense>(
+        await request(app.getHttpServer())
+          .post('/expenses')
+          .set(...auth('owner'))
+          .send({ branchId: 1, category: 'rent', description: 'E2E renta', amount: 12000, date: '2026-09-02' })
+          .expect(201),
+      );
+
+      const edited = await request(app.getHttpServer())
+        .put(`/expenses/${created.id}`)
+        .set(...auth('owner'))
+        .send({ branchId: null, category: 'marketing', description: 'E2E renta corregida', amount: 1200, date: '2026-09-03' })
+        .expect(200);
+      expect(body<Expense>(edited)).toEqual({
+        id: created.id,
+        branchId: null,
+        category: 'marketing',
+        description: 'E2E renta corregida',
+        amount: 1200,
+        date: '2026-09-03',
+      });
+
+      // Sin fecha, la edición conserva la que tenía.
+      const kept = await request(app.getHttpServer())
+        .put(`/expenses/${created.id}`)
+        .set(...auth('owner'))
+        .send({ branchId: 1, category: 'rent', description: 'E2E renta', amount: 1300 })
+        .expect(200);
+      expect(body<Expense>(kept).date).toBe('2026-09-03');
+
+      await request(app.getHttpServer())
+        .delete(`/expenses/${created.id}`)
+        .set(...auth('owner'))
+        .expect(204);
+      const list = await request(app.getHttpServer()).get('/expenses').set(...auth('owner')).expect(200);
+      expect(body<Expense[]>(list).some((e) => e.id === created.id)).toBe(false);
+
+      const gone = await request(app.getHttpServer())
+        .delete(`/expenses/${created.id}`)
+        .set(...auth('owner'))
+        .expect(404);
+      expect(body<{ code: string }>(gone).code).toBe('EXPENSE_NOT_FOUND');
+      const stale = await request(app.getHttpServer())
+        .put(`/expenses/${created.id}`)
+        .set(...auth('owner'))
+        .send({ branchId: 1, category: 'rent', description: 'E2E', amount: 1 })
+        .expect(404);
+      expect(body<{ code: string }>(stale).code).toBe('EXPENSE_NOT_FOUND');
+    });
+
+    it('lists the most recent day first', async () => {
+      const res = await request(app.getHttpServer()).get('/expenses').set(...auth('owner')).expect(200);
+      const dates = body<Expense[]>(res).map((e) => e.date);
+      expect(dates).toEqual([...dates].sort().reverse());
     });
   });
 });

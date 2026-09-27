@@ -18,3 +18,8 @@ export function previousMonth(month: string): string {
 export function inMonth(iso: string, month: string): boolean {
   return currentMonth(new Date(iso)) === month;
 }
+
+/** Hoy `YYYY-MM-DD` en CDMX (spec 054: la fecha por default de un gasto). */
+export function currentDay(now: Date = new Date()): string {
+  return new Date(now.getTime() - 6 * 3600_000).toISOString().slice(0, 10);
+}

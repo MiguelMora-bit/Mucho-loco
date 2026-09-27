@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useExpensesStore } from '../lib/stores/expenses.store';
 import { useBranchStatsStore } from '../lib/stores/branchStats.store';
-import { expensesRepository } from '../lib/repositories/expenses.repository';
+import { expensesRepository, ExpenseNotFoundError } from '../lib/repositories/expenses.repository';
 import { formatDate } from '../lib/dates';
-import type { ExpenseCategory, Lang } from '@mucho-loco/types';
+import { currentDay } from '../lib/currentMonth';
+import type { Expense, ExpenseCategory, Lang } from '@mucho-loco/types';
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-MX')}`;
@@ -13,6 +14,10 @@ function formatPrice(n: number) {
 
 const CATEGORIES: ExpenseCategory[] = ['rent', 'utilities', 'maintenance', 'supplies', 'marketing', 'other'];
 const CORPORATE_VALUE = 'corporate';
+
+const inputClass =
+  'w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red';
+const labelClass = 'text-xs font-mono uppercase text-ml-cream-dim block mb-1.5';
 
 export function ExpensesPage() {
   const { t, i18n } = useTranslation();
@@ -26,14 +31,22 @@ export function ExpensesPage() {
     fetchBranchStats();
   }, [fetch, fetchBranchStats]);
 
+  const today = currentDay();
+  const formRef = useRef<HTMLFormElement>(null);
+  // Spec 054: el mismo formulario da de alta o corrige (`editingId`).
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [branchValue, setBranchValue] = useState<string>(CORPORATE_VALUE);
   const [category, setCategory] = useState<ExpenseCategory>('rent');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(today);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const expenses = data ?? [];
+  // Del día más reciente al más viejo, igual en mock y en backend.
+  const expenses = [...(data ?? [])].sort((a, b) => b.date.localeCompare(a.date));
   const branches = branchStats.data ?? [];
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -42,27 +55,82 @@ export function ExpensesPage() {
     return branches.find((b) => b.branchId === branchId)?.branchName ?? `#${branchId}`;
   }
 
+  function resetForm() {
+    setEditingId(null);
+    setBranchValue(CORPORATE_VALUE);
+    setCategory('rent');
+    setDescription('');
+    setAmount('');
+    setDate(currentDay());
+  }
+
+  function startEdit(expense: Expense) {
+    setEditingId(expense.id);
+    setBranchValue(expense.branchId === null ? CORPORATE_VALUE : String(expense.branchId));
+    setCategory(expense.category);
+    setDescription(expense.description);
+    setAmount(String(expense.amount));
+    setDate(expense.date);
+    setNotice(null);
+    setConfirmingId(null);
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const amountNum = Number(amount);
-    if (!description.trim() || !amountNum || amountNum <= 0) return;
+    if (!description.trim() || !date) return;
+    // Pesos enteros: el backend rechaza centavos, mejor decirlo aquí.
+    if (!Number.isInteger(amountNum) || amountNum <= 0) {
+      setNotice(t('expenses.wholePesos'));
+      return;
+    }
     setSubmitting(true);
-    setSubmitError(null);
+    setNotice(null);
+    const input = {
+      branchId: branchValue === CORPORATE_VALUE ? null : Number(branchValue),
+      category,
+      description: description.trim(),
+      amount: amountNum,
+      date,
+    };
     try {
-      await expensesRepository.create({
-        branchId: branchValue === CORPORATE_VALUE ? null : Number(branchValue),
-        category,
-        description: description.trim(),
-        amount: amountNum,
-      });
-      setDescription('');
-      setAmount('');
+      if (editingId) await expensesRepository.update(editingId, input);
+      else await expensesRepository.create(input);
+      resetForm();
       await fetch();
     } catch (err) {
       console.error(err);
-      setSubmitError(t('expenses.errorGeneric'));
+      if (err instanceof ExpenseNotFoundError) {
+        setNotice(t('expenses.errorNotFound'));
+        resetForm();
+        await fetch();
+      } else {
+        setNotice(editingId ? t('expenses.errorSave') : t('expenses.errorGeneric'));
+      }
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    setNotice(null);
+    try {
+      await expensesRepository.remove(id);
+      if (editingId === id) resetForm();
+      await fetch();
+    } catch (err) {
+      console.error(err);
+      if (err instanceof ExpenseNotFoundError) {
+        setNotice(t('expenses.errorNotFound'));
+        await fetch();
+      } else {
+        setNotice(t('expenses.errorDelete'));
+      }
+    } finally {
+      setDeletingId(null);
+      setConfirmingId(null);
     }
   }
 
@@ -79,15 +147,19 @@ export function ExpensesPage() {
       </div>
 
       <section>
-        <h2 className="text-sm font-mono uppercase tracking-wide text-ml-cream-dim mb-3">{t('expenses.newExpense')}</h2>
-        <form onSubmit={handleSubmit} className="bg-ml-card border border-ml-border rounded p-4 grid grid-cols-2 gap-4">
+        <h2 className="text-sm font-mono uppercase tracking-wide text-ml-cream-dim mb-3">
+          {editingId ? t('expenses.editExpense') : t('expenses.newExpense')}
+        </h2>
+        <form
+          ref={formRef}
+          onSubmit={handleSubmit}
+          className={
+            'bg-ml-card border rounded p-4 grid grid-cols-2 gap-4 ' + (editingId ? 'border-ml-orange' : 'border-ml-border')
+          }
+        >
           <div>
-            <label className="text-xs font-mono uppercase text-ml-cream-dim block mb-1.5">{t('expenses.branchLabel')}</label>
-            <select
-              value={branchValue}
-              onChange={(e) => setBranchValue(e.target.value)}
-              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
-            >
+            <label htmlFor="expense-branch" className={labelClass}>{t('expenses.branchLabel')}</label>
+            <select id="expense-branch" value={branchValue} onChange={(e) => setBranchValue(e.target.value)} className={inputClass}>
               <option value={CORPORATE_VALUE}>{t('expenses.corporate')}</option>
               {branches.map((b) => (
                 <option key={b.branchId} value={b.branchId}>{b.branchName}</option>
@@ -95,11 +167,12 @@ export function ExpensesPage() {
             </select>
           </div>
           <div>
-            <label className="text-xs font-mono uppercase text-ml-cream-dim block mb-1.5">{t('expenses.categoryLabel')}</label>
+            <label htmlFor="expense-category" className={labelClass}>{t('expenses.categoryLabel')}</label>
             <select
+              id="expense-category"
               value={category}
               onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
+              className={inputClass}
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{t(`expenses.categories.${c}`)}</option>
@@ -107,24 +180,38 @@ export function ExpensesPage() {
             </select>
           </div>
           <div className="col-span-2">
-            <label className="text-xs font-mono uppercase text-ml-cream-dim block mb-1.5">{t('expenses.descriptionLabel')}</label>
+            <label htmlFor="expense-description" className={labelClass}>{t('expenses.descriptionLabel')}</label>
             <input
+              id="expense-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t('expenses.descriptionPlaceholder')}
-              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
+              maxLength={200}
+              className={inputClass}
             />
           </div>
           <div>
-            <label className="text-xs font-mono uppercase text-ml-cream-dim block mb-1.5">{t('expenses.amountLabel')}</label>
+            <label htmlFor="expense-amount" className={labelClass}>{t('expenses.amountLabel')}</label>
             <input
+              id="expense-amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              className="w-full bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-sm focus:outline-none focus:border-ml-red"
+              min="1"
+              step="1"
+              placeholder="0"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="expense-date" className={labelClass}>{t('expenses.dateLabel')}</label>
+            <input
+              id="expense-date"
+              type="date"
+              value={date}
+              max={today}
+              onChange={(e) => setDate(e.target.value)}
+              className={inputClass}
             />
           </div>
           <div className="col-span-2 flex items-center gap-3">
@@ -133,9 +220,14 @@ export function ExpensesPage() {
               disabled={submitting}
               className="px-4 py-2 rounded bg-ml-red text-ml-cream text-sm font-medium hover:bg-ml-red-bright disabled:opacity-40 transition-colors"
             >
-              {submitting ? t('expenses.saving') : t('expenses.addExpense')}
+              {submitting ? t('expenses.saving') : editingId ? t('expenses.saveChanges') : t('expenses.addExpense')}
             </button>
-            {submitError && <p className="text-ml-red text-xs">{submitError}</p>}
+            {editingId && (
+              <button type="button" onClick={resetForm} className="text-sm text-ml-cream-dim underline">
+                {t('expenses.cancelEdit')}
+              </button>
+            )}
+            {notice && <p className="text-ml-red text-xs">{notice}</p>}
           </div>
         </form>
       </section>
@@ -158,21 +250,52 @@ export function ExpensesPage() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="text-left text-ml-cream-dim font-mono text-xs uppercase border-b border-ml-border">
+                  <th className="py-2">{t('expenses.dateLabel')}</th>
                   <th className="py-2">{t('expenses.branchLabel')}</th>
                   <th className="py-2">{t('expenses.categoryLabel')}</th>
                   <th className="py-2">{t('expenses.descriptionLabel')}</th>
                   <th className="py-2">{t('expenses.amountLabel')}</th>
-                  <th className="py-2">{t('expenses.dateLabel')}</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {[...expenses].reverse().map((exp) => (
-                  <tr key={exp.id} className="border-b border-ml-border">
+                {expenses.map((exp) => (
+                  <tr
+                    key={exp.id}
+                    data-expense={exp.id}
+                    className={'border-b border-ml-border ' + (editingId === exp.id ? 'bg-ml-orange/10' : '')}
+                  >
+                    <td className="py-2 text-ml-cream-dim whitespace-nowrap">{formatDate(exp.date, lang)}</td>
                     <td className="py-2">{branchLabelFor(exp.branchId)}</td>
                     <td className="py-2">{t(`expenses.categories.${exp.category}`)}</td>
                     <td className="py-2">{exp.description}</td>
                     <td className="py-2 font-medium">{formatPrice(exp.amount)}</td>
-                    <td className="py-2 text-ml-cream-dim">{formatDate(exp.date, lang)}</td>
+                    <td className="py-2 text-right whitespace-nowrap">
+                      {confirmingId === exp.id ? (
+                        <span className="inline-flex items-center gap-2 text-xs">
+                          <span className="text-ml-orange">{t('expenses.confirmDelete')}</span>
+                          <button
+                            onClick={() => handleDelete(exp.id)}
+                            disabled={deletingId === exp.id}
+                            className="px-2 py-1 rounded bg-ml-red text-ml-cream disabled:opacity-40"
+                          >
+                            {t('expenses.confirmYes')}
+                          </button>
+                          <button onClick={() => setConfirmingId(null)} className="underline text-ml-cream-dim">
+                            {t('expenses.confirmNo')}
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="inline-flex gap-3 text-xs font-mono">
+                          <button onClick={() => startEdit(exp)} className="underline text-ml-cream-dim hover:text-ml-cream">
+                            {t('expenses.edit')}
+                          </button>
+                          <button onClick={() => setConfirmingId(exp.id)} className="underline text-ml-cream-dim hover:text-ml-red">
+                            {t('expenses.delete')}
+                          </button>
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

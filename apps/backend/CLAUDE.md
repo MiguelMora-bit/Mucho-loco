@@ -37,7 +37,7 @@ Segunda gran tanda: los dominios que `branch-app` y `owner-panel` tenían como m
 | `reports` | `branches/:id/reports/sales`, `stats/branches` | manager / owner | `reports.getSalesReport`, `stats.getBranchStats` |
 | `attendance` | `attendance/open`, `branches/:id/attendance/{clock-in,today}`, `attendance/clock-out` | staff / manager | `attendance.*` |
 | `payroll` | `payroll/{employees,periods,attendance,payslips}`, `payroll/periods/:id/run`, `payroll/periods/next` | owner | `payroll.*` |
-| `expenses` | `expenses` | owner | `expenses.*` |
+| `expenses` | `expenses`, `expenses/:id` (PUT/DELETE, spec 054) | owner | `expenses.*` |
 
 ### Roles (`auth/roles.decorator.ts` + `roles.guard.ts`)
 
@@ -61,6 +61,10 @@ Dos índices únicos **parciales**, escritos a mano en `20260912090000_branch_op
 - `attendance_entries_one_open_per_staff` — `WHERE "clockOut" IS NULL`.
 
 Sin ellos, dos requests simultáneos abrirían dos turnos. `getOpenShift` incluso maneja la carrera: si su insert pierde, relee y devuelve el turno que ganó.
+
+### Gastos: fecha real y correcciones (2026-09-26, spec 054)
+
+`PUT /expenses/:id` reemplaza lo capturado (sucursal o corporativo, categoría, concepto, monto y, si viene, fecha) y `DELETE /expenses/:id` lo borra (204); inexistente → 404 `EXPENSE_NOT_FOUND`. `ExpenseDto` sirve para las dos (concepto recortado y no vacío, monto entero ≥ 1). La fecha se captura: `expenseDay()` exige un día real y no futuro en CDMX (400 `INVALID_EXPENSE_DATE`) y, sin ella, usa hoy en CDMX — antes era `new Date()` y una captura de la noche caía al día siguiente. `expenses.date` pasó a `DATE` (migración `20260927020611_expense_date_day`: el seed conserva su día; lo creado con `new Date()` pasa a su día de CDMX). e2e en `branch-ops.e2e-spec.ts` ("expenses").
 
 ### Arqueo y auditoría de cortes (2026-09-26, spec 052)
 

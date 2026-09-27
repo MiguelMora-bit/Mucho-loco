@@ -76,6 +76,9 @@ describe('HQ endpoints are there and guarded', () => {
     ['expenses.getAll', () => expenses.getAll()],
     ['expenses.create', () =>
       expenses.create({ branchId: 1, category: 'other', description: 'x', amount: 1 })],
+    ['expenses.update (spec 054)', () =>
+      expenses.update('exp-1', { branchId: 1, category: 'other', description: 'x', amount: 1 })],
+    ['expenses.remove (spec 054)', () => expenses.remove('exp-1')],
     ['payroll.getEmployees', () => payroll.getEmployees()],
     ['payroll.getPeriods', () => payroll.getPeriods()],
     ['payroll.getAttendance', () => payroll.getAttendance()],

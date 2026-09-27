@@ -749,7 +749,8 @@ model Expense {
   category    ExpenseCategory
   description String
   amount      Int
-  date        DateTime
+  /// El día del gasto en CDMX (spec 054): fecha sola, sin hora.
+  date        DateTime        @db.Date
 
   @@index([date])
   @@map("expenses")

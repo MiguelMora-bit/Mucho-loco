@@ -48,6 +48,10 @@ Spec en `specs/004-owner-cfdi-panel/`. Los CFDI emitidos (un solo RFC para las 1
 - Mock: `SAT_REJECTS_CANCEL_UUID` simula un rechazo del SAT. La carga va dentro del efecto con `setState` solo en el callback de la promesa (el lint prohíbe `setState` síncrono en efectos).
 - **Sin verificar en navegador** (iniciar sesión necesita User Pool vivo) y **sin probar contra Facturapi**. Verificado: unit (HTTP, mock, CSV, mes), `tsc -b`, lint, build, integración de rutas.
 
+## Gastos: fecha y correcciones (2026-09-26, spec 054)
+
+`/expenses` captura la fecha (default hoy en CDMX con `currentDay()` de `lib/currentMonth.ts`, sin futuras) y el monto en pesos enteros (antes aceptaba centavos que el backend rechazaba con un error genérico). Cada renglón tiene "Editar" (el mismo formulario pasa a "Editar gasto") y "Borrar" (con confirmación). `expensesRepository.update`/`remove`, `ExpenseNotFoundError` (`EXPENSE_NOT_FOUND`) → aviso y recarga. La lista va del día más reciente al más viejo en los dos modos (antes hacía `reverse()` sobre órdenes distintos en mock y backend). Los reportes ejecutivos toman los gastos corregidos.
+
 ## Cortes de caja — `/cash-audit` (2026-09-26, spec 052)
 
 La regla del CLAUDE.md raíz ("corte de caja auditable desde el panel del dueño"). Desde el spec 052 el gerente cierra cada turno en `branch-app` capturando el efectivo que contó; aquí HQ ve esos cortes de las 15 sucursales:
