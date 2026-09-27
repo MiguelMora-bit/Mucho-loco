@@ -12,8 +12,10 @@ export interface ICashRegisterShiftRepository {
   getTransactions(shiftId: string): Promise<ShiftTransaction[]>;
   /** Shifts cerrados de esa sucursal, más reciente primero — el historial auditable. */
   getHistory(branchId: number): Promise<CashRegisterShift[]>;
-  /** No abre el siguiente shift — eso lo hace getOpenShift() la próxima vez que se pida. */
-  closeShift(shiftId: string): Promise<CashRegisterShift>;
+  /** Cerrar es arquear (spec 052): `countedCash` es el efectivo que el gerente contó.
+   *  Congela esperado, contado y quién cerró. No abre el siguiente shift — eso lo
+   *  hace getOpenShift() la próxima vez que se pida. */
+  closeShift(shiftId: string, countedCash: number): Promise<CashRegisterShift>;
 }
 
 // Mock o backend NestJS real, según VITE_DATA_SOURCE — ver datasources/http/config.ts.

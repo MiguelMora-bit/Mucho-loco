@@ -5,6 +5,7 @@ import { ExpensesHttpDatasource } from './expenses.http';
 import { PayrollHttpDatasource } from './payroll.http';
 import { ShipmentsHttpDatasource } from './shipments.http';
 import { ShipmentStateError } from '../../repositories/shipments.errors';
+import { CashAuditHttpDatasource } from './cashAudit.http';
 import { ApiRequestError } from './client';
 import {
   InsufficientStockError,
@@ -257,5 +258,23 @@ describe('ShipmentsHttpDatasource', () => {
     stubFetch(500, { message: 'boom' });
     const failure = await ds.getAll().catch((e: unknown) => e);
     expect(failure).not.toBeInstanceOf(ShipmentStateError);
+  });
+});
+
+describe('CashAuditHttpDatasource (spec 052)', () => {
+  const ds = new CashAuditHttpDatasource();
+
+  it('asks for the month and branch, and reuses the shift transactions route', async () => {
+    const spy = stubFetch(200, []);
+    await ds.getShifts('2026-09', 3);
+    await ds.getShifts('2026-09');
+    await ds.getTransactions('shift-1');
+
+    const first = new URL(call(spy, 0).url);
+    expect(first.pathname).toBe('/cash-register/audit');
+    expect(first.searchParams.get('month')).toBe('2026-09');
+    expect(first.searchParams.get('branchId')).toBe('3');
+    expect(new URL(call(spy, 1).url).searchParams.has('branchId')).toBe(false);
+    expect(new URL(call(spy, 2).url).pathname).toBe('/cash-register/shifts/shift-1/transactions');
   });
 });

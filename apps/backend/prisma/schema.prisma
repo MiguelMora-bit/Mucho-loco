@@ -629,7 +629,18 @@ model CashRegisterShift {
   closedAt DateTime?
   status   ShiftStatus @default(open)
 
+  // Arqueo, congelado al cerrar (spec 052). Nulos en un turno abierto y en
+  // los cerrados antes de que existiera. Pesos enteros, como el resto del corte.
+  countedCash      Int?
+  cashTotal        Int?
+  cardTotal        Int?
+  transferTotal    Int?
+  transactionCount Int?
+  closedByName     String?
+  closedByEmail    String?
+
   @@index([branchId, openedAt])
+  @@index([status, closedAt])
   @@map("cash_register_shifts")
 }
 

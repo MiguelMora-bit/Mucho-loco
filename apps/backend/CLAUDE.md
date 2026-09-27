@@ -32,7 +32,7 @@ Segunda gran tanda: los dominios que `branch-app` y `owner-panel` tenían como m
 | `inventory` | `branches/:id/inventory`, `inventory`, `inventory/global`, `inventory/transfers` | staff / owner | `counterSale.getInventory`, `stats.getGlobalInventory`, `inventoryTransfer.*` |
 | `counter-sales` | `POST branches/:id/counter-sales` | staff | `counterSale.createSale` |
 | `counter-memberships` | `branches/:id/check-ins` (POST, antes `GET member-access`), `members`, `memberships/renew`, `memberships/signup` | staff | `membership.*` de branch-app |
-| `cash-register` | `branches/:id/cash-register/open-shift`, `history`, `cash-register/shifts/:id/{transactions,close}` | staff / manager | `cashRegisterShift.*` |
+| `cash-register` | `branches/:id/cash-register/open-shift`, `history`, `cash-register/shifts/:id/{transactions,close}`, `cash-register/audit` | staff / manager / owner | `cashRegisterShift.*`, `cashAudit.*` |
 | `pickup-orders` | `branches/:id/pickup-orders`, `pickup-orders/:id/deliver` | staff | `pickupOrder.*` |
 | `reports` | `branches/:id/reports/sales`, `stats/branches` | manager / owner | `reports.getSalesReport`, `stats.getBranchStats` |
 | `attendance` | `attendance/open`, `branches/:id/attendance/{clock-in,today}`, `attendance/clock-out` | staff / manager | `attendance.*` |
@@ -61,6 +61,10 @@ Dos índices únicos **parciales**, escritos a mano en `20260912090000_branch_op
 - `attendance_entries_one_open_per_staff` — `WHERE "clockOut" IS NULL`.
 
 Sin ellos, dos requests simultáneos abrirían dos turnos. `getOpenShift` incluso maneja la carrera: si su insert pierde, relee y devuelve el turno que ganó.
+
+### Arqueo y auditoría de cortes (2026-09-26, spec 052)
+
+Cerrar un turno es arquear: `POST /cash-register/shifts/:id/close` exige `{ countedCash }` (`CloseShiftDto`, entero 0–10,000,000; sin él → 400) y congela en `cash_register_shifts` (migración `20260926220255_cash_shift_count`) el contado, los totales por forma de pago, los movimientos y quién cerró (`closedByName`/`closedByEmail`, **del token**). La ventana termina en el instante del cierre y la actualización es condicional a `status = open`: dos gerentes cerrando a la vez → el segundo recibe `SHIFT_ALREADY_CLOSED`, sin pisar el arqueo. `CashRegisterShift` gana `countedCash`/`expectedCash`/`closedBy`. `GET /cash-register/audit?month=YYYY-MM[&branchId=]` (owner, mes de CDMX con `mexicoMonthRange`) lista los cortes cerrados como `CashShiftAudit`, con `difference` = contado − efectivo (negativo = faltante). Cortes cerrados antes de esto salen sin totales ni diferencia. Reglas puras en `cash-register/shift-totals.ts`. e2e en `branch-ops.e2e-spec.ts` ("cash register"). **Hueco conocido**: el backend no sabe de qué sucursal es cada gerente, así que no impide cerrar un turno ajeno por id.
 
 ### Zona horaria
 

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCashRegisterShiftStore } from '../lib/stores/cashRegisterShift.store';
-import { cashRegisterShiftRepository } from '../lib/repositories/cashRegisterShift.repository';
-import { calculateShiftTotals } from '../lib/cashRegister';
+import {
+  cashRegisterShiftRepository,
+  ShiftAlreadyClosedError,
+} from '../lib/repositories/cashRegisterShift.repository';
+import { calculateShiftTotals, cashDifference } from '../lib/cashRegister';
 import type { CashRegisterShift, PaymentMethod, ShiftTransaction } from '@mucho-loco/types';
 import { formatDateTime, langOf } from '../lib/dates';
 import { getCurrentBranchId } from '../lib/currentBranch';
@@ -13,6 +16,16 @@ function formatPrice(n: number) {
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'card', 'transfer'];
+
+/** Arqueo (spec 052): faltante en rojo, sobrante en naranja, cuadrado en verde. */
+function CountDifference({ difference }: { difference: number }) {
+  const { t } = useTranslation();
+  if (difference === 0) return <span className="text-ml-green">{t('cashRegister.count.balanced')}</span>;
+  if (difference < 0) {
+    return <span className="text-ml-red">{t('cashRegister.count.short', { amount: formatPrice(-difference) })}</span>;
+  }
+  return <span className="text-ml-orange">{t('cashRegister.count.over', { amount: formatPrice(difference) })}</span>;
+}
 
 function TotalsGrid({ totals, transactionCount }: { totals: Record<PaymentMethod, number>; transactionCount: number }) {
   const { t } = useTranslation();
@@ -92,14 +105,25 @@ function ShiftHistoryRow({ shift }: { shift: CashRegisterShift }) {
   }
 
   const totals = transactions ? calculateShiftTotals(transactions) : null;
+  const difference = cashDifference(shift.countedCash, shift.expectedCash);
 
   return (
     <div className="bg-ml-card border border-ml-border rounded p-3">
       <div className="flex items-center justify-between">
-        <div className="text-sm">
-          <span className="text-ml-cream-dim">{t('cashRegister.history.openedAt')}:</span> {formatDateTime(shift.openedAt, lang)}
-          {' · '}
-          <span className="text-ml-cream-dim">{t('cashRegister.history.closedAt')}:</span> {shift.closedAt ? formatDateTime(shift.closedAt, lang) : '—'}
+        <div className="text-sm space-y-1">
+          <div>
+            <span className="text-ml-cream-dim">{t('cashRegister.history.openedAt')}:</span> {formatDateTime(shift.openedAt, lang)}
+            {' · '}
+            <span className="text-ml-cream-dim">{t('cashRegister.history.closedAt')}:</span> {shift.closedAt ? formatDateTime(shift.closedAt, lang) : '—'}
+          </div>
+          {shift.countedCash !== null && difference !== null && (
+            <div className="text-xs">
+              {t('cashRegister.count.counted', { amount: formatPrice(shift.countedCash) })}
+              {' · '}
+              <CountDifference difference={difference} />
+              {shift.closedBy && <span className="text-ml-cream-dim">{' · '}{t('cashRegister.count.closedBy', { name: shift.closedBy })}</span>}
+            </div>
+          )}
         </div>
         <button onClick={toggle} className="text-xs text-ml-cream-dim hover:text-ml-cream underline">
           {expanded ? t('cashRegister.history.hideDetail') : t('cashRegister.history.viewDetail')}
@@ -119,24 +143,42 @@ export function CashRegisterPage() {
   const { t, i18n } = useTranslation();
   const lang = langOf(i18n.language);
   const { data, loading, error, fetch } = useCashRegisterShiftStore();
-  const [confirming, setConfirming] = useState(false);
+  // Cerrar es arquear (spec 052): el gerente escribe el efectivo que contó.
+  const [counting, setCounting] = useState(false);
+  const [counted, setCounted] = useState('');
   const [closing, setClosing] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch();
   }, [fetch]);
 
+  const countedCash = /^\d+$/.test(counted.trim()) ? Number(counted.trim()) : null;
+  const expectedCash = data ? calculateShiftTotals(data.transactions).totals.cash : 0;
+  const difference = cashDifference(countedCash, expectedCash);
+
+  function cancelCount() {
+    setCounting(false);
+    setCounted('');
+  }
+
   async function handleClose() {
-    if (!data) return;
-    if (!confirming) {
-      setConfirming(true);
-      return;
-    }
+    if (!data || countedCash === null) return;
     setClosing(true);
+    setCloseError(null);
     try {
-      await cashRegisterShiftRepository.closeShift(data.shift.id);
-      setConfirming(false);
+      await cashRegisterShiftRepository.closeShift(data.shift.id, countedCash);
+      cancelCount();
       await fetch();
+    } catch (err) {
+      console.error(err);
+      if (err instanceof ShiftAlreadyClosedError) {
+        setCloseError(t('cashRegister.count.alreadyClosed'));
+        cancelCount();
+        await fetch();
+      } else {
+        setCloseError(t('cashRegister.count.error'));
+      }
     } finally {
       setClosing(false);
     }
@@ -167,17 +209,55 @@ export function CashRegisterPage() {
               <h2 className="text-sm font-mono uppercase tracking-wide text-ml-cream-dim">
                 {t('cashRegister.openedLabel')} {formatDateTime(data.shift.openedAt, lang)}
               </h2>
-              <button
-                onClick={handleClose}
-                disabled={closing}
-                className={
-                  'px-4 py-2 rounded text-sm font-medium transition-colors disabled:opacity-40 ' +
-                  (confirming ? 'bg-ml-orange text-ml-black' : 'bg-ml-red text-ml-cream hover:bg-ml-red-bright')
-                }
-              >
-                {closing ? t('cashRegister.closing') : confirming ? t('cashRegister.closeConfirm') : t('cashRegister.closeButton')}
-              </button>
+              {!counting && (
+                <button
+                  onClick={() => setCounting(true)}
+                  className="px-4 py-2 rounded text-sm font-medium transition-colors bg-ml-red text-ml-cream hover:bg-ml-red-bright"
+                >
+                  {t('cashRegister.closeButton')}
+                </button>
+              )}
             </div>
+
+            {counting && (
+              <div className="bg-ml-card border border-ml-orange rounded p-4 mb-4 space-y-3">
+                <label htmlFor="counted-cash" className="block text-xs font-mono uppercase text-ml-cream-dim">
+                  {t('cashRegister.count.label')}
+                </label>
+                <input
+                  id="counted-cash"
+                  inputMode="numeric"
+                  autoFocus
+                  value={counted}
+                  onChange={(e) => setCounted(e.target.value)}
+                  placeholder="0"
+                  className="w-48 bg-ml-black-2 border border-ml-border rounded px-3 py-2 text-lg focus:outline-none focus:border-ml-orange"
+                />
+                <p className="text-xs text-ml-cream-dim">{t('cashRegister.count.hint')}</p>
+                <p className="text-sm">
+                  {t('cashRegister.count.expected', { amount: formatPrice(expectedCash) })}
+                  {difference !== null && (
+                    <>
+                      {' · '}
+                      <CountDifference difference={difference} />
+                    </>
+                  )}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleClose}
+                    disabled={closing || countedCash === null}
+                    className="px-4 py-2 rounded text-sm font-medium bg-ml-orange text-ml-black disabled:opacity-40"
+                  >
+                    {closing ? t('cashRegister.closing') : t('cashRegister.count.confirm')}
+                  </button>
+                  <button onClick={cancelCount} disabled={closing} className="px-4 py-2 rounded text-sm text-ml-cream-dim underline">
+                    {t('cashRegister.count.cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
+            {closeError && <p className="text-ml-red text-sm mb-4">{closeError}</p>}
 
             <TotalsGrid totals={calculateShiftTotals(data.transactions).totals} transactionCount={data.transactions.length} />
             <TransactionList transactions={data.transactions} />

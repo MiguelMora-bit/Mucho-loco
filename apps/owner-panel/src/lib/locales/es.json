@@ -25,7 +25,8 @@
     "payroll": "Nómina",
     "reports": "Reportes",
     "shipments": "Envíos",
-    "invoicing": "Facturas"
+    "invoicing": "Facturas",
+    "cashAudit": "Cortes"
   },
   "shipments": {
     "title": "Envíos a domicilio",
@@ -233,6 +234,49 @@
       "invoicedGlobally": "En factura global",
       "canceled": "Cancelados",
       "failed": "Fallidos — revisar"
+    }
+  },
+  "cashAudit": {
+    "title": "Cortes de caja",
+    "subtitle": "El arqueo de cada turno cerrado en las sucursales: lo que el gerente contó en el cajón contra el efectivo que el corte dice que entró.",
+    "month": "Mes",
+    "branch": "Sucursal",
+    "allBranches": "Todas",
+    "loadError": "No pudimos cargar los cortes",
+    "empty": "No hay cortes cerrados en este mes.",
+    "summary": {
+      "shifts": "Cortes cerrados",
+      "shortage": "Faltante",
+      "overage": "Sobrante",
+      "uncounted": "Sin arqueo"
+    },
+    "columns": {
+      "branch": "Sucursal",
+      "closedAt": "Cierre",
+      "closedBy": "Cerró",
+      "expected": "Efectivo esperado",
+      "counted": "Contado",
+      "difference": "Diferencia",
+      "card": "Tarjeta",
+      "transfer": "Transferencia",
+      "count": "Movs."
+    },
+    "balanced": "Cuadra",
+    "noCount": "Sin arqueo",
+    "viewDetail": "Ver detalle",
+    "hideDetail": "Ocultar",
+    "openedAt": "Abierto {{date}}",
+    "detailError": "No pudimos cargar las transacciones",
+    "noTransactions": "Sin movimientos.",
+    "source": {
+      "sale": "Venta",
+      "membership": "Membresía",
+      "pickup": "Pedido en efectivo"
+    },
+    "methods": {
+      "cash": "Efectivo",
+      "card": "Tarjeta",
+      "transfer": "Transferencia"
     }
   }
 }

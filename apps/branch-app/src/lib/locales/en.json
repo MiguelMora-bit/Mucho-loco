@@ -49,7 +49,11 @@
     }
   },
   "counter": {
-    "cardType": { "label": "Credit or debit?", "credit": "Credit", "debit": "Debit" },
+    "cardType": {
+      "label": "Credit or debit?",
+      "credit": "Credit",
+      "debit": "Debit"
+    },
     "title": "Counter",
     "productsTab": "Product sale",
     "membershipTab": "Memberships",
@@ -181,7 +185,6 @@
       "pickup": "Cash pickup order"
     },
     "closeButton": "Close shift",
-    "closeConfirm": "Sure? Confirm close",
     "closing": "Closing…",
     "history": {
       "title": "Shift history",
@@ -190,6 +193,20 @@
       "closedAt": "Closed",
       "viewDetail": "View detail",
       "hideDetail": "Hide"
+    },
+    "count": {
+      "label": "Cash counted in the drawer",
+      "hint": "Count the cash and enter the total in pesos. The owner sees the count from HQ.",
+      "expected": "There should be {{amount}} in cash",
+      "balanced": "Balanced",
+      "short": "{{amount}} short",
+      "over": "{{amount}} over",
+      "confirm": "Confirm close",
+      "cancel": "Cancel",
+      "alreadyClosed": "Someone else had already closed this shift; the screen was refreshed.",
+      "error": "We couldn't close the shift. Try again.",
+      "counted": "Counted {{amount}}",
+      "closedBy": "Closed by {{name}}"
     }
   },
   "reports": {

@@ -56,7 +56,7 @@ describe('cashRegisterShiftRepository', () => {
 
   it('closeShift closes the shift, and getOpenShift then opens a fresh one', async () => {
     const shift = await cashRegisterShiftRepository.getOpenShift(BRANCH_A);
-    const closed = await cashRegisterShiftRepository.closeShift(shift.id);
+    const closed = await cashRegisterShiftRepository.closeShift(shift.id, 0);
     expect(closed.status).toBe('closed');
     expect(closed.closedAt).not.toBeNull();
 
@@ -67,12 +67,24 @@ describe('cashRegisterShiftRepository', () => {
 
   it('closeShift rejects closing the same shift twice', async () => {
     const shift = await cashRegisterShiftRepository.getOpenShift(BRANCH_A);
-    await cashRegisterShiftRepository.closeShift(shift.id);
-    await expect(cashRegisterShiftRepository.closeShift(shift.id)).rejects.toThrow(ShiftAlreadyClosedError);
+    await cashRegisterShiftRepository.closeShift(shift.id, 0);
+    await expect(cashRegisterShiftRepository.closeShift(shift.id, 0)).rejects.toThrow(ShiftAlreadyClosedError);
   });
 
   it('closeShift rejects an unknown shift id', async () => {
-    await expect(cashRegisterShiftRepository.closeShift('nope')).rejects.toThrow(ShiftNotFoundError);
+    await expect(cashRegisterShiftRepository.closeShift('nope', 0)).rejects.toThrow(ShiftNotFoundError);
+  });
+
+  // Spec 052: cerrar es arquear — el corte congela lo que se contó contra lo
+  // que entró en efectivo.
+  it('closeShift freezes the count against the cash that came in', async () => {
+    const shift = await cashRegisterShiftRepository.getOpenShift(BRANCH_A);
+    seedMembershipPayment(BRANCH_A, { paymentMethod: 'cash', amount: 1090 });
+    seedMembershipPayment(BRANCH_A, { paymentMethod: 'card', amount: 500 });
+
+    const closed = await cashRegisterShiftRepository.closeShift(shift.id, 1000);
+
+    expect(closed).toMatchObject({ status: 'closed', countedCash: 1000, expectedCash: 1090 });
   });
 
   it('getHistory returns only closed shifts for that branch', async () => {

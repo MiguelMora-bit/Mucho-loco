@@ -43,7 +43,7 @@ Varios specs tocan más de un app (casi todos también el backend); cada uno apa
 | [031-staff-auth-roles](031-staff-auth-roles/spec.md) — Acceso del personal y roles | retroactivo | 4/4 |  |
 | [032-pickup-orders](032-pickup-orders/spec.md) — Pedidos para recoger en sucursal | retroactivo | 3/3 |  |
 | [033-counter-sale](033-counter-sale/spec.md) — Venta de mostrador | retroactivo | 3/3 |  |
-| [034-cash-register](034-cash-register/spec.md) — Caja: turnos y corte | retroactivo | 4/5 | 1 |
+| [034-cash-register](034-cash-register/spec.md) — Caja: turnos y corte | retroactivo | 5/5 |  |
 | [035-counter-memberships](035-counter-memberships/spec.md) — Altas y renovaciones de membresía en mostrador | retroactivo | 4/4 |  |
 | [036-access-validation](036-access-validation/spec.md) — Validar el acceso en la puerta | retroactivo | 4/4 |  |
 | [037-branch-reports](037-branch-reports/spec.md) — Reportes e inventario local del gerente | retroactivo | 3/3 |  |
@@ -63,6 +63,7 @@ Varios specs tocan más de un app (casi todos también el backend); cada uno apa
 | [044-home-shipments](044-home-shipments/spec.md) — Envíos a domicilio desde la bodega | retroactivo | 3/3 |  |
 | [050-payroll-next-period](050-payroll-next-period/spec.md) — La nómina nunca se queda sin quincena | nuevo | 5/5 |  |
 | [051-payroll-cdmx-days](051-payroll-cdmx-days/spec.md) — Días trabajados en el calendario de CDMX | nuevo | 4/4 |  |
+| [052-owner-cash-audit](052-owner-cash-audit/spec.md) — Auditoría de cortes de caja desde HQ | nuevo | 7/7 |  |
 
 ## Plataforma — backend, avisos, infraestructura
 
@@ -84,7 +85,7 @@ Cada tarea abierta de los specs retroactivos es algo que hoy no está verificado
 - **026** Renovación natural al fin de periodo contra Stripe real (test clocks).
 - **027** Guardar las preferencias de avisos de Configuración y respetarlas en el backend (hoy son solo visuales).
 - **029** FR-003 · test automatizado del mapa con y sin llave de Google Maps (hoy solo revisión visual).
-- **034** Auditoría de cortes desde owner-panel (pedido en el CLAUDE.md raíz: "auditable desde el panel del dueño").
+- **052** (hallazgo) El backend no liga al gerente con su sucursal: cualquier gerente puede cerrar (y cualquier staff leer) un turno de otra sucursal por su id. La sucursal del staff vive en `staffDirectory.ts` de branch-app.
 - **038** Pantalla para que el gerente corrija una salida olvidada.
 - **041** Editar o borrar un gasto capturado por error.
 - **046** Probar contra el sandbox de Facturapi (requiere la cuenta).

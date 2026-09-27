@@ -76,6 +76,15 @@ export function AppShell() {
             {t('nav.invoicing')}
           </NavLink>
           <NavLink
+            to="/cash-audit"
+            className={({ isActive }) =>
+              'px-3 py-1.5 rounded text-sm font-medium transition-colors ' +
+              (isActive ? 'bg-ml-red text-ml-cream' : 'text-ml-cream-dim hover:text-ml-cream')
+            }
+          >
+            {t('nav.cashAudit')}
+          </NavLink>
+          <NavLink
             to="/payroll"
             className={({ isActive }) =>
               'px-3 py-1.5 rounded text-sm font-medium transition-colors ' +

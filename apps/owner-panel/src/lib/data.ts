@@ -1,4 +1,4 @@
-import type { AccessAlert, AttendanceSummary, BranchInventoryLevel, BranchStatsSummary, Employee, Expense, InventoryTransfer, Payslip, PayrollPeriod, ShipmentOrder } from '@mucho-loco/types';
+import type { AccessAlert, AttendanceSummary, BranchInventoryLevel, BranchStatsSummary, CashShiftAudit, Employee, Expense, InventoryTransfer, Payslip, PayrollPeriod, ShiftTransaction, ShipmentOrder } from '@mucho-loco/types';
 
 export const BRANCH_STATS: BranchStatsSummary[] = [
   { branchId: 1, branchName: 'Roma Sur', revenue: 186400, activeCustomers: 312, checkInsToday: 118, checkIns: 3240 },
@@ -15,6 +15,58 @@ export const ACCESS_ALERTS: AccessAlert[] = [
   { id: 'alert-2', memberName: 'Carlos Vega', qrCode: 'ML-QR-CARLOS06', firstBranch: 'Roma Sur', firstAt: hoursAgo(28), branch: 'Santa Fe', at: hoursAgo(26) },
   { id: 'alert-1', memberName: 'Carlos Vega', qrCode: 'ML-QR-CARLOS06', firstBranch: 'Roma Sur', firstAt: hoursAgo(76), branch: 'Condesa', at: hoursAgo(75) },
 ];
+
+// Spec 052: cortes de caja cerrados, con el arqueo que congeló el backend. La
+// diferencia se calcula igual que allá (contado − efectivo). Roma Norte es un
+// corte de antes del arqueo: sin totales ni contado.
+function cashShift(
+  id: string, branchId: number, branchName: string, closedHoursAgo: number, closedBy: string | null,
+  totals: CashShiftAudit['totals'], transactionCount: number | null, countedCash: number | null,
+): CashShiftAudit {
+  return {
+    id, branchId, branchName,
+    openedAt: hoursAgo(closedHoursAgo + 9),
+    closedAt: hoursAgo(closedHoursAgo),
+    closedBy,
+    closedByEmail: closedBy ? `${closedBy.split(' ')[0].toLowerCase()}@mucholoco.mx` : null,
+    totals, transactionCount, countedCash,
+    difference: countedCash === null || totals === null ? null : countedCash - totals.cash,
+  };
+}
+export const CASH_SHIFT_AUDITS: CashShiftAudit[] = [
+  cashShift('shift-rs-1', 1, 'Roma Sur', 3, 'Fernando Osorio', { cash: 4380, card: 2150, transfer: 0 }, 4, 4380),
+  cashShift('shift-co-1', 3, 'Condesa', 14, 'Mauricio Villalobos', { cash: 3120, card: 1890, transfer: 1090 }, 5, 3000),
+  cashShift('shift-sf-1', 5, 'Santa Fe', 27, 'Alejandro Zúñiga', { cash: 5260, card: 3400, transfer: 0 }, 4, 5300),
+  cashShift('shift-rn-1', 2, 'Roma Norte', 50, null, null, null, null),
+];
+
+const tx = (id: string, kind: ShiftTransaction['kind'], description: string, amount: number, paymentMethod: ShiftTransaction['paymentMethod'], atHoursAgo: number): ShiftTransaction =>
+  ({ id, kind, description, amount, paymentMethod, createdAt: hoursAgo(atHoursAgo) });
+export const SHIFT_TRANSACTIONS: Record<string, ShiftTransaction[]> = {
+  'shift-rs-1': [
+    tx('rs-4', 'pickup', 'Pedido en efectivo — Diego Ramírez', 1840, 'cash', 4),
+    tx('rs-3', 'sale', '1x Whey Protein 5LBS · Strawberry', 2150, 'card', 6),
+    tx('rs-2', 'sale', '2x Pre-Entreno Bestia · Mango Chamoy', 1450, 'cash', 8),
+    tx('rs-1', 'membership', 'Renovación — Rosa Jiménez', 1090, 'cash', 10),
+  ],
+  'shift-co-1': [
+    tx('co-5', 'membership', 'Alta — Carlos Vega', 1090, 'transfer', 15),
+    tx('co-4', 'pickup', 'Pedido en efectivo — Valeria Torres', 1160, 'cash', 16),
+    tx('co-3', 'sale', '1x Creatina 300g', 1890, 'card', 18),
+    tx('co-2', 'sale', '3x Energy Loco', 870, 'cash', 20),
+    tx('co-1', 'membership', 'Renovación — Sofía Castro', 1090, 'cash', 22),
+  ],
+  'shift-sf-1': [
+    tx('sf-4', 'sale', '2x Whey Protein 5LBS · Chocolate', 3400, 'card', 28),
+    tx('sf-3', 'sale', '4x Gomitas Loco', 2480, 'cash', 30),
+    tx('sf-2', 'membership', 'Alta — Luis Herrera', 1390, 'cash', 32),
+    tx('sf-1', 'membership', 'Renovación — Paulina Cortés', 1390, 'cash', 34),
+  ],
+  'shift-rn-1': [
+    tx('rn-2', 'sale', '1x Shaker Loco · 700ml', 600, 'card', 52),
+    tx('rn-1', 'sale', '2x Energy Loco', 900, 'cash', 55),
+  ],
+};
 
 // Per-branch stock — statsRepository.getGlobalInventory() sums this at call
 // time (never a separately-tracked total), so a transfer between branches

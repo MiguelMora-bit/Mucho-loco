@@ -48,6 +48,15 @@ Spec en `specs/004-owner-cfdi-panel/`. Los CFDI emitidos (un solo RFC para las 1
 - Mock: `SAT_REJECTS_CANCEL_UUID` simula un rechazo del SAT. La carga va dentro del efecto con `setState` solo en el callback de la promesa (el lint prohíbe `setState` síncrono en efectos).
 - **Sin verificar en navegador** (iniciar sesión necesita User Pool vivo) y **sin probar contra Facturapi**. Verificado: unit (HTTP, mock, CSV, mes), `tsc -b`, lint, build, integración de rutas.
 
+## Cortes de caja — `/cash-audit` (2026-09-26, spec 052)
+
+La regla del CLAUDE.md raíz ("corte de caja auditable desde el panel del dueño"). Desde el spec 052 el gerente cierra cada turno en `branch-app` capturando el efectivo que contó; aquí HQ ve esos cortes de las 15 sucursales:
+
+- **Mes** (default el de CDMX, `lib/currentMonth.ts`) y **sucursal** opcional (del `useBranchStatsStore`).
+- **Resumen** (`summarizeCashAudit`, `lib/cashAudit.ts`, con test): cortes cerrados, faltante y sobrante del mes (por separado, nunca uno compensa al otro) y cortes sin arqueo.
+- **Tabla**: sucursal, cierre, quién cerró, efectivo esperado, contado, diferencia (faltante en rojo, sobrante en naranja, "Cuadra" en verde, "Sin arqueo" en los cortes cerrados antes de esto), tarjeta, transferencia y movimientos. "Ver detalle" trae las transacciones del turno (reusa `GET /cash-register/shifts/:id/transactions`, de mostrador — el dueño pasa por jerarquía de roles).
+- `cashAudit.repository.ts` / `datasources/{mock,http}/cashAudit.*`; mock con `CASH_SHIFT_AUDITS` + `SHIFT_TRANSACTIONS` en `lib/data.ts` (las transacciones suman los totales congelados, lo prueba el test del repositorio). HTTP: `GET /cash-register/audit?month=&branchId=`. Ya son **6 repositorios** detrás de `VITE_DATA_SOURCE=http`.
+
 ## Swap de datasource: mock ↔ backend NestJS (2026-09-12)
 
 Los **4 repositorios están migrados** (`stats`, `inventoryTransfer`, `expenses`, `payroll`). Igual que en los otros dos apps, el default sigue siendo mock: sin configurar nada esto arranca sin Postgres ni backend.

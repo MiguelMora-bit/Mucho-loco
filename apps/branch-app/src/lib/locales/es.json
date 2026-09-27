@@ -49,7 +49,11 @@
     }
   },
   "counter": {
-    "cardType": { "label": "¿Crédito o débito?", "credit": "Crédito", "debit": "Débito" },
+    "cardType": {
+      "label": "¿Crédito o débito?",
+      "credit": "Crédito",
+      "debit": "Débito"
+    },
     "title": "Mostrador",
     "productsTab": "Venta de productos",
     "membershipTab": "Membresías",
@@ -181,7 +185,6 @@
       "pickup": "Pedido en efectivo"
     },
     "closeButton": "Cerrar corte",
-    "closeConfirm": "¿Seguro? Confirmar cierre",
     "closing": "Cerrando…",
     "history": {
       "title": "Historial de cortes",
@@ -190,6 +193,20 @@
       "closedAt": "Cerrado",
       "viewDetail": "Ver detalle",
       "hideDetail": "Ocultar"
+    },
+    "count": {
+      "label": "Efectivo contado en el cajón",
+      "hint": "Cuenta el efectivo y escribe el total en pesos. El dueño ve el arqueo desde HQ.",
+      "expected": "Debería haber {{amount}} en efectivo",
+      "balanced": "Cuadra",
+      "short": "Faltan {{amount}}",
+      "over": "Sobran {{amount}}",
+      "confirm": "Confirmar cierre",
+      "cancel": "Cancelar",
+      "alreadyClosed": "Este corte ya lo había cerrado alguien más; se actualizó la pantalla.",
+      "error": "No pudimos cerrar el corte. Intenta de nuevo.",
+      "counted": "Contado {{amount}}",
+      "closedBy": "Cerró {{name}}"
     }
   },
   "reports": {

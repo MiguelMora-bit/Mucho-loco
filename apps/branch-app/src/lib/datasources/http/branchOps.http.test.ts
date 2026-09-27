@@ -76,25 +76,27 @@ describe('CashRegisterShiftHttpDatasource', () => {
     await ds.getOpenShift(2);
     await ds.getTransactions('shift-1');
     await ds.getHistory(2);
-    await ds.closeShift('shift-1');
+    await ds.closeShift('shift-1', 1000);
 
     expect(call(spy, 0).url).toContain('/branches/2/cash-register/open-shift');
     expect(call(spy, 1).url).toContain('/cash-register/shifts/shift-1/transactions');
     expect(call(spy, 2).url).toContain('/branches/2/cash-register/history');
     expect(call(spy, 3).url).toContain('/cash-register/shifts/shift-1/close');
     expect(call(spy, 3).init.method).toBe('POST');
+    // Spec 052: el arqueo viaja; quién cerró no — lo pone el token.
+    expect(call(spy, 3).body).toEqual({ countedCash: 1000 });
   });
 
   // El contrato promete errores tipados para que la UI no lea prosa — el
   // código del backend es lo que hace posible traducirlos.
   it('translates the shift error codes into the contract types', async () => {
     stubFetch(404, { code: 'SHIFT_NOT_FOUND', shiftId: 'shift-9' });
-    const notFound = await ds.closeShift('shift-9').catch((e: unknown) => e);
+    const notFound = await ds.closeShift('shift-9', 0).catch((e: unknown) => e);
     expect(notFound).toBeInstanceOf(ShiftNotFoundError);
     expect((notFound as ShiftNotFoundError).shiftId).toBe('shift-9');
 
     stubFetch(400, { code: 'SHIFT_ALREADY_CLOSED', shiftId: 'shift-1' });
-    const closed = await ds.closeShift('shift-1').catch((e: unknown) => e);
+    const closed = await ds.closeShift('shift-1', 0).catch((e: unknown) => e);
     expect(closed).toBeInstanceOf(ShiftAlreadyClosedError);
   });
 
@@ -103,7 +105,7 @@ describe('CashRegisterShiftHttpDatasource', () => {
   it('lets an unexpected failure through untranslated', async () => {
     stubFetch(500, { message: 'boom' });
 
-    const err = await ds.closeShift('shift-1').catch((e: unknown) => e);
+    const err = await ds.closeShift('shift-1', 0).catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(ApiRequestError);
   });

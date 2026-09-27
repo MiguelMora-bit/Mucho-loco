@@ -6,6 +6,7 @@ import type {
   CheckInResult,
   BranchInventoryLevel,
   CashRegisterShift,
+  CashShiftAudit,
   CounterSale,
   GlobalInventoryItem,
   BranchSalesReport,
@@ -918,24 +919,82 @@ describe('Branch ops + HQ (e2e, Postgres real)', () => {
       expect(body<ShiftTransaction[]>(res).every((t) => t.amount !== 45)).toBe(true);
     });
 
-    it('only a manager can close the shift', async () => {
+    // Spec 052: cerrar es arquear — sin el efectivo contado no hay corte.
+    it('refuses to close without the counted cash', async () => {
+      await request(app.getHttpServer())
+        .post(`/cash-register/shifts/${shift.id}/close`)
+        .set(...auth('manager'))
+        .send({})
+        .expect(400);
+      await request(app.getHttpServer())
+        .post(`/cash-register/shifts/${shift.id}/close`)
+        .set(...auth('manager'))
+        .send({ countedCash: -1 })
+        .expect(400);
+    });
+
+    it('only a manager can close the shift, and the count is frozen with who closed it', async () => {
       await request(app.getHttpServer())
         .post(`/cash-register/shifts/${shift.id}/close`)
         .set(...auth('staff'))
+        .send({ countedCash: 1000 })
         .expect(403);
 
       const res = await request(app.getHttpServer())
         .post(`/cash-register/shifts/${shift.id}/close`)
         .set(...auth('manager'))
+        .send({ countedCash: 1000 })
         .expect(201);
 
-      expect(body<CashRegisterShift>(res).status).toBe('closed');
+      // El turno cobró $1,090 en efectivo (el alta) y $290 con tarjeta.
+      expect(body<CashRegisterShift>(res)).toMatchObject({
+        status: 'closed',
+        countedCash: 1000,
+        expectedCash: 1090,
+        closedBy: 'MANAGER',
+      });
     });
 
     it('refuses to close the same shift twice', async () => {
       await request(app.getHttpServer())
         .post(`/cash-register/shifts/${shift.id}/close`)
         .set(...auth('manager'))
+        .send({ countedCash: 1090 })
+        .expect(400);
+    });
+
+    it('HQ audits the closed shift with its shortage', async () => {
+      const month = mexicoDay(new Date()).slice(0, 7);
+      const res = await request(app.getHttpServer())
+        .get(`/cash-register/audit?month=${month}`)
+        .set(...auth('owner'))
+        .expect(200);
+
+      expect(body<CashShiftAudit[]>(res).find((s) => s.id === shift.id)).toMatchObject({
+        branchId: 2,
+        closedBy: 'MANAGER',
+        closedByEmail: 'manager@mucholoco.mx',
+        totals: { cash: 1090, card: 290, transfer: 0 },
+        transactionCount: 2,
+        countedCash: 1000,
+        difference: -90,
+      });
+
+      const otherBranch = await request(app.getHttpServer())
+        .get(`/cash-register/audit?month=${month}&branchId=1`)
+        .set(...auth('owner'))
+        .expect(200);
+      expect(body<CashShiftAudit[]>(otherBranch).some((s) => s.id === shift.id)).toBe(false);
+    });
+
+    it('the audit is only for the owner and needs a real month', async () => {
+      await request(app.getHttpServer())
+        .get('/cash-register/audit?month=2026-09')
+        .set(...auth('manager'))
+        .expect(403);
+      await request(app.getHttpServer())
+        .get('/cash-register/audit?month=septiembre')
+        .set(...auth('owner'))
         .expect(400);
     });
 

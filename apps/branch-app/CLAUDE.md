@@ -78,6 +78,10 @@ Si el QR ya entró hoy en OTRA sucursal (`checkIn.firstBranchId` ≠ la de este 
 
 Al buscar en Renovar a un socio en gracia con suscripción (`renewsOnline` + `grace`), en vez de solo "se renueva en línea" aparece el atraso ("Su suscripción tiene un pago atrasado de $1,550") y "COBRAR ATRASO" con forma de pago (y crédito/débito). Cobra lo que Stripe dice que se debe, reactiva la membresía y la suscripción sigue renovándose sola. Imprime el ticket como cualquier cobro de mostrador. `membershipRepository.getOverdue`/`settleOverdue`; errores tipados `NothingOverdueError` (ya se cobró) y `OverduePaymentFailedError` (Stripe no aceptó, no se cobró nada). Mock: Sofía Castro (`ML-QR-SOFIA07`) con $1,550 atrasados. **Revisado en navegador (2026-09-26)** con login real de Cognito (luis): atraso, cobro, ticket con autofactura. El aviso de QR compartido (spec 020) también, en HTTP contra el backend, y la alerta llegó al panel del dueño.
 
+## Cerrar con arqueo (2026-09-26, spec 052)
+
+"Cerrar corte" ya no es un doble clic: abre un panel que pide el **efectivo contado en el cajón** y muestra "Debería haber $X en efectivo · Faltan/Sobran $Y" (o "Cuadra") antes de confirmar; sin un entero ≥ 0 no deja confirmar. `cashRegisterShiftRepository.closeShift(shiftId, countedCash)` — el HTTP manda `{ countedCash }` y el backend congela esperado, contado y quién cerró (del token); el mock hace lo mismo con el nombre de la sesión. El historial muestra "Contado $X · Faltan $Y · Cerró <nombre>". `cashDifference` en `lib/cashRegister.ts` (gemela del backend). Si otro gerente ya lo cerró, `ShiftAlreadyClosedError` → aviso y recarga. HQ lo audita en `owner-panel` (`/cash-audit`).
+
 ## Crédito o débito (2026-09-25)
 
 Spec 009. Al cobrar con tarjeta en mostrador (venta, alta, renovación), `components/CardTypePicker.tsx` pide "¿Crédito o débito?" y no deja confirmar sin elegir. Viaja como `cardType` y el backend registra el cobro como `card_credit`/`card_debit` — la forma de pago del CFDI (04/28). El corte de caja sigue sumando tarjeta en un solo renglón (cuadra con el cierre de la terminal).

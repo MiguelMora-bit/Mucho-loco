@@ -11,4 +11,4 @@ Spec retroactivo: cada tarea es un requisito ya implementado y lo que lo verific
 - [X] FR-002 · `branch-ops.e2e-spec.ts` (el efectivo del pedido entregado aparece como `pickup`).
 - [X] FR-003 · `apps/branch-app/src/lib/cashRegister.test.ts`; `cashRegisterShift.repository.test.ts`.
 - [X] FR-005 · `branch-ops.e2e-spec.ts` ("roles"); navegador (luis sin Caja).
-- [ ] Auditoría de cortes desde owner-panel (pedido en el CLAUDE.md raíz: "auditable desde el panel del dueño").
+- [X] Auditoría de cortes desde owner-panel — ✅ spec [052](../052-owner-cash-audit/spec.md): el gerente cierra con arqueo (efectivo contado) y HQ ve cada corte con su faltante o sobrante en "Cortes de caja".

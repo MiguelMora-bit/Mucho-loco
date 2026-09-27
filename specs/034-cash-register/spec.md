@@ -62,4 +62,4 @@ El gerente ve las transacciones del turno y sus totales por forma de pago, y cie
 ## Fuera de alcance / pendiente conocido
 
 - Varias cajas por sucursal.
-- Auditoría del corte desde owner-panel (hoy HQ ve ingresos agregados, no los cortes).
+- ~~Auditoría del corte desde owner-panel~~ ✅ spec 052 (2026-09-26): cerrar pide el efectivo contado y congela el corte.

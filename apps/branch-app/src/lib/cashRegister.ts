@@ -14,3 +14,10 @@ export function calculateShiftTotals(transactions: ShiftTransaction[]): ShiftTot
   }
   return { totals, transactionCount: transactions.length };
 }
+
+/** Arqueo (spec 052): contado − esperado. Negativo = faltante, positivo = sobrante.
+ *  Gemela de `cashDifference` en `apps/backend/src/cash-register/shift-totals.ts`. */
+export function cashDifference(counted: number | null, expected: number | null): number | null {
+  if (counted === null || expected === null) return null;
+  return counted - expected;
+}

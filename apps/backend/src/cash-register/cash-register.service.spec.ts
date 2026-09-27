@@ -15,6 +15,8 @@ describe('CashRegisterService', () => {
       findMany: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
     };
     counterSale: { findMany: jest.Mock };
     membershipPayment: { findMany: jest.Mock };
@@ -31,6 +33,8 @@ describe('CashRegisterService', () => {
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
       },
       counterSale: { findMany: jest.fn().mockResolvedValue([]) },
       membershipPayment: { findMany: jest.fn().mockResolvedValue([]) },
@@ -182,18 +186,55 @@ describe('CashRegisterService', () => {
   });
 
   describe('closeShift', () => {
-    it('closes an open shift and stamps the time', async () => {
+    const NOW = new Date('2026-09-12T22:00:00.000Z');
+    const manager = { name: 'Ana Sofía Martínez', email: 'ana@mucholoco.mx' };
+
+    beforeEach(() => {
       prisma.cashRegisterShift.findUnique.mockResolvedValue(openShift);
-      prisma.cashRegisterShift.update.mockResolvedValue({
+      prisma.cashRegisterShift.updateMany.mockResolvedValue({ count: 1 });
+      prisma.cashRegisterShift.findUniqueOrThrow.mockResolvedValue({
         ...openShift,
         status: 'closed',
-        closedAt: new Date('2026-09-12T22:00:00.000Z'),
+        closedAt: NOW,
+        countedCash: 1000,
+        cashTotal: 1090,
+        closedByName: manager.name,
       });
+      prisma.counterSale.findMany.mockResolvedValue([
+        { id: 'cs1', total: 290, paymentMethod: 'card', createdAt: OPENED, items: [] },
+      ]);
+      prisma.membershipPayment.findMany.mockResolvedValue([
+        { id: 'mp1', amount: 1090, paymentMethod: 'cash', isNewMember: true, memberName: 'X', createdAt: OPENED },
+      ]);
+    });
 
-      const closed = await service.closeShift('s1');
+    // Spec 052: el arqueo, los totales y quién cerró quedan congelados.
+    it('freezes the count, the totals and who closed it', async () => {
+      const closed = await service.closeShift('s1', 1000, manager, NOW);
 
-      expect(closed.status).toBe('closed');
-      expect(closed.closedAt).not.toBeNull();
+      expect(prisma.cashRegisterShift.updateMany).toHaveBeenCalledWith({
+        where: { id: 's1', status: 'open' },
+        data: {
+          status: 'closed',
+          closedAt: NOW,
+          countedCash: 1000,
+          cashTotal: 1090,
+          cardTotal: 290,
+          transferTotal: 0,
+          transactionCount: 2,
+          closedByName: 'Ana Sofía Martínez',
+          closedByEmail: 'ana@mucholoco.mx',
+        },
+      });
+      expect(closed).toMatchObject({ status: 'closed', countedCash: 1000, expectedCash: 1090, closedBy: manager.name });
+    });
+
+    it('counts the window up to the closing instant', async () => {
+      await service.closeShift('s1', 1000, manager, NOW);
+
+      expect(prisma.counterSale.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { branchId: 1, createdAt: { gte: OPENED, lte: NOW } } }),
+      );
     });
 
     // Cerrar dos veces movería closedAt y con eso la ventana del corte ya
@@ -201,14 +242,78 @@ describe('CashRegisterService', () => {
     it('refuses to close an already closed shift', async () => {
       prisma.cashRegisterShift.findUnique.mockResolvedValue({ ...openShift, status: 'closed' });
 
-      await expect(service.closeShift('s1')).rejects.toBeInstanceOf(BadRequestException);
-      expect(prisma.cashRegisterShift.update).not.toHaveBeenCalled();
+      await expect(service.closeShift('s1', 0, manager)).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.cashRegisterShift.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('loses a simultaneous close without overwriting the first count', async () => {
+      prisma.cashRegisterShift.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.closeShift('s1', 0, manager)).rejects.toMatchObject({
+        response: { code: 'SHIFT_ALREADY_CLOSED' },
+      });
     });
 
     it('rejects an unknown shift', async () => {
       prisma.cashRegisterShift.findUnique.mockResolvedValue(null);
 
-      await expect(service.closeShift('nope')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.closeShift('nope', 0, manager)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('getAudit', () => {
+    const range = { from: new Date('2026-09-01T06:00:00.000Z'), to: new Date('2026-10-01T06:00:00.000Z') };
+    const closedRow = {
+      ...openShift,
+      status: 'closed',
+      closedAt: new Date('2026-09-12T22:00:00.000Z'),
+      countedCash: 1000,
+      cashTotal: 1090,
+      cardTotal: 290,
+      transferTotal: 0,
+      transactionCount: 2,
+      closedByName: 'Ana',
+      closedByEmail: 'ana@mucholoco.mx',
+      branch: { name: 'ROMA SUR' },
+    };
+
+    it('lists the closed shifts of the month with the count difference', async () => {
+      prisma.cashRegisterShift.findMany.mockResolvedValue([closedRow]);
+
+      const [audit] = await service.getAudit(range);
+
+      expect(prisma.cashRegisterShift.findMany).toHaveBeenCalledWith({
+        where: { status: 'closed', closedAt: { gte: range.from, lt: range.to } },
+        include: { branch: true },
+        orderBy: { closedAt: 'desc' },
+      });
+      expect(audit).toMatchObject({
+        branchName: 'ROMA SUR',
+        totals: { cash: 1090, card: 290, transfer: 0 },
+        countedCash: 1000,
+        difference: -90,
+      });
+    });
+
+    it('narrows to one branch when asked', async () => {
+      prisma.cashRegisterShift.findMany.mockResolvedValue([]);
+
+      await service.getAudit(range, 3);
+
+      expect(prisma.cashRegisterShift.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ branchId: 3 }) }),
+      );
+    });
+
+    // Un corte cerrado antes del arqueo no congeló nada: no se inventan cifras.
+    it('lists a shift closed before counting existed without totals', async () => {
+      prisma.cashRegisterShift.findMany.mockResolvedValue([
+        { ...closedRow, countedCash: null, cashTotal: null, cardTotal: null, transferTotal: null, transactionCount: null },
+      ]);
+
+      const [audit] = await service.getAudit(range);
+
+      expect(audit).toMatchObject({ totals: null, countedCash: null, difference: null });
     });
   });
 

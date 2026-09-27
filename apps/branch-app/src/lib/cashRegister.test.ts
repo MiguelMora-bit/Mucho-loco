@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateShiftTotals } from './cashRegister';
+import { calculateShiftTotals, cashDifference } from './cashRegister';
 import type { ShiftTransaction } from '@mucho-loco/types';
 
 function tx(overrides: Partial<ShiftTransaction>): ShiftTransaction {
@@ -28,5 +28,17 @@ describe('calculateShiftTotals', () => {
     ]);
     expect(result.totals.cash).toBe(1380);
     expect(result.transactionCount).toBe(2);
+  });
+});
+
+describe('cashDifference (spec 052)', () => {
+  it('reads a shortage as negative and an overage as positive', () => {
+    expect(cashDifference(1000, 1090)).toBe(-90);
+    expect(cashDifference(1100, 1090)).toBe(10);
+    expect(cashDifference(0, 0)).toBe(0);
+  });
+
+  it('has no difference without a count', () => {
+    expect(cashDifference(null, 1090)).toBeNull();
   });
 });

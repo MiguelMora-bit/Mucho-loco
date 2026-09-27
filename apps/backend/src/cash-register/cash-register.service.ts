@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { CashRegisterShift, PaymentMethod, ShiftTransaction } from '@mucho-loco/types';
+import type { CashRegisterShift, CashShiftAudit, PaymentMethod, ShiftTransaction } from '@mucho-loco/types';
 import { PrismaService } from '../prisma/prisma.service';
-import type { CashRegisterShift as ShiftRow } from '@prisma/client';
+import type { Branch, CashRegisterShift as ShiftRow } from '@prisma/client';
 import { shiftAlreadyClosed, shiftNotFound } from '../common/error-codes';
+import type { IdTokenClaims } from '../auth/cognito';
+import { cashDifference, shiftTotals } from './shift-totals';
 
 function toShift(row: ShiftRow): CashRegisterShift {
   return {
@@ -11,6 +13,29 @@ function toShift(row: ShiftRow): CashRegisterShift {
     openedAt: row.openedAt.toISOString(),
     closedAt: row.closedAt?.toISOString() ?? null,
     status: row.status,
+    countedCash: row.countedCash,
+    expectedCash: row.cashTotal,
+    closedBy: row.closedByName,
+  };
+}
+
+function toAudit(row: ShiftRow & { branch: Branch }): CashShiftAudit {
+  // Un corte cerrado antes del arqueo no congeló nada: se lista sin totales.
+  const frozen = row.cashTotal !== null && row.cardTotal !== null && row.transferTotal !== null;
+  return {
+    id: row.id,
+    branchId: row.branchId,
+    branchName: row.branch.name,
+    openedAt: row.openedAt.toISOString(),
+    closedAt: (row.closedAt as Date).toISOString(),
+    closedBy: row.closedByName,
+    closedByEmail: row.closedByEmail,
+    totals: frozen
+      ? { cash: row.cashTotal as number, card: row.cardTotal as number, transfer: row.transferTotal as number }
+      : null,
+    transactionCount: row.transactionCount,
+    countedCash: row.countedCash,
+    difference: cashDifference(row.countedCash, row.cashTotal),
   };
 }
 
@@ -57,8 +82,11 @@ export class CashRegisterService {
   async getTransactions(shiftId: string): Promise<ShiftTransaction[]> {
     const shift = await this.prisma.cashRegisterShift.findUnique({ where: { id: shiftId } });
     if (!shift) throw new NotFoundException(shiftNotFound(shiftId));
+    return this.transactionsOf(shift, shift.closedAt ?? new Date());
+  }
 
-    const window = { gte: shift.openedAt, lte: shift.closedAt ?? new Date() };
+  private async transactionsOf(shift: ShiftRow, end: Date): Promise<ShiftTransaction[]> {
+    const window = { gte: shift.openedAt, lte: end };
 
     const [sales, payments, cashPickups] = await Promise.all([
       this.prisma.counterSale.findMany({
@@ -123,21 +151,62 @@ export class CashRegisterService {
   }
 
   /**
-   * Cerrar es final: no se reabre. El siguiente turno nace solo, la próxima
-   * vez que alguien pida el abierto — así el corte queda congelado y nadie le
-   * mete una venta después de cuadrar el cajón.
+   * Cerrar es arquear (spec 052): el gerente dice cuánto efectivo contó, y el
+   * corte se congela — totales por forma de pago, movimientos y quién cerró
+   * (del token). Es final: no se reabre. El siguiente turno nace solo, la
+   * próxima vez que alguien pida el abierto — así nadie le mete una venta
+   * después de cuadrar el cajón.
+   *
+   * La ventana termina en el mismo instante que se congela, y la actualización
+   * es condicional a `open`: si dos gerentes cierran a la vez, el segundo
+   * recibe `SHIFT_ALREADY_CLOSED` en vez de pisar el arqueo del primero.
    */
-  async closeShift(shiftId: string): Promise<CashRegisterShift> {
+  async closeShift(
+    shiftId: string,
+    countedCash: number,
+    closer: Pick<IdTokenClaims, 'name' | 'email'>,
+    now: Date = new Date(),
+  ): Promise<CashRegisterShift> {
     const shift = await this.prisma.cashRegisterShift.findUnique({ where: { id: shiftId } });
     if (!shift) throw new NotFoundException(shiftNotFound(shiftId));
     if (shift.status === 'closed') {
       throw new BadRequestException(shiftAlreadyClosed(shiftId));
     }
 
-    const closed = await this.prisma.cashRegisterShift.update({
-      where: { id: shiftId },
-      data: { status: 'closed', closedAt: new Date() },
+    const { totals, transactionCount } = shiftTotals(await this.transactionsOf(shift, now));
+    const { count } = await this.prisma.cashRegisterShift.updateMany({
+      where: { id: shiftId, status: 'open' },
+      data: {
+        status: 'closed',
+        closedAt: now,
+        countedCash,
+        cashTotal: totals.cash,
+        cardTotal: totals.card,
+        transferTotal: totals.transfer,
+        transactionCount,
+        closedByName: closer.name,
+        closedByEmail: closer.email,
+      },
     });
-    return toShift(closed);
+    if (count === 0) throw new BadRequestException(shiftAlreadyClosed(shiftId));
+
+    return toShift(await this.prisma.cashRegisterShift.findUniqueOrThrow({ where: { id: shiftId } }));
+  }
+
+  /**
+   * Los cortes cerrados en un mes de CDMX, para HQ (spec 052): el cierre más
+   * reciente primero, con la diferencia del arqueo ya calculada.
+   */
+  async getAudit(range: { from: Date; to: Date }, branchId?: number): Promise<CashShiftAudit[]> {
+    const rows = await this.prisma.cashRegisterShift.findMany({
+      where: {
+        status: 'closed',
+        closedAt: { gte: range.from, lt: range.to },
+        ...(branchId === undefined ? {} : { branchId }),
+      },
+      include: { branch: true },
+      orderBy: { closedAt: 'desc' },
+    });
+    return rows.map(toAudit);
   }
 }

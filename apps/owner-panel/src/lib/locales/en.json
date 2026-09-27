@@ -25,7 +25,8 @@
     "payroll": "Payroll",
     "reports": "Reports",
     "shipments": "Shipments",
-    "invoicing": "Invoices"
+    "invoicing": "Invoices",
+    "cashAudit": "Cash counts"
   },
   "shipments": {
     "title": "Home deliveries",
@@ -233,6 +234,49 @@
       "invoicedGlobally": "In global invoice",
       "canceled": "Canceled",
       "failed": "Failed — review"
+    }
+  },
+  "cashAudit": {
+    "title": "Cash register close-outs",
+    "subtitle": "The count of every closed shift across the branches: what the manager counted in the drawer against the cash the close-out says came in.",
+    "month": "Month",
+    "branch": "Branch",
+    "allBranches": "All",
+    "loadError": "We couldn't load the close-outs",
+    "empty": "No shifts closed this month.",
+    "summary": {
+      "shifts": "Closed shifts",
+      "shortage": "Short",
+      "overage": "Over",
+      "uncounted": "Not counted"
+    },
+    "columns": {
+      "branch": "Branch",
+      "closedAt": "Closed",
+      "closedBy": "Closed by",
+      "expected": "Expected cash",
+      "counted": "Counted",
+      "difference": "Difference",
+      "card": "Card",
+      "transfer": "Transfer",
+      "count": "Txns"
+    },
+    "balanced": "Balanced",
+    "noCount": "Not counted",
+    "viewDetail": "View detail",
+    "hideDetail": "Hide",
+    "openedAt": "Opened {{date}}",
+    "detailError": "We couldn't load the transactions",
+    "noTransactions": "No transactions.",
+    "source": {
+      "sale": "Sale",
+      "membership": "Membership",
+      "pickup": "Cash order"
+    },
+    "methods": {
+      "cash": "Cash",
+      "card": "Card",
+      "transfer": "Transfer"
     }
   }
 }

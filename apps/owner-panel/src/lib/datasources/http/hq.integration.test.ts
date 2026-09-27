@@ -3,6 +3,7 @@ import { StatsHttpDatasource } from './stats.http';
 import { InventoryTransferHttpDatasource } from './inventoryTransfer.http';
 import { ExpensesHttpDatasource } from './expenses.http';
 import { PayrollHttpDatasource } from './payroll.http';
+import { CashAuditHttpDatasource } from './cashAudit.http';
 import { InvoicingHttpDatasource } from './invoicing.http';
 import { ApiRequestError } from './client';
 import { apiBaseUrl } from './config';
@@ -25,6 +26,7 @@ const stats = new StatsHttpDatasource();
 const transfers = new InventoryTransferHttpDatasource();
 const expenses = new ExpensesHttpDatasource();
 const payroll = new PayrollHttpDatasource();
+const cashAudit = new CashAuditHttpDatasource();
 
 async function statusOf(call: () => Promise<unknown>): Promise<number> {
   try {
@@ -80,6 +82,8 @@ describe('HQ endpoints are there and guarded', () => {
     ['payroll.getPayslips', () => payroll.getPayslips()],
     ['payroll.runPayroll', () => payroll.runPayroll('period-2')],
     ['payroll.openNextPeriod (spec 050)', () => payroll.openNextPeriod()],
+    ['cashAudit.getShifts (spec 052)', () => cashAudit.getShifts('2026-09', 1)],
+    ['cashAudit.getTransactions (spec 052)', () => cashAudit.getTransactions('shift-1')],
     ['invoicing.listCfdis', () => invoicing.listCfdis('2026-09')],
     ['invoicing.getSummary', () => invoicing.getSummary()],
     ['invoicing.cancel', () => invoicing.cancel('cfdi-1', '02')],

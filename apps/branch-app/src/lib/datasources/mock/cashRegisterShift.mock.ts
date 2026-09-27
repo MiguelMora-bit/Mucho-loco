@@ -3,10 +3,38 @@ import { CASH_REGISTER_SHIFTS, COUNTER_SALES, MEMBERSHIP_PAYMENTS } from '../../
 import { delay } from './delay';
 import { ShiftNotFoundError, ShiftAlreadyClosedError } from '../../repositories/cashRegisterShift.errors';
 import type { ICashRegisterShiftRepository } from '../../repositories/cashRegisterShift.repository';
+import { calculateShiftTotals } from '../../cashRegister';
+import { useAuthStore } from '../../stores/auth.store';
 
 function withinWindow(createdAt: string, shift: CashRegisterShift): boolean {
   const end = shift.closedAt ?? new Date().toISOString();
   return createdAt >= shift.openedAt && createdAt <= end;
+}
+
+function transactionsOf(shift: CashRegisterShift): ShiftTransaction[] {
+  const saleTransactions: ShiftTransaction[] = COUNTER_SALES
+    .filter((sale) => sale.branchId === shift.branchId && withinWindow(sale.createdAt, shift))
+    .map((sale) => ({
+      id: sale.id,
+      kind: 'sale',
+      description: sale.items.map((i) => `${i.qty}x ${i.productName}`).join(', '),
+      amount: sale.total,
+      paymentMethod: sale.paymentMethod,
+      createdAt: sale.createdAt,
+    }));
+
+  const membershipTransactions: ShiftTransaction[] = MEMBERSHIP_PAYMENTS
+    .filter((payment) => payment.branchId === shift.branchId && withinWindow(payment.createdAt, shift))
+    .map((payment) => ({
+      id: payment.id,
+      kind: 'membership',
+      description: `${payment.isNewMember ? 'Alta' : 'Renovación'} — ${payment.memberName}`,
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod,
+      createdAt: payment.createdAt,
+    }));
+
+  return [...saleTransactions, ...membershipTransactions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export class CashRegisterShiftMockDatasource implements ICashRegisterShiftRepository {
@@ -21,6 +49,9 @@ export class CashRegisterShiftMockDatasource implements ICashRegisterShiftReposi
       openedAt: new Date().toISOString(),
       closedAt: null,
       status: 'open',
+      countedCash: null,
+      expectedCash: null,
+      closedBy: null,
     };
     CASH_REGISTER_SHIFTS.push(shift);
     return shift;
@@ -30,30 +61,7 @@ export class CashRegisterShiftMockDatasource implements ICashRegisterShiftReposi
     await delay(200);
     const shift = CASH_REGISTER_SHIFTS.find((s) => s.id === shiftId);
     if (!shift) throw new ShiftNotFoundError(shiftId);
-
-    const saleTransactions: ShiftTransaction[] = COUNTER_SALES
-      .filter((sale) => sale.branchId === shift.branchId && withinWindow(sale.createdAt, shift))
-      .map((sale) => ({
-        id: sale.id,
-        kind: 'sale',
-        description: sale.items.map((i) => `${i.qty}x ${i.productName}`).join(', '),
-        amount: sale.total,
-        paymentMethod: sale.paymentMethod,
-        createdAt: sale.createdAt,
-      }));
-
-    const membershipTransactions: ShiftTransaction[] = MEMBERSHIP_PAYMENTS
-      .filter((payment) => payment.branchId === shift.branchId && withinWindow(payment.createdAt, shift))
-      .map((payment) => ({
-        id: payment.id,
-        kind: 'membership',
-        description: `${payment.isNewMember ? 'Alta' : 'Renovación'} — ${payment.memberName}`,
-        amount: payment.amount,
-        paymentMethod: payment.paymentMethod,
-        createdAt: payment.createdAt,
-      }));
-
-    return [...saleTransactions, ...membershipTransactions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return transactionsOf(shift);
   }
 
   async getHistory(branchId: number): Promise<CashRegisterShift[]> {
@@ -63,14 +71,19 @@ export class CashRegisterShiftMockDatasource implements ICashRegisterShiftReposi
       .sort((a, b) => (b.closedAt ?? '').localeCompare(a.closedAt ?? ''));
   }
 
-  async closeShift(shiftId: string): Promise<CashRegisterShift> {
+  async closeShift(shiftId: string, countedCash: number): Promise<CashRegisterShift> {
     await delay(200);
     const shift = CASH_REGISTER_SHIFTS.find((s) => s.id === shiftId);
     if (!shift) throw new ShiftNotFoundError(shiftId);
     if (shift.status === 'closed') throw new ShiftAlreadyClosedError(shiftId);
 
+    // Como el backend (spec 052): la ventana termina al cerrar y se congela el
+    // arqueo; quién cerró sale de la sesión, no de lo que mande la pantalla.
     shift.closedAt = new Date().toISOString();
     shift.status = 'closed';
+    shift.expectedCash = calculateShiftTotals(transactionsOf(shift)).totals.cash;
+    shift.countedCash = countedCash;
+    shift.closedBy = useAuthStore.getState().user?.name ?? null;
     return shift;
   }
 }

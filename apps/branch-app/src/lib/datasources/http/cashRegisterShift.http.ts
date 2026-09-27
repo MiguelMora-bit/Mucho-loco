@@ -38,9 +38,9 @@ export class CashRegisterShiftHttpDatasource implements ICashRegisterShiftReposi
     return api.get<CashRegisterShift[]>(`/branches/${branchId}/cash-register/history`);
   }
 
-  async closeShift(shiftId: string): Promise<CashRegisterShift> {
+  async closeShift(shiftId: string, countedCash: number): Promise<CashRegisterShift> {
     try {
-      return await api.post<CashRegisterShift>(`/cash-register/shifts/${shiftId}/close`);
+      return await api.post<CashRegisterShift>(`/cash-register/shifts/${shiftId}/close`, { countedCash });
     } catch (e) {
       throw toDomainError(e);
     }

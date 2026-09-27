@@ -1040,6 +1040,30 @@ export interface CashRegisterShift {
   openedAt: string;
   closedAt: string | null;
   status: 'open' | 'closed';
+  /** Arqueo (spec 052): el efectivo que el gerente contó al cerrar. `null` en
+   *  un turno abierto o en uno cerrado antes de que existiera el arqueo. */
+  countedCash: number | null;
+  /** El efectivo que el corte dice que entró, congelado al cerrar. */
+  expectedCash: number | null;
+  /** Quién cerró (nombre del token, nunca del body). */
+  closedBy: string | null;
+}
+
+/** Un corte cerrado visto desde HQ (spec 052): lo que se congeló al cerrar. */
+export interface CashShiftAudit {
+  id: string;
+  branchId: number;
+  branchName: string;
+  openedAt: string;
+  closedAt: string;
+  closedBy: string | null;
+  closedByEmail: string | null;
+  /** `null` en un corte cerrado antes del arqueo: no se congeló nada. */
+  totals: Record<PaymentMethod, number> | null;
+  transactionCount: number | null;
+  countedCash: number | null;
+  /** Contado − efectivo esperado: negativo = faltante, positivo = sobrante. */
+  difference: number | null;
 }
 
 /** Vista fusionada de CounterSale + MembershipPayment para un shift — así
